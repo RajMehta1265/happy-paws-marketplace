@@ -12,15 +12,16 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TrainingRouteImport } from './routes/training'
 import { Route as ProductsRouteImport } from './routes/products'
 import { Route as PetsRouteImport } from './routes/pets'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ExoticsRouteImport } from './routes/exotics'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CartRouteImport } from './routes/cart'
-import { Route as BlogRouteImport } from './routes/blog'
-import { Route as AdoptionRouteImport } from './routes/adoption'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PetsIndexRouteImport } from './routes/pets.index'
 import { Route as PetsPetIdRouteImport } from './routes/pets.$petId'
 
 const TrainingRoute = TrainingRouteImport.update({
@@ -38,9 +39,19 @@ const PetsRoute = PetsRouteImport.update({
   path: '/pets',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExoticsRoute = ExoticsRouteImport.update({
+  id: '/exotics',
+  path: '/exotics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -58,16 +69,6 @@ const CartRoute = CartRouteImport.update({
   path: '/cart',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BlogRoute = BlogRouteImport.update({
-  id: '/blog',
-  path: '/blog',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdoptionRoute = AdoptionRouteImport.update({
-  id: '/adoption',
-  path: '/adoption',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -83,6 +84,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PetsIndexRoute = PetsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PetsRoute,
+} as any)
 const PetsPetIdRoute = PetsPetIdRouteImport.update({
   id: '/$petId',
   path: '/$petId',
@@ -93,47 +99,49 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
-  '/adoption': typeof AdoptionRoute
-  '/blog': typeof BlogRoute
   '/cart': typeof CartRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
+  '/exotics': typeof ExoticsRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/pets': typeof PetsRouteWithChildren
   '/products': typeof ProductsRoute
   '/training': typeof TrainingRoute
   '/pets/$petId': typeof PetsPetIdRoute
+  '/pets/': typeof PetsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
-  '/adoption': typeof AdoptionRoute
-  '/blog': typeof BlogRoute
   '/cart': typeof CartRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
+  '/exotics': typeof ExoticsRoute
   '/login': typeof LoginRoute
-  '/pets': typeof PetsRouteWithChildren
+  '/onboarding': typeof OnboardingRoute
   '/products': typeof ProductsRoute
   '/training': typeof TrainingRoute
   '/pets/$petId': typeof PetsPetIdRoute
+  '/pets': typeof PetsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
-  '/adoption': typeof AdoptionRoute
-  '/blog': typeof BlogRoute
   '/cart': typeof CartRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
+  '/exotics': typeof ExoticsRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/pets': typeof PetsRouteWithChildren
   '/products': typeof ProductsRoute
   '/training': typeof TrainingRoute
   '/pets/$petId': typeof PetsPetIdRoute
+  '/pets/': typeof PetsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,58 +149,60 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/admin'
-    | '/adoption'
-    | '/blog'
     | '/cart'
     | '/contact'
     | '/dashboard'
+    | '/exotics'
     | '/login'
+    | '/onboarding'
     | '/pets'
     | '/products'
     | '/training'
     | '/pets/$petId'
+    | '/pets/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/about'
     | '/admin'
-    | '/adoption'
-    | '/blog'
     | '/cart'
     | '/contact'
     | '/dashboard'
+    | '/exotics'
     | '/login'
-    | '/pets'
+    | '/onboarding'
     | '/products'
     | '/training'
     | '/pets/$petId'
+    | '/pets'
   id:
     | '__root__'
     | '/'
     | '/about'
     | '/admin'
-    | '/adoption'
-    | '/blog'
     | '/cart'
     | '/contact'
     | '/dashboard'
+    | '/exotics'
     | '/login'
+    | '/onboarding'
     | '/pets'
     | '/products'
     | '/training'
     | '/pets/$petId'
+    | '/pets/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AdminRoute: typeof AdminRoute
-  AdoptionRoute: typeof AdoptionRoute
-  BlogRoute: typeof BlogRoute
   CartRoute: typeof CartRoute
   ContactRoute: typeof ContactRoute
   DashboardRoute: typeof DashboardRoute
+  ExoticsRoute: typeof ExoticsRoute
   LoginRoute: typeof LoginRoute
+  OnboardingRoute: typeof OnboardingRoute
   PetsRoute: typeof PetsRouteWithChildren
   ProductsRoute: typeof ProductsRoute
   TrainingRoute: typeof TrainingRoute
@@ -221,11 +231,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PetsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exotics': {
+      id: '/exotics'
+      path: '/exotics'
+      fullPath: '/exotics'
+      preLoaderRoute: typeof ExoticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -249,20 +273,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CartRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/blog': {
-      id: '/blog'
-      path: '/blog'
-      fullPath: '/blog'
-      preLoaderRoute: typeof BlogRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/adoption': {
-      id: '/adoption'
-      path: '/adoption'
-      fullPath: '/adoption'
-      preLoaderRoute: typeof AdoptionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -284,6 +294,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pets/': {
+      id: '/pets/'
+      path: '/'
+      fullPath: '/pets/'
+      preLoaderRoute: typeof PetsIndexRouteImport
+      parentRoute: typeof PetsRoute
+    }
     '/pets/$petId': {
       id: '/pets/$petId'
       path: '/$petId'
@@ -296,10 +313,12 @@ declare module '@tanstack/react-router' {
 
 interface PetsRouteChildren {
   PetsPetIdRoute: typeof PetsPetIdRoute
+  PetsIndexRoute: typeof PetsIndexRoute
 }
 
 const PetsRouteChildren: PetsRouteChildren = {
   PetsPetIdRoute: PetsPetIdRoute,
+  PetsIndexRoute: PetsIndexRoute,
 }
 
 const PetsRouteWithChildren = PetsRoute._addFileChildren(PetsRouteChildren)
@@ -308,12 +327,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AdminRoute: AdminRoute,
-  AdoptionRoute: AdoptionRoute,
-  BlogRoute: BlogRoute,
   CartRoute: CartRoute,
   ContactRoute: ContactRoute,
   DashboardRoute: DashboardRoute,
+  ExoticsRoute: ExoticsRoute,
   LoginRoute: LoginRoute,
+  OnboardingRoute: OnboardingRoute,
   PetsRoute: PetsRouteWithChildren,
   ProductsRoute: ProductsRoute,
   TrainingRoute: TrainingRoute,
@@ -321,3 +340,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

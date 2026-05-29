@@ -7,45 +7,181 @@ type AuthCtx = {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
+  isProfileComplete: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 };
 
-const Ctx = createContext<AuthCtx>({ user: null, session: null, isAdmin: false, loading: true, signOut: async () => {} });
+const Ctx = createContext<AuthCtx>({
+  user: null,
+  session: null,
+  isAdmin: false,
+  isProfileComplete: true,
+  loading: true,
+  signOut: async () => {},
+  refreshProfile: async () => {},
+});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isProfileComplete, setIsProfileComplete] = useState(true);
   const [loading, setLoading] = useState(true);
   const qc = useQueryClient();
 
+  const fetchProfileAndCheckComplete = async (userId: string) => {
+    try {
+      const isMock = !!localStorage.getItem("pawhaven_mock_session");
+      if (isMock) {
+        const stored = localStorage.getItem(`pawhaven_profile_${userId}`);
+        if (!stored) {
+          setIsProfileComplete(false);
+          return;
+        }
+        try {
+          const parsed = JSON.parse(stored);
+          const complete = !!(
+            parsed.full_name?.trim() &&
+            parsed.phone?.trim() &&
+            parsed.address_line?.trim() &&
+            parsed.city?.trim() &&
+            parsed.postal_code?.trim() &&
+            parsed.country?.trim()
+          );
+          setIsProfileComplete(complete);
+          return;
+        } catch {
+          setIsProfileComplete(false);
+          return;
+        }
+      }
+
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!profile) {
+        setIsProfileComplete(false);
+        return;
+      }
+
+      const complete = !!(
+        profile.full_name?.trim() &&
+        profile.phone?.trim() &&
+        profile.address_line?.trim() &&
+        profile.city?.trim() &&
+        profile.postal_code?.trim() &&
+        profile.country?.trim()
+      );
+      setIsProfileComplete(complete);
+    } catch (err) {
+      console.error("Error checking profile status:", err);
+      setIsProfileComplete(true);
+    }
+  };
+
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s);
-      qc.invalidateQueries();
-      if (s?.user) {
-        setTimeout(() => {
-          supabase.from("user_roles").select("role").eq("user_id", s.user.id).eq("role", "admin").maybeSingle()
-            .then(({ data }) => setIsAdmin(!!data));
-        }, 0);
-      } else {
-        setIsAdmin(false);
+    const checkMockAuth = () => {
+      if (typeof window === "undefined") return false;
+      const stored = localStorage.getItem("pawhaven_mock_session");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setSession({ user: parsed.user } as any);
+          setIsAdmin(parsed.isAdmin);
+          fetchProfileAndCheckComplete(parsed.user.id);
+          setLoading(false);
+          return true;
+        } catch (e) {
+          console.error("Failed to parse mock session:", e);
+        }
       }
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-      if (data.session?.user) {
-        supabase.from("user_roles").select("role").eq("user_id", data.session.user.id).eq("role", "admin").maybeSingle()
-          .then(({ data: r }) => setIsAdmin(!!r));
+      return false;
+    };
+
+    const handleAuthChange = () => {
+      if (!checkMockAuth()) {
+        supabase.auth.getSession().then(({ data }) => {
+          setSession(data.session);
+          setLoading(false);
+          if (data.session?.user) {
+            fetchProfileAndCheckComplete(data.session.user.id);
+            supabase.from("user_roles").select("role").eq("user_id", data.session.user.id).eq("role", "admin").maybeSingle()
+              .then(({ data: r }) => setIsAdmin(!!r));
+          } else {
+            setIsAdmin(false);
+            setIsProfileComplete(true);
+          }
+        });
       }
-    });
-    return () => subscription.unsubscribe();
+    };
+
+    window.addEventListener("auth-change", handleAuthChange);
+
+    // If mock auth is present, don't query Supabase auth initially
+    if (!checkMockAuth()) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+        if (!localStorage.getItem("pawhaven_mock_session")) {
+          setSession(s);
+          qc.invalidateQueries();
+          if (s?.user) {
+            fetchProfileAndCheckComplete(s.user.id);
+            setTimeout(() => {
+              supabase.from("user_roles").select("role").eq("user_id", s.user.id).eq("role", "admin").maybeSingle()
+                .then(({ data }) => setIsAdmin(!!data));
+            }, 0);
+          } else {
+            setIsAdmin(false);
+            setIsProfileComplete(true);
+          }
+        }
+      });
+
+      supabase.auth.getSession().then(({ data }) => {
+        if (!localStorage.getItem("pawhaven_mock_session")) {
+          setSession(data.session);
+          setLoading(false);
+          if (data.session?.user) {
+            fetchProfileAndCheckComplete(data.session.user.id);
+            supabase.from("user_roles").select("role").eq("user_id", data.session.user.id).eq("role", "admin").maybeSingle()
+              .then(({ data: r }) => setIsAdmin(!!r));
+          }
+        }
+      });
+
+      return () => {
+        subscription.unsubscribe();
+        window.removeEventListener("auth-change", handleAuthChange);
+      };
+    }
+
+    return () => {
+      window.removeEventListener("auth-change", handleAuthChange);
+    };
   }, [qc]);
 
-  const signOut = async () => { await supabase.auth.signOut(); };
+  const signOut = async () => {
+    localStorage.removeItem("pawhaven_mock_session");
+    window.dispatchEvent(new Event("auth-change"));
+    await supabase.auth.signOut();
+  };
 
-  return <Ctx.Provider value={{ user: session?.user ?? null, session, isAdmin, loading, signOut }}>{children}</Ctx.Provider>;
+  const refreshProfile = async () => {
+    if (session?.user) {
+      await fetchProfileAndCheckComplete(session.user.id);
+    }
+  };
+
+  return (
+    <Ctx.Provider value={{ user: session?.user ?? null, session, isAdmin, isProfileComplete, loading, signOut, refreshProfile }}>
+      {children}
+    </Ctx.Provider>
+  );
 }
 
 export const useAuth = () => useContext(Ctx);

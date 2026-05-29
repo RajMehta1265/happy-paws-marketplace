@@ -1,19 +1,18 @@
+import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
   createRootRouteWithContext,
   useRouter,
+  useNavigate,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
-<<<<<<< HEAD
-=======
-import { AuthProvider } from "@/hooks/use-auth";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/sonner";
->>>>>>> c5e86efeed0b9449abf0d48921bc94c99347db72
 
 function NotFoundComponent() {
   return (
@@ -77,10 +76,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "PawHaven — Premium Pet Marketplace, Adoption & Care" },
-      { name: "description", content: "Buy, adopt, train and care for the pets you love. Premium products, gentle training, and rescue stories — all in one warm place." },
-      { property: "og:title", content: "PawHaven" },
-      { property: "og:description", content: "Premium pet marketplace, adoption and care." },
+      { title: "WOOLF.INDIA — Premium Companions, Adoption & Care" },
+      { name: "description", content: "Nourishing bonds, naturally. Buy, adopt, and care for companions with WOOLF.INDIA. Premium catalog, training, and care." },
+      { property: "og:title", content: "WOOLF.INDIA" },
+      { property: "og:description", content: "Premium companions, adoption and care." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -88,7 +87,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Karla:wght@300;400;500;600;700&display=swap" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Karla:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700;800&display=swap" },
     ],
   }),
   shellComponent: RootShell,
@@ -111,19 +110,35 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function OnboardingGuard({ children }: { children: React.ReactNode }) {
+  const { user, isProfileComplete, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && user && !isProfileComplete) {
+      if (typeof window !== "undefined") {
+        const pathname = window.location.pathname;
+        if (pathname !== "/onboarding" && pathname !== "/login") {
+          navigate({ to: "/onboarding" });
+        }
+      }
+    }
+  }, [user, isProfileComplete, loading, navigate]);
+
+  return <>{children}</>;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
-<<<<<<< HEAD
-      <Outlet />
-=======
       <AuthProvider>
-        <Outlet />
-        <Toaster richColors position="top-right" />
+        <OnboardingGuard>
+          <Outlet />
+          <Toaster richColors position="top-right" />
+        </OnboardingGuard>
       </AuthProvider>
->>>>>>> c5e86efeed0b9449abf0d48921bc94c99347db72
     </QueryClientProvider>
   );
 }

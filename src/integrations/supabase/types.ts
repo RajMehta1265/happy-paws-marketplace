@@ -46,6 +46,63 @@ export type Database = {
           },
         ]
       }
+      contact_submissions: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          subject: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          name: string
+          subject: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          subject?: string
+        }
+        Relationships: []
+      }
+      consultations: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          pet_type: string
+          price_max: number
+          price_min: number
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          pet_type: string
+          price_max: number
+          price_min: number
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          pet_type?: string
+          price_max?: number
+          price_min?: number
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string

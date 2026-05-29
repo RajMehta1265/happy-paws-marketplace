@@ -1,15 +1,25 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { FiArrowRight, FiHeart, FiShield, FiAward } from "react-icons/fi";
-import heroImg from "@/assets/hero-pets.jpg";
+import { FiArrowRight, FiHeart, FiShield, FiAward, FiCheck } from "react-icons/fi";
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { pets, products, testimonials, trainingPlans } from "@/data/sample";
+import { products, testimonials, trainingPlans } from "@/data/sample";
+import { HeroSlider } from "@/components/site/HeroSlider";
+import { dbService } from "@/services/db-service";
+import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
 function Index() {
+  const { data: pets, isLoading } = useQuery({
+    queryKey: ["pets"],
+    queryFn: () => dbService.getPets(),
+  });
+
+  const featuredPets = pets?.slice(0, 4) || [];
+
   return (
     <SiteLayout>
       <section className="relative overflow-hidden">
@@ -22,14 +32,14 @@ function Index() {
               Where pets find <em className="text-primary not-italic">families</em>, and families find joy.
             </h1>
             <p className="mt-6 text-lg text-muted-foreground max-w-lg">
-              PawHaven is a gentle marketplace, adoption center, training studio and care shop — built for people who love animals the way you do.
+              WOOLF.INDIA is a gentle marketplace, training studio and care shop — built for people who love animals the way you do.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/pets" className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-primary-foreground hover:opacity-90 transition">
                 Meet the pets <FiArrowRight />
               </Link>
-              <Link to="/adoption" className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-6 py-3 hover:bg-muted transition">
-                Adopt a friend
+              <Link to="/contact" className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-6 py-3 hover:bg-muted transition">
+                Get in touch
               </Link>
             </div>
             <div className="mt-10 grid grid-cols-3 gap-6 max-w-md">
@@ -48,8 +58,8 @@ function Index() {
 
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1, ease: "easeOut" }} className="relative">
             <div className="absolute -inset-6 rounded-[3rem] bg-accent/40 blur-3xl" aria-hidden />
-            <img src={heroImg} alt="A happy puppy and kitten on a soft blanket" width={1600} height={1200} className="relative rounded-[2.5rem] shadow-soft object-cover w-full aspect-[4/3]" />
-            <div className="absolute -bottom-6 -left-6 glass rounded-2xl p-4 hidden sm:flex items-center gap-3">
+            <HeroSlider />
+            <div className="absolute -bottom-6 -left-6 bg-background/95 border border-border rounded-2xl p-4 hidden sm:flex items-center gap-3 z-30 shadow-md">
               <FiShield className="text-primary text-2xl" />
               <div>
                 <div className="text-sm font-medium">Health-checked</div>
@@ -62,24 +72,31 @@ function Index() {
 
       <Section eyebrow="Featured" title="Meet our newest companions" subtitle="Hand-raised, health-checked, and waiting to meet you." cta={{ to: "/pets", label: "View all pets" }}>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {pets.slice(0, 4).map((p, i) => (
-            <motion.div key={p.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
-              <Link to="/pets/$petId" params={{ petId: p.id }} className="block group">
-                <div className="overflow-hidden rounded-3xl bg-card hover-lift">
-                  <img src={p.image} alt={p.name} width={800} height={800} loading="lazy" className="aspect-square w-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                  <div className="p-5">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-display text-xl">{p.name}</div>
-                        <div className="text-xs text-muted-foreground">{p.breed} • {p.age}</div>
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="aspect-square rounded-3xl" />)
+            : featuredPets.map((p, i) => (
+                <motion.div key={p.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
+                  <Link to="/pets/$petId" params={{ petId: p.id }} className="block group">
+                    <div className="overflow-hidden rounded-3xl bg-card hover-lift border border-border">
+                      <img src={p.image_url ?? "/pet-1.jpg"} alt={p.name} width={800} height={800} loading="lazy" className="aspect-square w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                      <div className="p-5">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="font-display text-xl">{p.name}</div>
+                            <div className="text-xs text-muted-foreground">{p.breed} • {p.age}</div>
+                          </div>
+                          {/* Individual Price Section Bar/Badge */}
+                          <div className="shrink-0 ml-2">
+                            <span className="inline-flex rounded-full bg-accent/20 px-2.5 py-1 text-xs font-semibold text-accent-foreground font-display">
+                              ₹{Number(p.price).toFixed(0)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="font-display text-lg text-primary">${p.price}</div>
                     </div>
-                  </div>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
+                  </Link>
+                </motion.div>
+              ))}
         </div>
       </Section>
 
@@ -94,7 +111,7 @@ function Index() {
                 {t.perks.map((p) => <li key={p} className="flex gap-2"><FiAward className="text-primary mt-0.5 shrink-0" /> {p}</li>)}
               </ul>
               <div className="mt-6 flex items-center justify-between">
-                <span className="font-display text-2xl">${t.price}</span>
+                <span className="font-display text-2xl">₹{t.price}</span>
                 <Link to="/training" className="text-sm text-primary hover:underline">Book →</Link>
               </div>
             </div>
@@ -112,7 +129,7 @@ function Index() {
                   <div className="text-xs text-muted-foreground">{p.category}</div>
                   <div className="font-display text-lg">{p.name}</div>
                 </div>
-                <div className="font-display text-xl text-primary">${p.price}</div>
+                <div className="font-display text-xl text-primary">₹{p.price}</div>
               </div>
             </div>
           ))}
@@ -136,9 +153,9 @@ function Index() {
       <section className="mx-auto max-w-7xl px-6 my-24">
         <div className="rounded-[2.5rem] bg-primary text-primary-foreground p-12 lg:p-20 text-center">
           <h2 className="font-display text-4xl lg:text-5xl text-balance">A pet is waiting to change your life.</h2>
-          <p className="mt-4 opacity-80 max-w-xl mx-auto">Browse pets ready for adoption today — every fee supports rescue, vaccination, and care.</p>
-          <Link to="/adoption" className="mt-8 inline-flex items-center gap-2 rounded-full bg-background text-foreground px-7 py-3 hover:opacity-90 transition">
-            Start adopting <FiArrowRight />
+          <p className="mt-4 opacity-80 max-w-xl mx-auto">Browse our curated, health-checked pets ready to join your family today.</p>
+          <Link to="/pets" className="mt-8 inline-flex items-center gap-2 rounded-full bg-background text-foreground px-7 py-3 hover:opacity-90 transition">
+            Explore Marketplace <FiArrowRight />
           </Link>
         </div>
       </section>
