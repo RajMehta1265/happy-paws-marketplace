@@ -2,12 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { FiCheck, FiHeart, FiStar, FiMessageSquare, FiSend, FiShoppingBag } from "react-icons/fi";
+import { FiCheck, FiHeart, FiStar, FiMessageSquare, FiSend, FiShoppingBag, FiPlay } from "react-icons/fi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect } from "react";
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "sonner";
-import { dbService } from "@/services/db-service";
+import { dbService, parseImages } from "@/services/db-service";
 
 export const Route = createFileRoute("/pets/$petId")({
   component: PetDetail,
@@ -42,7 +42,26 @@ function PetDetail() {
   const { data: pet, isLoading } = useQuery({
     queryKey: ["pet", petId],
     queryFn: () => dbService.getPet(petId),
+    initialData: () => {
+      const localPets = dbService.initLocalData();
+      return localPets.find((p) => p.id === petId) || undefined;
+    },
   });
+
+  const [showVideo, setShowVideo] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  useEffect(() => {
+    setShowVideo(false);
+    setActiveImageIndex(0);
+
+    if (pet?.video_url) {
+      const timer = setTimeout(() => {
+        setShowVideo(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [pet?.id, pet?.video_url]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -105,13 +124,64 @@ function PetDetail() {
       <section className="mx-auto max-w-7xl px-6 pt-32 pb-16 grid lg:grid-cols-2 gap-12 items-start">
         
         {/* Media Block (Left Column) */}
-        {pet.video_url ? (
-          <div className="relative rounded-[2.5rem] w-full aspect-square overflow-hidden shadow-soft bg-black border border-border">
-            <video src={pet.video_url} controls className="w-full h-full object-cover" />
-          </div>
-        ) : (
-          <img src={pet.image_url ?? "/pet-1.jpg"} alt={pet.name} width={800} height={800} className="rounded-[2.5rem] w-full aspect-square object-cover shadow-soft border border-border" />
-        )}
+        <div className="space-y-4 w-full">
+          {showVideo && pet.video_url ? (
+            <div className="relative rounded-[2.5rem] w-full aspect-square overflow-hidden shadow-soft bg-black border border-border animate-fade-in">
+              <video src={pet.video_url} controls autoPlay className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className="relative rounded-[2.5rem] w-full aspect-square overflow-hidden shadow-soft border border-border bg-card">
+              <img
+                src={parseImages(pet.image_url)[activeImageIndex] || pet.image_url || "/pet-1.jpg"}
+                alt={pet.name}
+                className="w-full h-full object-cover"
+              />
+              {pet.video_url && (
+                <button
+                  onClick={() => setShowVideo(true)}
+                  className="absolute bottom-4 right-4 bg-primary/80 hover:bg-primary text-primary-foreground rounded-full px-4 py-2 text-xs font-semibold flex items-center gap-1.5 backdrop-blur-xs shadow-md transition cursor-pointer"
+                >
+                  <FiPlay size={12} /> Play Video
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Media Thumbnails Navigation */}
+          {(parseImages(pet.image_url).length > 1 || pet.video_url) && (
+            <div className="flex flex-wrap gap-3 py-2">
+              {parseImages(pet.image_url).map((imgUrl, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setActiveImageIndex(idx);
+                    setShowVideo(false);
+                  }}
+                  className={`relative w-20 h-20 rounded-2xl overflow-hidden border-2 transition cursor-pointer flex-shrink-0 ${
+                    !showVideo && activeImageIndex === idx
+                      ? "border-accent shadow-md scale-105"
+                      : "border-border hover:border-accent/50"
+                  }`}
+                >
+                  <img src={imgUrl} alt={`${pet.name} thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+              {pet.video_url && (
+                <button
+                  onClick={() => setShowVideo(true)}
+                  className={`relative w-20 h-20 rounded-2xl overflow-hidden border-2 transition cursor-pointer flex-shrink-0 bg-black flex flex-col items-center justify-center text-white ${
+                    showVideo
+                      ? "border-accent shadow-md scale-105"
+                      : "border-border hover:border-accent/50"
+                  }`}
+                >
+                  <FiPlay size={20} className="text-accent" />
+                  <span className="text-[9px] font-bold uppercase mt-1">Video</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
         
         {/* Details Block (Right Column) */}
         <div className="space-y-6">
@@ -128,7 +198,7 @@ function PetDetail() {
 
           <div className="space-y-2">
             <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground">About {pet.name}</h4>
-            <p className="text-sm text-foreground/80 leading-relaxed">{pet.description}</p>
+            <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap break-words">{pet.description}</p>
           </div>
           
           <div className="flex flex-wrap gap-2 text-xs font-semibold">

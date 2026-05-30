@@ -25,6 +25,31 @@ const openIndexedDB = (): Promise<IDBDatabase> => {
   });
 };
 
+// Background media pruner to remove heavy local base64 images/videos that stall the browser thread
+if (typeof window !== "undefined") {
+  setTimeout(async () => {
+    try {
+      const db = await openIndexedDB();
+      const tx = db.transaction("media", "readwrite");
+      const store = tx.objectStore("media");
+      const req = store.openCursor();
+      req.onsuccess = (e: any) => {
+        const cursor = e.target.result;
+        if (cursor) {
+          const value = cursor.value;
+          if (typeof value === "string" && value.length > 2 * 1024 * 1024) {
+            console.log(`Pruning large IndexedDB media key: ${cursor.key} (size: ${value.length})`);
+            cursor.delete();
+          }
+          cursor.continue();
+        }
+      };
+    } catch (e) {
+      console.warn("IndexedDB background pruning failed:", e);
+    }
+  }, 2000);
+}
+
 const storeMedia = async (key: string, value: string): Promise<string> => {
   if (typeof window === "undefined" || !value || !value.startsWith("data:")) return value;
   try {
@@ -43,9 +68,12 @@ const storeMedia = async (key: string, value: string): Promise<string> => {
   }
 };
 
+const mediaCache: Record<string, string> = {};
+
 const loadMedia = async (value: string | null | undefined): Promise<string | null> => {
   if (!value || !value.startsWith("indexeddb://")) return value || null;
   const key = value.replace("indexeddb://", "");
+  if (mediaCache[key]) return mediaCache[key];
   try {
     const db = await openIndexedDB();
     const result = await new Promise<string | null>((resolve, reject) => {
@@ -55,6 +83,9 @@ const loadMedia = async (value: string | null | undefined): Promise<string | nul
       req.onsuccess = () => resolve(req.result || null);
       req.onerror = () => reject(req.error);
     });
+    if (result) {
+      mediaCache[key] = result;
+    }
     return result;
   } catch (err) {
     console.warn("Failed to load from IndexedDB:", err);
@@ -76,6 +107,73 @@ const deleteMedia = async (key: string): Promise<void> => {
   } catch (err) {
     console.warn("Failed to delete from IndexedDB:", err);
   }
+};
+
+const withTimeout = <T>(promise: PromiseLike<T>, ms = 3000): Promise<T> => {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("Database request timeout")), ms);
+    promise.then(
+      (res) => { clearTimeout(timer); resolve(res); },
+      (err) => { clearTimeout(timer); reject(err); }
+    );
+  });
+};
+
+export const parseImages = (imageUrlString: string | null | undefined): string[] => {
+  if (!imageUrlString) return [];
+  const trimmed = imageUrlString.trim();
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (e) {
+      console.warn("Failed to parse image_url JSON in parseImages:", e);
+    }
+  }
+  return [imageUrlString];
+};
+
+const storeMediaArrayOrSingle = async (keyPrefix: string, value: string): Promise<string> => {
+  if (!value) return value;
+  const trimmed = value.trim();
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        const storedArray = await Promise.all(
+          parsed.map(async (item, index) => {
+            return await storeMedia(`${keyPrefix}_${index}`, item);
+          })
+        );
+        return JSON.stringify(storedArray);
+      }
+    } catch (e) {
+      console.warn("Failed to parse image_url as JSON array in storeMedia:", e);
+    }
+  }
+  return await storeMedia(keyPrefix, value);
+};
+
+const loadMediaArrayOrSingle = async (value: string | null | undefined): Promise<string | null> => {
+  if (!value) return value || null;
+  const trimmed = value.trim();
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        const loadedArray = await Promise.all(
+          parsed.map(async (item) => {
+            const loaded = await loadMedia(item);
+            return loaded || item;
+          })
+        );
+        return JSON.stringify(loadedArray);
+      }
+    } catch (e) {
+      console.warn("Failed to parse image_url as JSON array in loadMedia:", e);
+    }
+  }
+  return await loadMedia(value);
 };
 
 export interface Pet {
@@ -253,7 +351,27 @@ export const dbService = {
       return DEFAULT_PETS;
     }
     try {
-      return JSON.parse(data);
+      const parsed = JSON.parse(data) as Pet[];
+      let changed = false;
+      const cleaned = parsed.map(pet => {
+        let cleanImg = pet.image_url;
+        let cleanVid = pet.video_url;
+        // If it's a huge base64 in local storage
+        if (pet.image_url && pet.image_url.startsWith("data:") && pet.image_url.length > 100000) {
+          cleanImg = pet1;
+          changed = true;
+        }
+        if (pet.video_url && pet.video_url.startsWith("data:") && pet.video_url.length > 500000) {
+          cleanVid = null;
+          changed = true;
+        }
+        return { ...pet, image_url: cleanImg, video_url: cleanVid };
+      });
+      if (changed) {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cleaned));
+        return cleaned;
+      }
+      return parsed;
     } catch {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(DEFAULT_PETS));
       return DEFAULT_PETS;
@@ -270,34 +388,25 @@ export const dbService = {
   // GET ALL PETS
   async getPets(): Promise<Pet[]> {
     const localPets = this.initLocalData();
-    // Resolve any IndexedDB media references in localPets
-    const resolvedLocalPets = await Promise.all(
-      localPets.map(async (pet) => {
-        const img = await loadMedia(pet.image_url);
-        const vid = await loadMedia(pet.video_url);
-        return {
-          ...pet,
-          image_url: img || pet.image_url,
-          video_url: vid || pet.video_url,
-        };
-      })
-    );
 
     try {
-      const { data, error } = await supabase
-        .from("pets")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data, error } = await withTimeout(
+        supabase
+          .from("pets")
+          .select("*")
+          .order("created_at", { ascending: false })
+      );
 
       if (error) {
         console.warn("Supabase fetch failed, using local fallback:", error.message);
-        return resolvedLocalPets;
+        return await this.resolveLocalPetsList(localPets);
       }
 
       if (!data || data.length === 0) {
         // If Supabase is empty, seed it with local data
         console.log("Supabase table is empty. Seeding Supabase with local data...");
-        for (const pet of resolvedLocalPets) {
+        const resolved = await this.resolveLocalPetsList(localPets);
+        for (const pet of resolved) {
           // Try to insert with video_url first; if the column doesn't exist, insert without it
           const { error } = await supabase.from("pets").insert({
             name: pet.name,
@@ -320,14 +429,14 @@ export const dbService = {
             });
           }
         }
-        return resolvedLocalPets;
+        return resolved;
       }
 
       // Merge Supabase data with local videos (since Supabase might not store video_url)
       const merged = await Promise.all(
         data.map(async (sp: any) => {
-          const lp = resolvedLocalPets.find((l) => l.name.toLowerCase() === sp.name.toLowerCase());
-          const img = await loadMedia(sp.image_url);
+          const lp = localPets.find((l) => l.name.toLowerCase() === sp.name.toLowerCase());
+          const img = await loadMediaArrayOrSingle(sp.image_url);
           const vid = await loadMedia(sp.video_url || lp?.video_url);
           return {
             id: sp.id,
@@ -350,17 +459,15 @@ export const dbService = {
       return merged;
     } catch (err) {
       console.warn("Error in getPets, returning local storage:", err);
-      return resolvedLocalPets;
+      return await this.resolveLocalPetsList(localPets);
     }
   },
 
-  // GET SINGLE PET BY ID
-  async getPet(id: string): Promise<Pet | null> {
-    const localPets = this.initLocalData();
-    // Resolve local storage references asynchronously
-    const resolvedLocalPets = await Promise.all(
+  // Helper to resolve local pets list asynchronously
+  async resolveLocalPetsList(localPets: Pet[]): Promise<Pet[]> {
+    return await Promise.all(
       localPets.map(async (pet) => {
-        const img = await loadMedia(pet.image_url);
+        const img = await loadMediaArrayOrSingle(pet.image_url);
         const vid = await loadMedia(pet.video_url);
         return {
           ...pet,
@@ -369,19 +476,34 @@ export const dbService = {
         };
       })
     );
+  },
+
+  // GET SINGLE PET BY ID
+  async getPet(id: string): Promise<Pet | null> {
+    const localPets = this.initLocalData();
 
     try {
-      const { data, error } = await supabase.from("pets").select("*").eq("id", id).maybeSingle();
+      const { data, error } = await withTimeout(
+        supabase.from("pets").select("*").eq("id", id).maybeSingle()
+      );
 
       if (error || !data) {
         // Fallback to local storage
-        return resolvedLocalPets.find((p) => p.id === id) || null;
+        const lp = localPets.find((p) => p.id === id);
+        if (!lp) return null;
+        const img = await loadMediaArrayOrSingle(lp.image_url);
+        const vid = await loadMedia(lp.video_url);
+        return {
+          ...lp,
+          image_url: img || lp.image_url,
+          video_url: vid || lp.video_url,
+        };
       }
 
-      const lp = resolvedLocalPets.find(
+      const lp = localPets.find(
         (l) => l.name.toLowerCase() === data.name.toLowerCase() || l.id === data.id,
       );
-      const img = await loadMedia(data.image_url);
+      const img = await loadMediaArrayOrSingle(data.image_url);
       const vid = await loadMedia((data as any).video_url || lp?.video_url);
       return {
         id: data.id,
@@ -400,7 +522,15 @@ export const dbService = {
       };
     } catch (err) {
       console.warn(`Error in getPet(${id}), returning local storage pet:`, err);
-      return resolvedLocalPets.find((p) => p.id === id) || null;
+      const lp = localPets.find((p) => p.id === id);
+      if (!lp) return null;
+      const img = await loadMediaArrayOrSingle(lp.image_url);
+      const vid = await loadMedia(lp.video_url);
+      return {
+        ...lp,
+        image_url: img || lp.image_url,
+        video_url: vid || lp.video_url,
+      };
     }
   },
 
@@ -410,7 +540,7 @@ export const dbService = {
     const newId = crypto.randomUUID();
 
     // Store large Base64 files in IndexedDB, and store references in local storage
-    const storedImageUrl = await storeMedia(`pet_img_${newId}`, petInput.image_url);
+    const storedImageUrl = await storeMediaArrayOrSingle(`pet_img_${newId}`, petInput.image_url);
     const storedVideoUrl = petInput.video_url
       ? await storeMedia(`pet_vid_${newId}`, petInput.video_url)
       : null;
@@ -427,37 +557,46 @@ export const dbService = {
     this.saveLocalData(updatedPets);
 
     // Save to Supabase (attempt with actual Base64/url values)
-    try {
-      const { error } = await supabase.from("pets").insert([
+    Promise.resolve(
+      supabase.from("pets").insert([
         {
           name: petInput.name,
           type: petInput.type,
           breed: petInput.breed,
           age: petInput.age,
           price: petInput.price,
-          image_url: petInput.image_url,
-          video_url: petInput.video_url,
+          image_url: storedImageUrl,
+          video_url: storedVideoUrl,
           description: petInput.description,
           vaccinated: petInput.vaccinated,
           adoption: petInput.adoption,
           status: petInput.status,
         },
-      ] as any);
+      ] as any)
+    ).then(({ error }) => {
       if (error) {
         if (error.message.includes("column") || error.message.includes("video_url")) {
           console.warn(
             "video_url column is missing in Supabase pets table. Retrying insert without it...",
           );
           const { video_url, ...supabasePayload } = petInput;
-          const { error: retryError } = await supabase.from("pets").insert([supabasePayload]);
-          if (retryError) console.warn("Retry failed:", retryError.message);
+          Promise.resolve(
+            supabase.from("pets").insert([{
+              ...supabasePayload,
+              image_url: storedImageUrl
+            }])
+          ).then(({ error: retryError }) => {
+            if (retryError) console.warn("Retry failed:", retryError.message);
+          }).catch((err: any) => {
+            console.warn("Retry error:", err);
+          });
         } else {
           console.warn("Could not save pet to Supabase (saved locally instead):", error.message);
         }
       }
-    } catch (err) {
+    }).catch((err: any) => {
       console.warn("Supabase insert failed, pet saved to local storage only:", err);
-    }
+    });
 
     // Return the resolved pet so client gets actual values
     return {
@@ -473,25 +612,24 @@ export const dbService = {
     const index = localPets.findIndex((p) => p.id === id);
     let updatedPet = localPets[index];
 
+    let storedImageUrl = updatedPet ? updatedPet.image_url : petInput.image_url;
+    if (petInput.image_url && (!updatedPet || petInput.image_url !== updatedPet.image_url)) {
+      storedImageUrl = await storeMediaArrayOrSingle(`pet_img_${id}`, petInput.image_url);
+    }
+
+    let storedVideoUrl = updatedPet ? updatedPet.video_url : petInput.video_url;
+    if (petInput.video_url !== undefined && (!updatedPet || petInput.video_url !== updatedPet.video_url)) {
+      storedVideoUrl = petInput.video_url
+        ? await storeMedia(`pet_vid_${id}`, petInput.video_url)
+        : null;
+    }
+
     if (index !== -1) {
-      // Store large Base64 files in IndexedDB, and store references in local storage
-      let storedImageUrl = localPets[index].image_url;
-      if (petInput.image_url && petInput.image_url !== localPets[index].image_url) {
-        storedImageUrl = await storeMedia(`pet_img_${id}`, petInput.image_url);
-      }
-
-      let storedVideoUrl = localPets[index].video_url;
-      if (petInput.video_url !== undefined && petInput.video_url !== localPets[index].video_url) {
-        storedVideoUrl = petInput.video_url
-          ? await storeMedia(`pet_vid_${id}`, petInput.video_url)
-          : null;
-      }
-
       updatedPet = {
         ...localPets[index],
         ...petInput,
-        image_url: storedImageUrl,
-        video_url: storedVideoUrl,
+        image_url: storedImageUrl || localPets[index].image_url,
+        video_url: storedVideoUrl !== undefined ? storedVideoUrl : localPets[index].video_url,
       };
 
       localPets[index] = updatedPet;
@@ -499,8 +637,8 @@ export const dbService = {
     }
 
     // Save to Supabase (attempt)
-    try {
-      const { error } = await supabase
+    Promise.resolve(
+      supabase
         .from("pets")
         .update({
           name: petInput.name,
@@ -508,26 +646,34 @@ export const dbService = {
           breed: petInput.breed,
           age: petInput.age,
           price: petInput.price,
-          image_url: petInput.image_url,
-          video_url: petInput.video_url,
+          image_url: storedImageUrl,
+          video_url: storedVideoUrl,
           description: petInput.description,
           vaccinated: petInput.vaccinated,
           adoption: petInput.adoption,
           status: petInput.status,
         } as any)
-        .eq("id", id);
-
+        .eq("id", id)
+    ).then(({ error }) => {
       if (error) {
         if (error.message.includes("column") || error.message.includes("video_url")) {
           console.warn(
             "video_url column is missing in Supabase pets table. Retrying update without it...",
           );
           const { video_url, id: _id, created_at: _c, ...supabasePayload } = petInput;
-          const { error: retryError } = await supabase
-            .from("pets")
-            .update(supabasePayload)
-            .eq("id", id);
-          if (retryError) console.warn("Retry failed:", retryError.message);
+          Promise.resolve(
+            supabase
+              .from("pets")
+              .update({
+                ...supabasePayload,
+                image_url: storedImageUrl
+              })
+              .eq("id", id)
+          ).then(({ error: retryError }) => {
+            if (retryError) console.warn("Retry failed:", retryError.message);
+          }).catch((err: any) => {
+            console.warn("Retry error:", err);
+          });
         } else {
           console.warn(
             "Could not update pet in Supabase (updated locally instead):",
@@ -535,9 +681,9 @@ export const dbService = {
           );
         }
       }
-    } catch (err) {
+    }).catch((err: any) => {
       console.warn("Supabase update failed, pet updated in local storage only:", err);
-    }
+    });
 
     // Return the resolved pet so client gets actual values
     return {
@@ -554,21 +700,20 @@ export const dbService = {
     this.saveLocalData(filtered);
 
     // Clean up IndexedDB media
-    await deleteMedia(`pet_img_${id}`);
-    await deleteMedia(`pet_vid_${id}`);
+    deleteMedia(`pet_img_${id}`).catch((err: any) => console.warn("deleteMedia error:", err));
+    deleteMedia(`pet_vid_${id}`).catch((err: any) => console.warn("deleteMedia error:", err));
 
     // Delete from Supabase (attempt)
-    try {
-      const { error } = await supabase.from("pets").delete().eq("id", id);
+    Promise.resolve(supabase.from("pets").delete().eq("id", id)).then(({ error }) => {
       if (error) {
         console.warn(
           "Could not delete pet from Supabase (deleted locally instead):",
           error.message,
         );
       }
-    } catch (err) {
+    }).catch((err: any) => {
       console.warn("Supabase delete failed, pet deleted from local storage only:", err);
-    }
+    });
 
     return true;
   },
@@ -586,10 +731,12 @@ export const dbService = {
       }
     }
     try {
-      const { data, error } = await supabase
-        .from("consultations")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data, error } = await withTimeout(
+        supabase
+          .from("consultations")
+          .select("*")
+          .order("created_at", { ascending: false })
+      );
 
       if (error) {
         console.warn("Supabase consultations fetch failed, using local fallback:", error.message);
@@ -625,8 +772,8 @@ export const dbService = {
       localStorage.setItem(CONSULTATIONS_LOCAL_KEY, JSON.stringify(list));
     }
 
-    try {
-      const { error } = await supabase.from("consultations").insert([
+    Promise.resolve(
+      supabase.from("consultations").insert([
         {
           name: newConsultation.name,
           email: newConsultation.email,
@@ -634,13 +781,14 @@ export const dbService = {
           price_min: Number(newConsultation.price_min),
           price_max: Number(newConsultation.price_max),
         }
-      ]);
+      ])
+    ).then(({ error }) => {
       if (error) {
         console.warn("Could not save consultation to Supabase (saved locally instead):", error.message);
       }
-    } catch (err) {
+    }).catch((err: any) => {
       console.warn("Supabase consultation insert failed, saved locally:", err);
-    }
+    });
 
     return newConsultation;
   },

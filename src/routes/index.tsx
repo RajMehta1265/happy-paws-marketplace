@@ -4,7 +4,7 @@ import { FiArrowRight, FiHeart, FiShield, FiAward, FiCheck } from "react-icons/f
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { products, testimonials, trainingPlans } from "@/data/sample";
 import { HeroSlider } from "@/components/site/HeroSlider";
-import { dbService } from "@/services/db-service";
+import { dbService, parseImages } from "@/services/db-service";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -16,6 +16,7 @@ function Index() {
   const { data: pets, isLoading } = useQuery({
     queryKey: ["pets"],
     queryFn: () => dbService.getPets(),
+    initialData: () => dbService.initLocalData(),
   });
 
   const featuredPets = pets?.slice(0, 4) || [];
@@ -78,7 +79,7 @@ function Index() {
                 <motion.div key={p.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
                   <Link to="/pets/$petId" params={{ petId: p.id }} className="block group">
                     <div className="overflow-hidden rounded-3xl bg-card hover-lift border border-border">
-                      <img src={p.image_url ?? "/pet-1.jpg"} alt={p.name} width={800} height={800} loading="lazy" className="aspect-square w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                      <img src={parseImages(p.image_url)[0] || p.image_url || "/pet-1.jpg"} alt={p.name} width={800} height={800} loading="lazy" className="aspect-square w-full object-cover transition-transform duration-700 group-hover:scale-105" />
                       <div className="p-5">
                         <div className="flex justify-between items-center">
                           <div>

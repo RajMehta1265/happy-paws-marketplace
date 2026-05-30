@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { dbService, Pet, Consultation } from "@/services/db-service";
+import { dbService, Pet, Consultation, parseImages } from "@/services/db-service";
 import { FiCheck, FiFilter, FiArrowRight, FiInfo } from "react-icons/fi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -25,7 +25,24 @@ function PetsPage() {
   const [type, setType] = useState<(typeof TYPES)[number]>("All");
   const [breed, setBreed] = useState<string>("All Breeds");
   const [saleType, setSaleType] = useState<"all" | "sale">("all");
-  const [max, setMax] = useState(1500);
+
+  // Fetch pets
+  const { data: pets, isLoading: petsLoading } = useQuery({
+    queryKey: ["pets"],
+    queryFn: () => dbService.getPets(),
+    initialData: () => dbService.initLocalData(),
+  });
+
+  // Dynamically resolve maximum price from pet data, fallback to 5000
+  const maxSliderValue = useMemo(() => {
+    if (!pets || pets.length === 0) return 5000;
+    const prices = pets.map(p => Number(p.price));
+    const rawMax = Math.max(...prices, 5000);
+    return Math.ceil(rawMax / 500) * 500;
+  }, [pets]);
+
+  const [max, setMax] = useState<number | null>(null);
+  const currentMaxPrice = max ?? maxSliderValue;
 
   // Consultation form state
   const [consultName, setConsultName] = useState("");
@@ -34,12 +51,6 @@ function PetsPage() {
   const [consultPriceMin, setConsultPriceMin] = useState(100);
   const [consultPriceMax, setConsultPriceMax] = useState(1000);
   const [isSubmittingConsult, setIsSubmittingConsult] = useState(false);
-
-  // Fetch pets
-  const { data: pets, isLoading: petsLoading } = useQuery({
-    queryKey: ["pets"],
-    queryFn: () => dbService.getPets(),
-  });
 
   // Fetch consultations
   const { data: consultations, isLoading: consultsLoading } = useQuery({
@@ -71,11 +82,11 @@ function PetsPage() {
         }
 
         // Price filter: Only applies to pets that are for purchase.
-        const matchPrice = Number(p.price) <= max;
+        const matchPrice = Number(p.price) <= currentMaxPrice;
 
         return matchType && matchBreed && matchPrice;
       });
-  }, [pets, type, breed, max]);
+  }, [pets, type, breed, currentMaxPrice]);
 
   // Submit consultation
   const handleConsultSubmit = async (e: React.FormEvent) => {
@@ -186,13 +197,13 @@ function PetsPage() {
 
               {/* Price Range Slider */}
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span>Max Price: <strong className="text-foreground">₹{max}</strong></span>
+                <span>Max Price: <strong className="text-foreground">₹{currentMaxPrice}</strong></span>
                 <input
                   type="range"
                   min={50}
-                  max={2000}
+                  max={maxSliderValue}
                   step={50}
-                  value={max}
+                  value={currentMaxPrice}
                   onChange={(e) => setMax(+e.target.value)}
                   className="accent-primary cursor-pointer w-32 sm:w-40 h-1.5 bg-muted rounded-lg appearance-none"
                 />
@@ -214,7 +225,7 @@ function PetsPage() {
                 <div>
                   <div className="relative aspect-[4/3] w-full bg-muted overflow-hidden">
                     <img
-                      src={p.image_url ?? "/pet-1.jpg"}
+                      src={parseImages(p.image_url)[0] || p.image_url || "/pet-1.jpg"}
                       alt={p.name}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-103"
                       loading="lazy"

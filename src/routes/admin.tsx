@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { dbService, Pet } from "@/services/db-service";
+import { dbService, Pet, parseImages } from "@/services/db-service";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -119,6 +119,34 @@ function AdminPage() {
     reader.readAsDataURL(file);
   };
 
+  const handleMultipleImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const currentImages = parseImages(formData.image_url);
+    const newImages: string[] = [...currentImages];
+    let loadedCount = 0;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.size > 3 * 1024 * 1024) {
+        toast.warning(`${file.name} is larger than 3MB. High resolution images may affect database sync and load speeds.`);
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        newImages.push(base64String);
+        loadedCount++;
+        if (loadedCount === files.length) {
+          setFormData(prev => ({ ...prev, image_url: JSON.stringify(newImages) }));
+          toast.success(`Successfully loaded ${files.length} image(s) from computer!`);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -193,6 +221,7 @@ function AdminPage() {
   const { data: pets, isLoading: petsLoading } = useQuery({
     queryKey: ["pets"],
     queryFn: () => dbService.getPets(),
+    initialData: () => dbService.initLocalData(),
   });
 
   // Fetch products (shop items)
@@ -668,19 +697,51 @@ function AdminPage() {
                           type="text"
                           placeholder="Image URL"
                           className="flex-1 rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
-                          value={formData.image_url.startsWith("data:") ? "Image loaded from computer" : formData.image_url}
+                          value={
+                            formData.image_url.trim().startsWith("[")
+                              ? `${parseImages(formData.image_url).length} images selected`
+                              : formData.image_url.startsWith("data:")
+                              ? "Image loaded from computer"
+                              : formData.image_url
+                          }
                           onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                         />
                         <label className="rounded-full bg-primary/10 border border-primary/20 px-5 py-3 text-sm text-primary hover:bg-primary/20 transition cursor-pointer flex items-center gap-2 whitespace-nowrap font-medium">
                           <FiUploadCloud /> Upload from PC
                           <input
                             type="file"
+                            multiple
                             accept="image/*"
                             className="hidden"
-                            onChange={(e) => handleImageUpload(e, "pet")}
+                            onChange={handleMultipleImagesUpload}
                           />
                         </label>
                       </div>
+
+                      {/* Thumbnail Previews */}
+                      {parseImages(formData.image_url).length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2 p-3 bg-muted/40 rounded-2xl border border-border">
+                          {parseImages(formData.image_url).map((url, idx) => (
+                            <div key={idx} className="relative w-16 h-16 group rounded-lg overflow-hidden border border-border bg-background">
+                              <img src={url} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = parseImages(formData.image_url).filter((_, i) => i !== idx);
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    image_url: updated.length === 1 ? updated[0] : (updated.length > 1 ? JSON.stringify(updated) : "")
+                                  }));
+                                }}
+                                className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md hover:scale-105 transition cursor-pointer flex items-center justify-center"
+                              >
+                                <FiX size={10} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       <div className="flex gap-2 mt-1">
                         <button
                           type="button"
@@ -787,7 +848,7 @@ function AdminPage() {
                         <tr key={p.id} className="hover:bg-muted/20 transition">
                           <td className="px-6 py-4 font-medium text-foreground flex items-center gap-3">
                             <img
-                              src={p.image_url.startsWith("data:") ? p.image_url : p.image_url || "/pet-1.jpg"}
+                              src={parseImages(p.image_url)[0] || "/pet-1.jpg"}
                               alt={p.name}
                               className="h-10 w-10 rounded-full object-cover border border-border bg-muted"
                             />
@@ -972,19 +1033,50 @@ function AdminPage() {
                           type="text"
                           placeholder="Image URL"
                           className="flex-1 rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
-                          value={formData.image_url.startsWith("data:") ? "Image loaded from computer" : formData.image_url}
+                          value={
+                            formData.image_url.trim().startsWith("[")
+                              ? `${parseImages(formData.image_url).length} images selected`
+                              : formData.image_url.startsWith("data:")
+                              ? "Image loaded from computer"
+                              : formData.image_url
+                          }
                           onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                         />
                         <label className="rounded-full bg-primary/10 border border-primary/20 px-5 py-3 text-sm text-primary hover:bg-primary/20 transition cursor-pointer flex items-center gap-2 whitespace-nowrap font-medium">
                           <FiUploadCloud /> Upload from PC
                           <input
                             type="file"
+                            multiple
                             accept="image/*"
                             className="hidden"
-                            onChange={(e) => handleImageUpload(e, "pet")}
+                            onChange={handleMultipleImagesUpload}
                           />
                         </label>
                       </div>
+
+                      {/* Thumbnail Previews */}
+                      {parseImages(formData.image_url).length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2 p-3 bg-muted/40 rounded-2xl border border-border">
+                          {parseImages(formData.image_url).map((url, idx) => (
+                            <div key={idx} className="relative w-16 h-16 group rounded-lg overflow-hidden border border-border bg-background">
+                              <img src={url} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = parseImages(formData.image_url).filter((_, i) => i !== idx);
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    image_url: updated.length === 1 ? updated[0] : (updated.length > 1 ? JSON.stringify(updated) : "")
+                                  }));
+                                }}
+                                className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md hover:scale-105 transition cursor-pointer flex items-center justify-center"
+                              >
+                                <FiX size={10} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
@@ -1072,7 +1164,7 @@ function AdminPage() {
                         <tr key={p.id} className="hover:bg-muted/20 transition">
                           <td className="px-6 py-4 font-medium text-foreground flex items-center gap-3">
                             <img
-                              src={p.image_url.startsWith("data:") ? p.image_url : p.image_url || "/pet-1.jpg"}
+                              src={parseImages(p.image_url)[0] || "/pet-1.jpg"}
                               alt={p.name}
                               className="h-10 w-10 rounded-full object-cover border border-border bg-muted"
                             />

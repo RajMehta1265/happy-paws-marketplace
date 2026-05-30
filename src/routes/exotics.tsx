@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { useQuery } from "@tanstack/react-query";
-import { dbService } from "@/services/db-service";
+import { dbService, parseImages } from "@/services/db-service";
 import { FiCheck, FiInfo } from "react-icons/fi";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -24,6 +24,7 @@ function ExoticsPage() {
   const { data: pets, isLoading } = useQuery({
     queryKey: ["pets"],
     queryFn: () => dbService.getPets(),
+    initialData: () => dbService.initLocalData(),
   });
 
   const exotics = useMemo(() => {
@@ -70,7 +71,7 @@ function ExoticsPage() {
               >
                 <div className="relative overflow-hidden aspect-[4/3]">
                   <img
-                    src={p.image_url ?? "/pet-1.jpg"}
+                    src={parseImages(p.image_url)[0] || p.image_url || "/pet-1.jpg"}
                     alt={p.name}
                     width={800}
                     height={800}

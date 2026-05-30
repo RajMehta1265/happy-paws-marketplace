@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/site/SiteLayout";
+import { parseImages } from "@/services/db-service";
 import { useCart } from "@/hooks/use-cart";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -212,7 +213,7 @@ function CartPage() {
                   className="flex items-center gap-4 rounded-2xl bg-card border border-border p-4"
                 >
                   <img
-                    src={i.product?.image_url ?? "/product-1.jpg"}
+                    src={parseImages(i.product?.image_url)[0] || i.product?.image_url || "/product-1.jpg"}
                     alt={i.product?.name}
                     className="h-20 w-20 rounded-xl object-cover"
                   />
