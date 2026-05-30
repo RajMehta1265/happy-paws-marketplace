@@ -25,6 +25,7 @@ function ExoticsPage() {
     queryKey: ["pets"],
     queryFn: () => dbService.getPets(),
     initialData: () => dbService.initLocalData(),
+    staleTime: 0,
   });
 
   const exotics = useMemo(() => {

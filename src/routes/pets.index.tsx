@@ -31,6 +31,7 @@ function PetsPage() {
     queryKey: ["pets"],
     queryFn: () => dbService.getPets(),
     initialData: () => dbService.initLocalData(),
+    staleTime: 0,
   });
 
   // Dynamically resolve maximum price from pet data, fallback to 5000
@@ -66,6 +67,7 @@ function PetsPage() {
 
   const filtered = useMemo(() => {
     return (pets ?? [])
+      .filter((p) => p.type.toLowerCase() !== "exotic") // Exclude exotic pets from normal pet page
       .filter((p) => !p.adoption) // Completely remove adoption pets to scrub adoption from site
       .filter((p) => {
         // Animal Type Filter

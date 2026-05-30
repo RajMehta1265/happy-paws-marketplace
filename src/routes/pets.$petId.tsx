@@ -46,6 +46,7 @@ function PetDetail() {
       const localPets = dbService.initLocalData();
       return localPets.find((p) => p.id === petId) || undefined;
     },
+    staleTime: 0,
   });
 
   const [showVideo, setShowVideo] = useState(false);

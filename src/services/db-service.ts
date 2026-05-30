@@ -25,6 +25,29 @@ const openIndexedDB = (): Promise<IDBDatabase> => {
   });
 };
 
+const mediaCache: Record<string, string> = {};
+
+// Preload all media from IndexedDB into mediaCache on app startup
+if (typeof window !== "undefined") {
+  setTimeout(async () => {
+    try {
+      const db = await openIndexedDB();
+      const tx = db.transaction("media", "readonly");
+      const store = tx.objectStore("media");
+      const req = store.openCursor();
+      req.onsuccess = (e: any) => {
+        const cursor = e.target.result;
+        if (cursor) {
+          mediaCache[cursor.key] = cursor.value;
+          cursor.continue();
+        }
+      };
+    } catch (e) {
+      console.warn("Failed to preload media cache:", e);
+    }
+  }, 100);
+}
+
 // Background media pruner to remove heavy local base64 images/videos that stall the browser thread
 if (typeof window !== "undefined") {
   setTimeout(async () => {
@@ -52,6 +75,7 @@ if (typeof window !== "undefined") {
 
 const storeMedia = async (key: string, value: string): Promise<string> => {
   if (typeof window === "undefined" || !value || !value.startsWith("data:")) return value;
+  mediaCache[key] = value; // Update cache instantly
   try {
     const db = await openIndexedDB();
     await new Promise<void>((resolve, reject) => {
@@ -67,8 +91,6 @@ const storeMedia = async (key: string, value: string): Promise<string> => {
     return value;
   }
 };
-
-const mediaCache: Record<string, string> = {};
 
 const loadMedia = async (value: string | null | undefined): Promise<string | null> => {
   if (!value || !value.startsWith("indexeddb://")) return value || null;
@@ -125,10 +147,22 @@ export const parseImages = (imageUrlString: string | null | undefined): string[]
   if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
     try {
       const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => {
+          if (typeof item === "string" && item.startsWith("indexeddb://")) {
+            const key = item.replace("indexeddb://", "");
+            return mediaCache[key] || item;
+          }
+          return item;
+        });
+      }
     } catch (e) {
       console.warn("Failed to parse image_url JSON in parseImages:", e);
     }
+  }
+  if (trimmed.startsWith("indexeddb://")) {
+    const key = trimmed.replace("indexeddb://", "");
+    return [mediaCache[key] || trimmed];
   }
   return [imageUrlString];
 };

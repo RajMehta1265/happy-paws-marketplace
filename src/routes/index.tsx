@@ -17,9 +17,12 @@ function Index() {
     queryKey: ["pets"],
     queryFn: () => dbService.getPets(),
     initialData: () => dbService.initLocalData(),
+    staleTime: 0,
   });
 
-  const featuredPets = pets?.slice(0, 4) || [];
+  const featuredPets = (pets ?? [])
+    .filter((p) => p.type.toLowerCase() !== "exotic")
+    .slice(0, 4);
 
   return (
     <SiteLayout>
