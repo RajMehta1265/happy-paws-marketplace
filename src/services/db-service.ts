@@ -7,6 +7,77 @@ import scarletMacaw from "@/assets/scarlet-macaw.png";
 import sugarGlider from "@/assets/sugar-glider.png";
 import chameleon from "@/assets/chameleon.png";
 
+const openIndexedDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined" || !window.indexedDB) {
+      reject("IndexedDB not available");
+      return;
+    }
+    const request = window.indexedDB.open("pawhaven_media_db", 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains("media")) {
+        db.createObjectStore("media");
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const storeMedia = async (key: string, value: string): Promise<string> => {
+  if (typeof window === "undefined" || !value || !value.startsWith("data:")) return value;
+  try {
+    const db = await openIndexedDB();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("media", "readwrite");
+      const store = tx.objectStore("media");
+      store.put(value, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    return `indexeddb://${key}`;
+  } catch (err) {
+    console.warn("Failed to save to IndexedDB:", err);
+    return value;
+  }
+};
+
+const loadMedia = async (value: string | null | undefined): Promise<string | null> => {
+  if (!value || !value.startsWith("indexeddb://")) return value || null;
+  const key = value.replace("indexeddb://", "");
+  try {
+    const db = await openIndexedDB();
+    const result = await new Promise<string | null>((resolve, reject) => {
+      const tx = db.transaction("media", "readonly");
+      const store = tx.objectStore("media");
+      const req = store.get(key);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+    return result;
+  } catch (err) {
+    console.warn("Failed to load from IndexedDB:", err);
+    return null;
+  }
+};
+
+const deleteMedia = async (key: string): Promise<void> => {
+  if (typeof window === "undefined") return;
+  try {
+    const db = await openIndexedDB();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("media", "readwrite");
+      const store = tx.objectStore("media");
+      store.delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (err) {
+    console.warn("Failed to delete from IndexedDB:", err);
+  }
+};
+
 export interface Pet {
   id: string;
   name: string;
@@ -199,6 +270,19 @@ export const dbService = {
   // GET ALL PETS
   async getPets(): Promise<Pet[]> {
     const localPets = this.initLocalData();
+    // Resolve any IndexedDB media references in localPets
+    const resolvedLocalPets = await Promise.all(
+      localPets.map(async (pet) => {
+        const img = await loadMedia(pet.image_url);
+        const vid = await loadMedia(pet.video_url);
+        return {
+          ...pet,
+          image_url: img || pet.image_url,
+          video_url: vid || pet.video_url,
+        };
+      })
+    );
+
     try {
       const { data, error } = await supabase
         .from("pets")
@@ -207,13 +291,13 @@ export const dbService = {
 
       if (error) {
         console.warn("Supabase fetch failed, using local fallback:", error.message);
-        return localPets;
+        return resolvedLocalPets;
       }
 
       if (!data || data.length === 0) {
         // If Supabase is empty, seed it with local data
         console.log("Supabase table is empty. Seeding Supabase with local data...");
-        for (const pet of localPets) {
+        for (const pet of resolvedLocalPets) {
           // Try to insert with video_url first; if the column doesn't exist, insert without it
           const { error } = await supabase.from("pets").insert({
             name: pet.name,
@@ -236,50 +320,69 @@ export const dbService = {
             });
           }
         }
-        return localPets;
+        return resolvedLocalPets;
       }
 
       // Merge Supabase data with local videos (since Supabase might not store video_url)
-      const merged = data.map((sp: any) => {
-        const lp = localPets.find((l) => l.name.toLowerCase() === sp.name.toLowerCase());
-        return {
-          id: sp.id,
-          name: sp.name,
-          type: sp.type,
-          breed: sp.breed || "",
-          age: sp.age || "",
-          price: Number(sp.price),
-          image_url: sp.image_url || pet1,
-          video_url: sp.video_url || lp?.video_url || null, // Preserve video_url if saved locally
-          vaccinated: !!sp.vaccinated,
-          adoption: !!sp.adoption,
-          status: sp.status || "available",
-          description: sp.description || "",
-          created_at: sp.created_at,
-        };
-      });
+      const merged = await Promise.all(
+        data.map(async (sp: any) => {
+          const lp = resolvedLocalPets.find((l) => l.name.toLowerCase() === sp.name.toLowerCase());
+          const img = await loadMedia(sp.image_url);
+          const vid = await loadMedia(sp.video_url || lp?.video_url);
+          return {
+            id: sp.id,
+            name: sp.name,
+            type: sp.type,
+            breed: sp.breed || "",
+            age: sp.age || "",
+            price: Number(sp.price),
+            image_url: img || sp.image_url || pet1,
+            video_url: vid || null,
+            vaccinated: !!sp.vaccinated,
+            adoption: !!sp.adoption,
+            status: sp.status || "available",
+            description: sp.description || "",
+            created_at: sp.created_at,
+          };
+        })
+      );
 
       return merged;
     } catch (err) {
       console.warn("Error in getPets, returning local storage:", err);
-      return localPets;
+      return resolvedLocalPets;
     }
   },
 
   // GET SINGLE PET BY ID
   async getPet(id: string): Promise<Pet | null> {
     const localPets = this.initLocalData();
+    // Resolve local storage references asynchronously
+    const resolvedLocalPets = await Promise.all(
+      localPets.map(async (pet) => {
+        const img = await loadMedia(pet.image_url);
+        const vid = await loadMedia(pet.video_url);
+        return {
+          ...pet,
+          image_url: img || pet.image_url,
+          video_url: vid || pet.video_url,
+        };
+      })
+    );
+
     try {
       const { data, error } = await supabase.from("pets").select("*").eq("id", id).maybeSingle();
 
       if (error || !data) {
         // Fallback to local storage
-        return localPets.find((p) => p.id === id) || null;
+        return resolvedLocalPets.find((p) => p.id === id) || null;
       }
 
-      const lp = localPets.find(
+      const lp = resolvedLocalPets.find(
         (l) => l.name.toLowerCase() === data.name.toLowerCase() || l.id === data.id,
       );
+      const img = await loadMedia(data.image_url);
+      const vid = await loadMedia((data as any).video_url || lp?.video_url);
       return {
         id: data.id,
         name: data.name,
@@ -287,8 +390,8 @@ export const dbService = {
         breed: data.breed || "",
         age: data.age || "",
         price: Number(data.price),
-        image_url: data.image_url || pet1,
-        video_url: (data as any).video_url || lp?.video_url || null,
+        image_url: img || data.image_url || pet1,
+        video_url: vid || null,
         vaccinated: !!data.vaccinated,
         adoption: !!data.adoption,
         status: data.status || "available",
@@ -297,7 +400,7 @@ export const dbService = {
       };
     } catch (err) {
       console.warn(`Error in getPet(${id}), returning local storage pet:`, err);
-      return localPets.find((p) => p.id === id) || null;
+      return resolvedLocalPets.find((p) => p.id === id) || null;
     }
   },
 
@@ -305,32 +408,39 @@ export const dbService = {
   async createPet(petInput: Omit<Pet, "id">): Promise<Pet> {
     const localPets = this.initLocalData();
     const newId = crypto.randomUUID();
-    const newPet: Pet = {
+
+    // Store large Base64 files in IndexedDB, and store references in local storage
+    const storedImageUrl = await storeMedia(`pet_img_${newId}`, petInput.image_url);
+    const storedVideoUrl = petInput.video_url
+      ? await storeMedia(`pet_vid_${newId}`, petInput.video_url)
+      : null;
+
+    const newPetLocal: Pet = {
       ...petInput,
       id: newId,
+      image_url: storedImageUrl,
+      video_url: storedVideoUrl,
       created_at: new Date().toISOString(),
     };
 
-    // Save to local storage
-    const updatedPets = [newPet, ...localPets];
+    const updatedPets = [newPetLocal, ...localPets];
     this.saveLocalData(updatedPets);
 
-    // Save to Supabase (attempt)
+    // Save to Supabase (attempt with actual Base64/url values)
     try {
-      // Attempt insert with video_url. If column is missing, retry without it
       const { error } = await supabase.from("pets").insert([
         {
-          name: newPet.name,
-          type: newPet.type,
-          breed: newPet.breed,
-          age: newPet.age,
-          price: newPet.price,
-          image_url: newPet.image_url,
-          video_url: newPet.video_url,
-          description: newPet.description,
-          vaccinated: newPet.vaccinated,
-          adoption: newPet.adoption,
-          status: newPet.status,
+          name: petInput.name,
+          type: petInput.type,
+          breed: petInput.breed,
+          age: petInput.age,
+          price: petInput.price,
+          image_url: petInput.image_url,
+          video_url: petInput.video_url,
+          description: petInput.description,
+          vaccinated: petInput.vaccinated,
+          adoption: petInput.adoption,
+          status: petInput.status,
         },
       ] as any);
       if (error) {
@@ -338,7 +448,7 @@ export const dbService = {
           console.warn(
             "video_url column is missing in Supabase pets table. Retrying insert without it...",
           );
-          const { video_url, ...supabasePayload } = newPet;
+          const { video_url, ...supabasePayload } = petInput;
           const { error: retryError } = await supabase.from("pets").insert([supabasePayload]);
           if (retryError) console.warn("Retry failed:", retryError.message);
         } else {
@@ -349,7 +459,12 @@ export const dbService = {
       console.warn("Supabase insert failed, pet saved to local storage only:", err);
     }
 
-    return newPet;
+    // Return the resolved pet so client gets actual values
+    return {
+      ...newPetLocal,
+      image_url: petInput.image_url,
+      video_url: petInput.video_url,
+    };
   },
 
   // UPDATE PET
@@ -359,7 +474,26 @@ export const dbService = {
     let updatedPet = localPets[index];
 
     if (index !== -1) {
-      updatedPet = { ...localPets[index], ...petInput };
+      // Store large Base64 files in IndexedDB, and store references in local storage
+      let storedImageUrl = localPets[index].image_url;
+      if (petInput.image_url && petInput.image_url !== localPets[index].image_url) {
+        storedImageUrl = await storeMedia(`pet_img_${id}`, petInput.image_url);
+      }
+
+      let storedVideoUrl = localPets[index].video_url;
+      if (petInput.video_url !== undefined && petInput.video_url !== localPets[index].video_url) {
+        storedVideoUrl = petInput.video_url
+          ? await storeMedia(`pet_vid_${id}`, petInput.video_url)
+          : null;
+      }
+
+      updatedPet = {
+        ...localPets[index],
+        ...petInput,
+        image_url: storedImageUrl,
+        video_url: storedVideoUrl,
+      };
+
       localPets[index] = updatedPet;
       this.saveLocalData(localPets);
     }
@@ -405,7 +539,12 @@ export const dbService = {
       console.warn("Supabase update failed, pet updated in local storage only:", err);
     }
 
-    return updatedPet;
+    // Return the resolved pet so client gets actual values
+    return {
+      ...updatedPet,
+      image_url: petInput.image_url || updatedPet.image_url,
+      video_url: petInput.video_url !== undefined ? petInput.video_url : updatedPet.video_url,
+    };
   },
 
   // DELETE PET
@@ -413,6 +552,10 @@ export const dbService = {
     const localPets = this.initLocalData();
     const filtered = localPets.filter((p) => p.id !== id);
     this.saveLocalData(filtered);
+
+    // Clean up IndexedDB media
+    await deleteMedia(`pet_img_${id}`);
+    await deleteMedia(`pet_vid_${id}`);
 
     // Delete from Supabase (attempt)
     try {
