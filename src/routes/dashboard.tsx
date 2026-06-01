@@ -91,7 +91,7 @@ function Dashboard() {
       <section className="mx-auto max-w-5xl px-6 py-16 space-y-10">
         <header>
           <h1 className="font-display text-5xl">Welcome{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}</h1>
-          <p className="mt-2 text-muted-foreground">{user.email}</p>
+          <p className="mt-2 text-muted-foreground">{user.email || user.phone || "No email/phone linked"}</p>
         </header>
 
         <div className="rounded-3xl bg-card border border-border p-8">

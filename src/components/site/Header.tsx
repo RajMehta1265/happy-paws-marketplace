@@ -8,9 +8,10 @@ import { WolfLogo } from "@/components/ui/WolfLogo";
 const nav = [
   { to: "/", label: "Home" },
   { to: "/pets", label: "Pets" },
+  { to: "/exotics", label: "Exotic Pets" },
+  { to: "/products", label: "Products" },
   { to: "/training", label: "Training" },
-  { to: "/products", label: "Shop" },
-  { to: "/exotics", label: "Exotics" },
+  { to: "/hostelling", label: "Hostelling" },
   { to: "/about", label: "About" },
   { to: "/contact", label: "Contact" },
 ];
@@ -29,9 +30,9 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 glass">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <Link to="/" className="flex items-center gap-3 group">
-          <WolfLogo className="h-12 w-12 text-accent group-hover:scale-105 transition-transform duration-300 shrink-0" />
-          <span className="font-display font-extrabold text-2xl lg:text-3xl tracking-[0.2em] text-foreground group-hover:text-accent transition-colors duration-300 select-none">
+        <Link to="/" className="flex items-center gap-2 sm:gap-3 group">
+          <WolfLogo className="h-10 w-10 sm:h-12 sm:w-12 text-accent group-hover:scale-105 transition-transform duration-300 shrink-0" />
+          <span className="font-display font-extrabold text-lg sm:text-2xl lg:text-3xl tracking-[0.1em] sm:tracking-[0.2em] text-foreground group-hover:text-accent transition-colors duration-300 select-none">
             WOOLF.INDIA
           </span>
         </Link>

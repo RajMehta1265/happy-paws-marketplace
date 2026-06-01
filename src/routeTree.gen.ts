@@ -14,6 +14,7 @@ import { Route as ProductsRouteImport } from './routes/products'
 import { Route as PetsRouteImport } from './routes/pets'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as HostellingRouteImport } from './routes/hostelling'
 import { Route as ExoticsRouteImport } from './routes/exotics'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ContactRouteImport } from './routes/contact'
@@ -47,6 +48,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HostellingRoute = HostellingRouteImport.update({
+  id: '/hostelling',
+  path: '/hostelling',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExoticsRoute = ExoticsRouteImport.update({
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/exotics': typeof ExoticsRoute
+  '/hostelling': typeof HostellingRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/pets': typeof PetsRouteWithChildren
@@ -119,6 +126,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/exotics': typeof ExoticsRoute
+  '/hostelling': typeof HostellingRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/products': typeof ProductsRoute
@@ -135,6 +143,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/exotics': typeof ExoticsRoute
+  '/hostelling': typeof HostellingRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/pets': typeof PetsRouteWithChildren
@@ -153,6 +162,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/dashboard'
     | '/exotics'
+    | '/hostelling'
     | '/login'
     | '/onboarding'
     | '/pets'
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/dashboard'
     | '/exotics'
+    | '/hostelling'
     | '/login'
     | '/onboarding'
     | '/products'
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/dashboard'
     | '/exotics'
+    | '/hostelling'
     | '/login'
     | '/onboarding'
     | '/pets'
@@ -201,6 +213,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   DashboardRoute: typeof DashboardRoute
   ExoticsRoute: typeof ExoticsRoute
+  HostellingRoute: typeof HostellingRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   PetsRoute: typeof PetsRouteWithChildren
@@ -243,6 +256,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hostelling': {
+      id: '/hostelling'
+      path: '/hostelling'
+      fullPath: '/hostelling'
+      preLoaderRoute: typeof HostellingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/exotics': {
@@ -331,6 +351,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   DashboardRoute: DashboardRoute,
   ExoticsRoute: ExoticsRoute,
+  HostellingRoute: HostellingRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   PetsRoute: PetsRouteWithChildren,

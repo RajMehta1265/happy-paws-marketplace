@@ -32,7 +32,12 @@ export function Footer() {
             </li>
             <li>
               <Link to="/products" className="hover:text-foreground">
-                Shop
+                Products
+              </Link>
+            </li>
+            <li>
+              <Link to="/hostelling" className="hover:text-foreground">
+                Hostelling
               </Link>
             </li>
           </ul>
@@ -42,7 +47,7 @@ export function Footer() {
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li>
               <Link to="/exotics" className="hover:text-foreground">
-                Exotics
+                Exotic Pets
               </Link>
             </li>
             <li>

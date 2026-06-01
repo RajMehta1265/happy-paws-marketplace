@@ -74,18 +74,20 @@ export function useCart() {
       if (items.length > 0) {
         const itemIds = items.map(item => item.product_id);
         try {
-          // Fetch products and pets in parallel
-          const [productsRes, petsRes] = await Promise.all([
+          // Fetch products, pets, and exotic pets in parallel
+          const [productsRes, petsRes, exoticsRes] = await Promise.all([
             supabase.from("products").select("id, name, price, image_url, category").in("id", itemIds),
-            supabase.from("pets").select("id, name, price, image_url").in("id", itemIds)
+            supabase.from("pets").select("id, name, price, image_url").in("id", itemIds),
+            supabase.from("exotic_pets").select("id, name, price, image_url").in("id", itemIds)
           ]);
 
           const prodsData = productsRes.data || [];
           const petsData = petsRes.data || [];
+          const exoticsData = exoticsRes.data || [];
 
           items.forEach(item => {
             const prod = prodsData.find(p => p.id === item.product_id);
-            const pet = petsData.find(p => p.id === item.product_id);
+            const pet = petsData.find(p => p.id === item.product_id) || exoticsData.find(p => p.id === item.product_id);
 
             if (prod) {
               item.product = {

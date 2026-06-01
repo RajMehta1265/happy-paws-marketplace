@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { parseImages } from "@/services/db-service";
+import { parseImages, dbService } from "@/services/db-service";
 import { useCart } from "@/hooks/use-cart";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiMinus, FiPlus, FiTrash2 } from "react-icons/fi";
 import { useQueryClient } from "@tanstack/react-query";
 import { sendEmail } from "@/services/mail-service";
@@ -18,10 +18,67 @@ export const Route = createFileRoute("/cart")({
 
 function CartPage() {
   const { items, total, setQty, remove, loading } = useCart();
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
+
+  const [shippingDetails, setShippingDetails] = useState({
+    full_name: "",
+    phone: "",
+    address_line: "",
+    city: "",
+    postal_code: "",
+    country: "India",
+  });
+
+  useEffect(() => {
+    if (user) {
+      const loadProfile = async () => {
+        const isMock = !!localStorage.getItem("pawhaven_mock_session");
+        if (isMock) {
+          const stored = localStorage.getItem(`pawhaven_profile_${user.id}`);
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored);
+              setShippingDetails({
+                full_name: parsed.full_name ?? "",
+                phone: parsed.phone ?? "",
+                address_line: parsed.address_line ?? "",
+                city: parsed.city ?? "",
+                postal_code: parsed.postal_code ?? "",
+                country: parsed.country ?? "India",
+              });
+            } catch {}
+          }
+          return;
+        }
+
+        const { data } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (data) {
+          setShippingDetails({
+            full_name: data.full_name ?? "",
+            phone: data.phone ?? "",
+            address_line: data.address_line ?? "",
+            city: data.city ?? "",
+            postal_code: data.postal_code ?? "",
+            country: data.country ?? "India",
+          });
+        }
+      };
+      loadProfile();
+    }
+  }, [user]);
   const [placing, setPlacing] = useState(false);
+  const [signedName, setSignedName] = useState("");
+  const [liabilityAccepted, setLiabilityAccepted] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(false);
+
+  const hasPet = items.some((i) => i.product?.category === "Pet");
 
   const checkout = async () => {
     if (!user) {
@@ -29,10 +86,71 @@ function CartPage() {
       return;
     }
     if (items.length === 0) return;
+
+    if (
+      !shippingDetails.full_name.trim() ||
+      !shippingDetails.phone.trim() ||
+      !shippingDetails.address_line.trim() ||
+      !shippingDetails.city.trim() ||
+      !shippingDetails.postal_code.trim() ||
+      !shippingDetails.country.trim()
+    ) {
+      toast.error("Please fill in all shipping details before placing the order.");
+      return;
+    }
+
+    const nameRegex = /^[A-Za-z\s]+$/;
+    if (!nameRegex.test(shippingDetails.full_name.trim())) {
+      toast.error("Full name must contain only letters and spaces.");
+      return;
+    }
+
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(shippingDetails.phone.trim())) {
+      toast.error("Phone number must be exactly 10 digits (numbers only).");
+      return;
+    }
+
+    if (shippingDetails.country.trim().toLowerCase() === "india") {
+      const pinRegex = /^\d{6}$/;
+      if (!pinRegex.test(shippingDetails.postal_code.trim())) {
+        toast.error("Postal code must be exactly 6 digits for India (numbers only).");
+        return;
+      }
+    }
+    
+    if (hasPet) {
+      if (!signedName.trim()) {
+        toast.error("Please sign your full legal name for the Liability and Consent Basis.");
+        return;
+      }
+      if (!liabilityAccepted || !consentGiven) {
+        toast.error("Please accept the liability waiver and consent terms to proceed.");
+        return;
+      }
+    }
+
     setPlacing(true);
     try {
       const isMock = !!localStorage.getItem("pawhaven_mock_session");
       if (isMock) {
+        localStorage.setItem(`pawhaven_profile_${user.id}`, JSON.stringify(shippingDetails));
+
+        // Update full name in mock session user_metadata
+        const storedSession = localStorage.getItem("pawhaven_mock_session");
+        if (storedSession) {
+          try {
+            const parsed = JSON.parse(storedSession);
+            parsed.user.user_metadata = {
+              ...parsed.user.user_metadata,
+              full_name: shippingDetails.full_name,
+            };
+            localStorage.setItem("pawhaven_mock_session", JSON.stringify(parsed));
+          } catch {}
+        }
+        window.dispatchEvent(new Event("auth-change"));
+        await refreshProfile();
+
         const storedOrders = localStorage.getItem("pawhaven_orders") || "[]";
         let localOrders = [];
         try {
@@ -66,28 +184,13 @@ function CartPage() {
 
         // Send order confirmation email asynchronously
         try {
-          let toName = user.email || "Valued Customer";
-          let shippingAddress = {
-            address_line: "",
-            city: "",
-            postal_code: "",
-            country: "",
+          const toName = shippingDetails.full_name || user.email || "Valued Customer";
+          const shippingAddress = {
+            address_line: shippingDetails.address_line,
+            city: shippingDetails.city,
+            postal_code: shippingDetails.postal_code,
+            country: shippingDetails.country,
           };
-          const storedProfile = localStorage.getItem(`pawhaven_profile_${user.id}`);
-          if (storedProfile) {
-            try {
-              const parsed = JSON.parse(storedProfile);
-              toName = parsed.full_name || toName;
-              shippingAddress = {
-                address_line: parsed.address_line || "",
-                city: parsed.city || "",
-                postal_code: parsed.postal_code || "",
-                country: parsed.country || "",
-              };
-            } catch (err) {
-              console.error("Failed to parse mock profile:", err);
-            }
-          }
           const orderReceiptHtml = mailTemplates.getOrderReceiptEmail({
             toName,
             orderId: newOrder.id,
@@ -100,18 +203,47 @@ function CartPage() {
             total: newOrder.total,
             shippingAddress,
           });
-          sendEmail(
-            user.email!,
-            `Order Confirmation #${newOrder.id.slice(0, 8)}`,
-            orderReceiptHtml,
-          );
+          if (user.email) {
+            sendEmail(
+              user.email,
+              `Order Confirmation #${newOrder.id.slice(0, 8)}`,
+              orderReceiptHtml,
+            );
+          }
         } catch (emailErr) {
           console.error("Failed to prepare or send mock order receipt email:", emailErr);
+        }
+
+        // Save consent records for any pets in the cart (mock flow)
+        const petItems = items.filter((i) => i.product?.category === "Pet");
+        for (const item of petItems) {
+          await dbService.submitConsent({
+            user_id: user.id,
+            full_name: signedName.trim(),
+            email: user.email || "customer@example.com",
+            pet_id: item.product_id,
+            pet_name: item.product?.name ?? "Unknown Pet",
+            liability_accepted: liabilityAccepted,
+            consent_given: consentGiven,
+          });
         }
 
         toast.success("Order placed successfully!");
         navigate({ to: "/dashboard" });
         return;
+      } else {
+        const { error: profileError } = await supabase.from("profiles").upsert({
+          id: user.id,
+          full_name: shippingDetails.full_name.trim(),
+          phone: shippingDetails.phone.trim(),
+          address_line: shippingDetails.address_line.trim(),
+          city: shippingDetails.city.trim(),
+          postal_code: shippingDetails.postal_code.trim(),
+          country: shippingDetails.country.trim(),
+          updated_at: new Date().toISOString(),
+        });
+        if (profileError) throw profileError;
+        await refreshProfile();
       }
 
       const { data: order, error } = await supabase
@@ -133,20 +265,28 @@ function CartPage() {
       if (e2) throw e2;
       await supabase.from("cart_items").delete().eq("user_id", user.id);
 
+      // Save consent records for any pets in the cart (Supabase flow)
+      const petItems = items.filter((i) => i.product?.category === "Pet");
+      for (const item of petItems) {
+        await dbService.submitConsent({
+          user_id: user.id,
+          full_name: signedName.trim(),
+          email: user.email || "customer@example.com",
+          pet_id: item.product_id,
+          pet_name: item.product?.name ?? "Unknown Pet",
+          liability_accepted: liabilityAccepted,
+          consent_given: consentGiven,
+        });
+      }
+
       // Send order confirmation email asynchronously
       try {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        const toName = profile?.full_name || user.email || "Valued Customer";
+        const toName = shippingDetails.full_name || user.email || "Valued Customer";
         const shippingAddress = {
-          address_line: profile?.address_line || "",
-          city: profile?.city || "",
-          postal_code: profile?.postal_code || "",
-          country: profile?.country || "",
+          address_line: shippingDetails.address_line,
+          city: shippingDetails.city,
+          postal_code: shippingDetails.postal_code,
+          country: shippingDetails.country,
         };
 
         const orderReceiptHtml = mailTemplates.getOrderReceiptEmail({
@@ -162,7 +302,9 @@ function CartPage() {
           shippingAddress,
         });
 
-        sendEmail(user.email!, `Order Confirmation #${order.id.slice(0, 8)}`, orderReceiptHtml);
+        if (user.email) {
+          sendEmail(user.email, `Order Confirmation #${order.id.slice(0, 8)}`, orderReceiptHtml);
+        }
       } catch (emailErr) {
         console.error("Failed to prepare or send order receipt email:", emailErr);
       }
@@ -206,7 +348,8 @@ function CartPage() {
           </div>
         ) : (
           <div className="mt-10 grid lg:grid-cols-[1fr_360px] gap-8">
-            <ul className="space-y-4">
+            <div className="space-y-6">
+              <ul className="space-y-4">
               {items.map((i) => (
                 <li
                   key={i.id}
@@ -250,7 +393,90 @@ function CartPage() {
                 </li>
               ))}
             </ul>
-            <aside className="rounded-3xl bg-card border border-border p-6 h-fit">
+
+            {/* Shipping Details form */}
+            <div className="rounded-3xl bg-card border border-border p-8 shadow-soft">
+              <h3 className="font-display text-2xl mb-1 text-foreground">Shipping Information</h3>
+              <p className="text-xs text-muted-foreground mb-6">Enter your contact and delivery details to place the order.</p>
+              
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">Full Name *</label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="John Doe"
+                    value={shippingDetails.full_name}
+                    onChange={(e) => setShippingDetails({ ...shippingDetails, full_name: e.target.value.replace(/[^A-Za-z\s]/g, "") })}
+                    className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">Phone Number *</label>
+                  <input
+                    required
+                    type="tel"
+                    maxLength={10}
+                    placeholder="10-digit number"
+                    value={shippingDetails.phone}
+                    onChange={(e) => setShippingDetails({ ...shippingDetails, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                    className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
+                  />
+                </div>
+                <div className="sm:col-span-2 flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">Address Line *</label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="Apartment, Street address"
+                    value={shippingDetails.address_line}
+                    onChange={(e) => setShippingDetails({ ...shippingDetails, address_line: e.target.value })}
+                    className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">City *</label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="e.g. Mumbai"
+                    value={shippingDetails.city}
+                    onChange={(e) => setShippingDetails({ ...shippingDetails, city: e.target.value })}
+                    className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">Postal Code *</label>
+                  <input
+                    required
+                    type="text"
+                    maxLength={6}
+                    placeholder="e.g. 400001"
+                    value={shippingDetails.postal_code}
+                    onChange={(e) => setShippingDetails({
+                      ...shippingDetails,
+                      postal_code: shippingDetails.country.toLowerCase() === "india"
+                        ? e.target.value.replace(/\D/g, "").slice(0, 6)
+                        : e.target.value.replace(/[^A-Za-z0-9\s-]/g, "")
+                    })}
+                    className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
+                  />
+                </div>
+                <div className="sm:col-span-2 flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">Country *</label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="e.g. India"
+                    value={shippingDetails.country}
+                    onChange={(e) => setShippingDetails({ ...shippingDetails, country: e.target.value })}
+                    className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <aside className="rounded-3xl bg-card border border-border p-6 h-fit">
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span>₹{total.toFixed(2)}</span>
@@ -264,10 +490,63 @@ function CartPage() {
                 <span>Total</span>
                 <span className="text-accent">₹{total.toFixed(2)}</span>
               </div>
+
+              {/* Liability & Consent Section */}
+              {hasPet && (
+                <div className="mt-6 border-t border-border pt-6 space-y-4">
+                  <h4 className="font-display text-sm font-semibold text-foreground">Liability & Consent Basis</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed bg-muted/40 p-3 rounded-2xl border border-border">
+                    This order contains companion/exotic pets. By signing below, you agree to take full responsibility for their welfare and legal ownership guidelines.
+                  </p>
+                  
+                  <div className="space-y-3">
+                    <label className="flex items-start gap-2.5 text-xs text-muted-foreground cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        className="rounded text-primary h-3.5 w-3.5 border-input mt-0.5 focus:ring-primary"
+                        checked={liabilityAccepted}
+                        onChange={(e) => setLiabilityAccepted(e.target.checked)}
+                      />
+                      <span>I accept the Liability Waiver.</span>
+                    </label>
+
+                    <label className="flex items-start gap-2.5 text-xs text-muted-foreground cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        className="rounded text-primary h-3.5 w-3.5 border-input mt-0.5 focus:ring-primary"
+                        checked={consentGiven}
+                        onChange={(e) => setConsentGiven(e.target.checked)}
+                      />
+                      <span>I consent to the legal terms of ownership.</span>
+                    </label>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Full Legal Name Signature</label>
+                    <input
+                      type="text"
+                      placeholder="Sign your full name"
+                      className="w-full rounded-full border border-input bg-background px-4 py-2.5 text-xs focus:outline-primary font-medium"
+                      value={signedName}
+                      onChange={(e) => setSignedName(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={checkout}
-                disabled={placing}
-                className="mt-6 w-full rounded-full bg-primary px-6 py-3 text-primary-foreground disabled:opacity-60"
+                disabled={
+                  placing ||
+                  !shippingDetails.full_name.trim() ||
+                  !shippingDetails.phone.trim() ||
+                  !shippingDetails.address_line.trim() ||
+                  !shippingDetails.city.trim() ||
+                  !shippingDetails.postal_code.trim() ||
+                  !shippingDetails.country.trim() ||
+                  (hasPet && (!signedName.trim() || !liabilityAccepted || !consentGiven))
+                }
+                className="mt-6 w-full rounded-full bg-primary px-6 py-3 text-primary-foreground disabled:opacity-60 disabled:cursor-not-allowed font-semibold text-sm transition hover:opacity-90 cursor-pointer"
               >
                 {placing ? "Placing order…" : "Checkout"}
               </button>

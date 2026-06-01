@@ -117,9 +117,12 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loading && user && !isProfileComplete) {
       if (typeof window !== "undefined") {
-        const pathname = window.location.pathname;
-        if (pathname !== "/onboarding" && pathname !== "/login") {
-          navigate({ to: "/onboarding" });
+        const skipped = sessionStorage.getItem("pawhaven_skip_onboarding") === "true";
+        if (!skipped) {
+          const pathname = window.location.pathname;
+          if (pathname !== "/onboarding" && pathname !== "/login") {
+            navigate({ to: "/onboarding" });
+          }
         }
       }
     }

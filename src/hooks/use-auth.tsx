@@ -66,6 +66,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
 
       if (!profile) {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          const fullName = authUser.user_metadata?.full_name || authUser.email || "User";
+          await supabase.from("profiles").insert({
+            id: userId,
+            full_name: fullName,
+          });
+        }
         setIsProfileComplete(false);
         return;
       }
@@ -167,6 +175,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     localStorage.removeItem("pawhaven_mock_session");
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("pawhaven_skip_onboarding");
+    }
     window.dispatchEvent(new Event("auth-change"));
     await supabase.auth.signOut();
   };

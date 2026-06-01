@@ -1,9 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { trainingPlans, trainers } from "@/data/sample";
-import { FiAward, FiClock, FiUsers, FiCheckSquare, FiPenTool, FiRefreshCw, FiFileText } from "react-icons/fi";
-import { useState, useRef, useEffect } from "react";
+import { FiAward, FiClock, FiUsers, FiCheckSquare, FiPenTool, FiRefreshCw, FiFileText, FiCheck } from "react-icons/fi";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { dbService } from "@/services/db-service";
+import { useAuth } from "@/hooks/use-auth";
+import { BookingCalendar } from "@/components/BookingCalendar";
 
 export const Route = createFileRoute("/training")({
   head: () => ({
@@ -23,11 +26,85 @@ interface ConsentSubmission {
   submittedAt: string;
 }
 
+const trainingPrices = {
+  Basic: "₹2,500",
+  Moderate: "₹4,500",
+  Advance: "₹7,500",
+};
+
+const commandsList = ["Sit", "Stay", "Heel", "Come", "Down", "Leave It", "Leash Walking", "Shake Hands", "Roll Over", "Bathroom Trained"];
+
 function TrainingPage() {
+  const { user } = useAuth();
   const [ownerName, setOwnerName] = useState("");
   const [petName, setPetName] = useState("");
   const [consentTerms, setConsentTerms] = useState(false);
   const [googleFormLink, setGoogleFormLink] = useState("");
+
+  // Booking Form State
+  const [bookOwnerName, setBookOwnerName] = useState("");
+  const [bookPetName, setBookPetName] = useState("");
+  const [bookBreed, setBookBreed] = useState("");
+  const [bookAge, setBookAge] = useState("");
+  const [bookHasMedical, setBookHasMedical] = useState(false);
+  const [bookMedical, setBookMedical] = useState("");
+  const [trainingType, setTrainingType] = useState<"Basic" | "Moderate" | "Advance">("Basic");
+  const [preferredDate, setPreferredDate] = useState("");
+  const [selectedCommands, setSelectedCommands] = useState<string[]>([]);
+  const [bookSuccess, setBookSuccess] = useState(false);
+
+  // Calendar availability state
+  const [bookedDates, setBookedDates] = useState<string[]>([]);
+  const [dateCounts, setDateCounts] = useState<Record<string, number>>({});
+
+  const refreshAvailability = useCallback(() => {
+    const { bookedDates: bd, dateCounts: dc } = dbService.getBookedDates(3);
+    setBookedDates(bd);
+    setDateCounts(dc);
+  }, []);
+
+  useEffect(() => {
+    refreshAvailability();
+  }, [refreshAvailability]);
+
+  useEffect(() => {
+    if (user) {
+      setBookOwnerName(user.user_metadata?.full_name || user.email?.split("@")[0] || "");
+    }
+  }, [user]);
+
+  const handleBookingSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bookOwnerName || !bookPetName || !bookBreed || !bookAge || !preferredDate) {
+      toast.error("Please fill in all the required booking fields.");
+      return;
+    }
+
+    // Check if date is still available
+    if (bookedDates.includes(preferredDate)) {
+      toast.error("This date is fully booked. Please choose another date.");
+      return;
+    }
+
+    // Save booking to db-service
+    dbService.createTrainingBooking({
+      user_id: user?.id || null,
+      ownerName: bookOwnerName,
+      petName: bookPetName,
+      breed: bookBreed,
+      age: bookAge,
+      trainingType,
+      preferredDate,
+      selectedCommands,
+      medicalConditions: bookHasMedical ? bookMedical : "N/A",
+    });
+
+    // Refresh calendar availability
+    refreshAvailability();
+
+    setBookSuccess(true);
+    toast.success("Training booking request submitted successfully!");
+  };
   
   // Signature Drawing State
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -135,6 +212,21 @@ function TrainingPage() {
     if (typeof window !== "undefined") {
       localStorage.setItem("pawhaven_training_consent", JSON.stringify(nextSubmission));
     }
+
+    // Save consent and signature to Supabase database via dbService
+    dbService.submitConsent({
+      user_id: user?.id || null,
+      full_name: ownerName,
+      email: user?.email || "training_customer@example.com",
+      pet_id: null,
+      pet_name: petName,
+      liability_accepted: consentTerms,
+      consent_given: consentTerms,
+      signature_data_url: signatureDataUrl,
+    }).catch((err) => {
+      console.warn("Failed to save training consent to database:", err);
+    });
+
     toast.success("Consent agreement signed and submitted successfully!");
   };
 
@@ -193,19 +285,248 @@ function TrainingPage() {
         </div>
       </section>
 
+      {/* Availability Calendar */}
+      <section className="mx-auto max-w-7xl px-6 my-16">
+        <div className="mb-6">
+          <div className="text-xs uppercase tracking-[0.25em] text-primary mb-2">Availability</div>
+          <h2 className="font-display text-4xl">Check available training dates</h2>
+          <p className="mt-2 text-sm text-muted-foreground max-w-xl">
+            Green dates are available for booking. Click on an available date to auto-fill your preferred start date below.
+          </p>
+        </div>
+        <div className="max-w-xl">
+          <BookingCalendar
+            mode="user"
+            bookedDates={bookedDates}
+            dateCounts={dateCounts}
+            maxPerDay={3}
+            selectedDate={preferredDate}
+            onDateSelect={(dateStr) => {
+              setPreferredDate(dateStr);
+              toast.success(`Selected ${new Date(dateStr + "T00:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })} as your preferred date.`);
+            }}
+          />
+        </div>
+      </section>
+
       {/* Appointment Booking Form */}
       <section className="mx-auto max-w-7xl px-6 my-16">
-        <div className="rounded-[2rem] bg-accent/40 p-10 lg:p-14">
-          <h3 className="font-display text-3xl">Book an appointment</h3>
-          <form className="mt-6 grid md:grid-cols-2 gap-4" onSubmit={(e) => e.preventDefault()}>
-            <input className="rounded-full border border-input bg-background px-5 py-3" placeholder="Your name" />
-            <input className="rounded-full border border-input bg-background px-5 py-3" placeholder="Pet name & breed" />
-            <input type="date" className="rounded-full border border-input bg-background px-5 py-3" />
-            <select className="rounded-full border border-input bg-background px-5 py-3">
-              {trainingPlans.map((t) => <option key={t.id}>{t.title}</option>)}
-            </select>
-            <button className="md:col-span-2 rounded-full bg-primary px-6 py-3 text-primary-foreground cursor-pointer hover:opacity-95 transition">Request booking</button>
-          </form>
+        <div className="rounded-[2.5rem] bg-accent/40 p-8 md:p-12 lg:p-14 border border-accent/20">
+          <h3 className="font-display text-4xl mb-2 text-foreground">Book an Appointment</h3>
+          <p className="text-sm text-muted-foreground mb-8">
+            Select your preferred conditioning level, customize commands, and provide health details below.
+          </p>
+          
+          {bookSuccess ? (
+            <div className="text-center py-10 bg-background/50 rounded-3xl p-6 border border-border/80 max-w-xl mx-auto space-y-4 animate-scale-in">
+              <div className="inline-flex rounded-full bg-[#673ab7]/10 p-4 text-[#673ab7] mb-2">
+                <FiCheckSquare size={36} />
+              </div>
+              <h4 className="font-display text-2xl text-foreground">Booking Request Sent!</h4>
+              <p className="text-sm text-muted-foreground">
+                We've received your request for <strong>{bookPetName}</strong>'s training session.
+              </p>
+              
+              <div className="bg-background rounded-2xl p-4 border border-border/85 text-left text-xs space-y-2">
+                <div>Owner Name: <strong className="text-foreground">{bookOwnerName}</strong></div>
+                <div>Pet Details: <strong className="text-foreground">{bookPetName} ({bookBreed}, {bookAge})</strong></div>
+                <div>Program Type: <strong className="text-foreground">{trainingType} (₹{trainingType === "Basic" ? "2,500" : trainingType === "Moderate" ? "4,500" : "7,500"})</strong></div>
+                <div>Preferred Date: <strong className="text-foreground">{preferredDate}</strong></div>
+                <div>Medical Conditions: <strong className="text-foreground">{bookHasMedical ? (bookMedical || "Declared but not specified") : "N/A"}</strong></div>
+                {selectedCommands.length > 0 && (
+                  <div>Custom Commands: <strong className="text-foreground">{selectedCommands.join(", ")}</strong></div>
+                )}
+              </div>
+              
+              <button
+                onClick={() => {
+                  setBookSuccess(false);
+                  setBookPetName("");
+                  setBookBreed("");
+                  setBookAge("");
+                  setBookHasMedical(false);
+                  setBookMedical("");
+                  setSelectedCommands([]);
+                }}
+                className="mt-6 rounded-full bg-[#673ab7] text-white hover:opacity-90 transition px-8 py-3 text-sm font-semibold cursor-pointer shadow-md"
+              >
+                Book Another Program
+              </button>
+            </div>
+          ) : (
+            <form className="space-y-6" onSubmit={handleBookingSubmit}>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">Your Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={bookOwnerName}
+                    onChange={(e) => setBookOwnerName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:border-[#673ab7] focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">Pet Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={bookPetName}
+                    onChange={(e) => setBookPetName(e.target.value)}
+                    placeholder="e.g. Biscuit"
+                    className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:border-[#673ab7] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">Breed Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={bookBreed}
+                    onChange={(e) => setBookBreed(e.target.value)}
+                    placeholder="e.g. Golden Retriever"
+                    className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:border-[#673ab7] focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">Pet Age *</label>
+                  <input
+                    type="text"
+                    required
+                    value={bookAge}
+                    onChange={(e) => setBookAge(e.target.value)}
+                    placeholder="e.g. 8 months"
+                    className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:border-[#673ab7] focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">Preferred Start Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={preferredDate}
+                    onChange={(e) => setPreferredDate(e.target.value)}
+                    className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:border-[#673ab7] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Medical Conditions - Checkbox Toggle */}
+              <div className="flex flex-col gap-3">
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={bookHasMedical}
+                    onChange={(e) => {
+                      setBookHasMedical(e.target.checked);
+                      if (!e.target.checked) {
+                        setBookMedical("");
+                      }
+                    }}
+                    className="h-4 w-4 rounded border-border text-[#673ab7] focus:ring-[#673ab7]"
+                  />
+                  <span className="text-xs font-semibold text-foreground">My pet has existing medical conditions</span>
+                </label>
+
+                {bookHasMedical ? (
+                  <div className="flex flex-col gap-1.5 animate-slide-down">
+                    <label className="text-xs font-semibold text-muted-foreground">Describe Medical Conditions *</label>
+                    <textarea
+                      required={bookHasMedical}
+                      value={bookMedical}
+                      onChange={(e) => setBookMedical(e.target.value)}
+                      placeholder="Describe any allergies, chronic illness, daily medications, or physical limitations..."
+                      rows={3}
+                      className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:border-[#673ab7] focus:outline-none"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground bg-muted/20 px-4 py-2 rounded-xl border border-border">
+                    Medical conditions: <strong>N/A</strong> (Not Applicable)
+                  </div>
+                )}
+              </div>
+
+              {/* Training Type & Package Price */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-muted-foreground">Training Type & Package Price *</label>
+                <div className="flex flex-wrap gap-3">
+                  {(["Basic", "Moderate", "Advance"] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setTrainingType(type)}
+                      className={`px-5 py-2.5 rounded-full border text-xs font-semibold transition cursor-pointer ${
+                        trainingType === type
+                          ? "bg-[#673ab7] text-white border-[#673ab7] shadow-md"
+                          : "border-border hover:bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {type} — {trainingPrices[type]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Customization of Training Program — Premium Command Selection */}
+              <div className="flex flex-col gap-3 pt-2">
+                <div>
+                  <label className="text-sm font-semibold text-foreground">Customize Training Program</label>
+                  <p className="text-xs text-muted-foreground mt-0.5">Select the commands you want your pet to learn. Choose as many as needed.</p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                  {commandsList.map((command) => {
+                    const checked = selectedCommands.includes(command);
+                    return (
+                      <button
+                        key={command}
+                        type="button"
+                        onClick={() => {
+                          if (checked) {
+                            setSelectedCommands(selectedCommands.filter((c) => c !== command));
+                          } else {
+                            setSelectedCommands([...selectedCommands, command]);
+                          }
+                        }}
+                        className={`relative flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border-2 text-xs font-bold transition-all duration-200 cursor-pointer text-center ${
+                          checked
+                            ? "bg-[#673ab7]/10 text-[#673ab7] border-[#673ab7] shadow-[0_0_0_1px_rgba(103,58,183,0.2),0_4px_12px_rgba(103,58,183,0.15)]"
+                            : "border-border/60 hover:border-[#673ab7]/40 hover:bg-[#673ab7]/5 text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {checked && (
+                          <span className="flex items-center justify-center w-4 h-4 rounded-full bg-[#673ab7] text-white shrink-0">
+                            <FiCheck size={10} strokeWidth={3} />
+                          </span>
+                        )}
+                        {command}
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedCommands.length > 0 && (
+                  <div className="flex items-center gap-2 text-xs text-[#673ab7] font-semibold mt-1">
+                    <FiCheckSquare size={14} />
+                    {selectedCommands.length} command{selectedCommands.length > 1 ? "s" : ""} selected: {selectedCommands.join(", ")}
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                className="w-full rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground hover:opacity-90 transition cursor-pointer mt-4"
+              >
+                Send Booking Request
+              </button>
+            </form>
+          )}
         </div>
       </section>
 

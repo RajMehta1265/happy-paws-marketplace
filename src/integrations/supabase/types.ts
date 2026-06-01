@@ -222,6 +222,57 @@ export type Database = {
         }
         Relationships: []
       }
+      exotic_pets: {
+        Row: {
+          adoption: boolean
+          age: string | null
+          breed: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          price: number
+          status: string
+          type: string
+          updated_at: string
+          vaccinated: boolean
+          video_url: string | null
+        }
+        Insert: {
+          adoption?: boolean
+          age?: string | null
+          breed?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          price?: number
+          status?: string
+          type?: string
+          updated_at?: string
+          vaccinated?: boolean
+          video_url?: string | null
+        }
+        Update: {
+          adoption?: boolean
+          age?: string | null
+          breed?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          price?: number
+          status?: string
+          type?: string
+          updated_at?: string
+          vaccinated?: boolean
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string

@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FiShoppingBag, FiStar } from "react-icons/fi";
 
 export const Route = createFileRoute("/products")({
-  head: () => ({ meta: [{ title: "Pet Products Shop — WOOLF.INDIA" }, { name: "description", content: "Food, toys, grooming and accessories for the pets you love." }] }),
+  head: () => ({ meta: [{ title: "Pet Products — WOOLF.INDIA" }, { name: "description", content: "Food, toys, grooming and accessories for the pets you love." }] }),
   component: ProductsPage,
 });
 
@@ -86,7 +86,7 @@ function ProductsPage() {
   return (
     <SiteLayout>
       <section className="mx-auto max-w-7xl px-6 pt-16">
-        <div className="text-xs uppercase tracking-[0.25em] text-accent">Shop</div>
+        <div className="text-xs uppercase tracking-[0.25em] text-accent">Products</div>
         <h1 className="mt-2 font-display text-5xl lg:text-6xl">Care, curated.</h1>
       </section>
       <section className="mx-auto max-w-7xl px-6 mt-10 flex flex-wrap gap-3">

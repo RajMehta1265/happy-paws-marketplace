@@ -123,7 +123,7 @@ function Index() {
         </div>
       </Section>
 
-      <Section eyebrow="Shop" title="Beautiful things, made for them" cta={{ to: "/products", label: "Shop everything" }}>
+      <Section eyebrow="Products" title="Beautiful things, made for them" cta={{ to: "/products", label: "View all products" }}>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.slice(0, 3).map((p) => (
             <div key={p.id} className="rounded-3xl bg-card overflow-hidden hover-lift">

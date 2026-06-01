@@ -1,43 +1,30 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { FiCheck, FiHeart, FiStar, FiMessageSquare, FiSend, FiShoppingBag, FiPlay } from "react-icons/fi";
+import { FiCheck, FiHeart, FiStar, FiMessageSquare, FiSend, FiShoppingBag, FiPlay, FiEdit2, FiTrash2, FiX } from "react-icons/fi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect } from "react";
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "sonner";
-import { dbService, parseImages } from "@/services/db-service";
+import { dbService, parseImages, safeUUID, type Review } from "@/services/db-service";
 
 export const Route = createFileRoute("/pets/$petId")({
   component: PetDetail,
 });
 
-interface Review {
-  id: string;
-  petId: string;
-  author: string;
-  rating: number;
-  text: string;
-  date: string;
-}
-
-const DEFAULT_REVIEWS: Review[] = [
-  { id: "1", petId: "milo", author: "Sarah M.", rating: 5, text: "Milo is a bundle of joy! Very healthy and well-behaved.", date: "2026-05-15" },
-  { id: "2", petId: "milo", author: "Aman P.", rating: 5, text: "Extremely friendly. The onboarding instructions were super helpful.", date: "2026-05-20" },
-  { id: "3", petId: "luna", author: "Deepak S.", rating: 5, text: "Luna is the sweetest Persian kitten. Pure white fur and green eyes!", date: "2026-05-18" },
-  { id: "4", petId: "kiwi", author: "Priyah K.", rating: 4, text: "Kiwi sings beautifully every morning. Healthy bird.", date: "2026-05-22" },
-  { id: "5", petId: "mochi", author: "Vikram R.", rating: 5, text: "Mochi loves curling up in my lap. So content and quiet.", date: "2026-05-25" },
-];
-
 function PetDetail() {
   const { petId } = Route.useParams();
   const { add: addCartItem } = useCart();
+  const queryClient = useQueryClient();
 
-  const [reviews, setReviews] = useState<Review[]>([]);
   const [newReviewAuthor, setNewReviewAuthor] = useState("");
   const [newReviewText, setNewReviewText] = useState("");
   const [newReviewRating, setNewReviewRating] = useState(5);
+
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [editReviewRating, setEditReviewRating] = useState(5);
+  const [editReviewText, setEditReviewText] = useState("");
 
   const { data: pet, isLoading } = useQuery({
     queryKey: ["pet", petId],
@@ -47,6 +34,105 @@ function PetDetail() {
       return localPets.find((p) => p.id === petId) || undefined;
     },
     staleTime: 0,
+  });
+
+  const { data: reviews = [] } = useQuery({
+    queryKey: ["reviews", petId],
+    queryFn: () => dbService.getReviews(petId),
+    initialData: () => {
+      const allLocal = dbService.initLocalReviews();
+      return allLocal.filter((r) => r.petId === petId);
+    },
+    staleTime: 0,
+  });
+
+  const submitReviewMutation = useMutation({
+    mutationFn: (newReview: Omit<Review, "id" | "date">) => dbService.submitReview(newReview),
+    onMutate: async (newReviewInput) => {
+      await queryClient.cancelQueries({ queryKey: ["reviews", petId] });
+      const previousReviews = queryClient.getQueryData<Review[]>(["reviews", petId]) || [];
+
+      const optimisticReview: Review = {
+        ...newReviewInput,
+        id: safeUUID(),
+        date: new Date().toISOString().split("T")[0],
+      };
+
+      queryClient.setQueryData<Review[]>(["reviews", petId], [optimisticReview, ...previousReviews]);
+
+      return { previousReviews };
+    },
+    onError: (err, newReview, context) => {
+      if (context?.previousReviews) {
+        queryClient.setQueryData(["reviews", petId], context.previousReviews);
+      }
+      toast.error("Failed to submit review. Saved locally.");
+    },
+    onSuccess: () => {
+      toast.success("Thank you for your review!");
+      setNewReviewAuthor("");
+      setNewReviewText("");
+      setNewReviewRating(5);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["reviews", petId] });
+    },
+  });
+
+  const deleteReviewMutation = useMutation({
+    mutationFn: (id: string) => dbService.deleteReview(id, petId),
+    onMutate: async (deletedId) => {
+      await queryClient.cancelQueries({ queryKey: ["reviews", petId] });
+      const previousReviews = queryClient.getQueryData<Review[]>(["reviews", petId]) || [];
+
+      queryClient.setQueryData<Review[]>(
+        ["reviews", petId],
+        previousReviews.filter((r) => r.id !== deletedId)
+      );
+
+      return { previousReviews };
+    },
+    onError: (err, id, context) => {
+      if (context?.previousReviews) {
+        queryClient.setQueryData(["reviews", petId], context.previousReviews);
+      }
+      toast.error("Failed to delete review. Saved locally.");
+    },
+    onSuccess: () => {
+      toast.success("Review deleted successfully.");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["reviews", petId] });
+    },
+  });
+
+  const updateReviewMutation = useMutation({
+    mutationFn: ({ id, rating, text }: { id: string; rating: number; text: string }) =>
+      dbService.updateReview(id, petId, rating, text),
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: ["reviews", petId] });
+      const previousReviews = queryClient.getQueryData<Review[]>(["reviews", petId]) || [];
+
+      queryClient.setQueryData<Review[]>(
+        ["reviews", petId],
+        previousReviews.map((r) => (r.id === variables.id ? { ...r, rating: variables.rating, text: variables.text } : r))
+      );
+
+      return { previousReviews };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousReviews) {
+        queryClient.setQueryData(["reviews", petId], context.previousReviews);
+      }
+      toast.error("Failed to update review. Saved locally.");
+    },
+    onSuccess: () => {
+      toast.success("Review updated successfully.");
+      setEditingReviewId(null);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["reviews", petId] });
+    },
   });
 
   const [showVideo, setShowVideo] = useState(false);
@@ -64,22 +150,6 @@ function PetDetail() {
     }
   }, [pet?.id, pet?.video_url]);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedReviews = localStorage.getItem("pawhaven_pet_reviews");
-      if (storedReviews) {
-        try {
-          setReviews(JSON.parse(storedReviews));
-        } catch {
-          setReviews(DEFAULT_REVIEWS);
-        }
-      } else {
-        localStorage.setItem("pawhaven_pet_reviews", JSON.stringify(DEFAULT_REVIEWS));
-        setReviews(DEFAULT_REVIEWS);
-      }
-    }
-  }, []);
-
   const handleReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newReviewAuthor || !newReviewText) {
@@ -87,31 +157,25 @@ function PetDetail() {
       return;
     }
 
-    const nextReview: Review = {
-      id: crypto.randomUUID(),
+    submitReviewMutation.mutate({
       petId: petId,
       author: newReviewAuthor,
       rating: newReviewRating,
       text: newReviewText,
-      date: new Date().toISOString().split("T")[0],
-    };
-
-    const updated = [nextReview, ...reviews];
-    setReviews(updated);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("pawhaven_pet_reviews", JSON.stringify(updated));
-    }
-    toast.success("Thank you for your review!");
-    setNewReviewAuthor("");
-    setNewReviewText("");
-    setNewReviewRating(5);
+    });
   };
 
   if (isLoading) return <SiteLayout><div className="mx-auto max-w-7xl px-6 py-32"><Skeleton className="h-96 rounded-3xl" /></div></SiteLayout>;
   if (!pet) return <SiteLayout><div className="mx-auto max-w-3xl px-6 py-32 text-center"><h1 className="font-display text-4xl">Pet not found</h1><Link to="/pets" className="text-accent mt-4 inline-block">Back to all pets →</Link></div></SiteLayout>;
 
-  // Filter reviews for this pet
-  const petReviews = reviews.filter((r) => r.petId === pet.id);
+  // Filter reviews for this pet (with name-based fallbacks for default reviews)
+  const petReviews = reviews.filter((r) => 
+    r.petId === pet.id ||
+    (pet.name.toLowerCase() === "milo" && (r.petId === "milo" || r.petId === "d1111111-1111-1111-1111-111111111111")) ||
+    (pet.name.toLowerCase() === "luna" && (r.petId === "luna" || r.petId === "d2222222-2222-2222-2222-222222222222")) ||
+    (pet.name.toLowerCase() === "kiwi" && (r.petId === "kiwi" || r.petId === "d4444444-4444-4444-4444-444444444444")) ||
+    (pet.name.toLowerCase() === "mochi" && (r.petId === "mochi" || r.petId === "d6666666-6666-6666-6666-666666666666"))
+  );
   if (petReviews.length === 0) {
     petReviews.push(
       { id: `mock-1-${pet.id}`, petId: pet.id, author: "Aditi G.", rating: 5, text: `Absolutely love ${pet.name}! Super active and healthy.`, date: "2026-05-10" },
@@ -235,20 +299,123 @@ function PetDetail() {
             </h2>
             
             <div className="space-y-4">
-              {petReviews.map((r) => (
-                <div key={r.id} className="bg-card p-6 rounded-3xl border border-border shadow-xs hover:border-border/100 transition duration-300">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-sm text-foreground">{r.author}</span>
-                    <span className="text-[10px] text-muted-foreground">{r.date}</span>
+              {petReviews.map((r) => {
+                const isEditing = editingReviewId === r.id;
+                return (
+                  <div key={r.id} className="bg-card p-6 rounded-3xl border border-border shadow-xs hover:border-border/100 transition duration-300 relative group">
+                    {/* Inline edit/delete buttons - only show if not mock reviews */}
+                    {!r.id.startsWith("mock-") && !isEditing && (
+                      <div className="absolute top-6 right-6 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <button
+                          onClick={() => {
+                            setEditingReviewId(r.id);
+                            setEditReviewRating(r.rating);
+                            setEditReviewText(r.text);
+                          }}
+                          className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition cursor-pointer"
+                          aria-label="Edit review"
+                        >
+                          <FiEdit2 size={13} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm("Are you sure you want to delete this review?")) {
+                              deleteReviewMutation.mutate(r.id);
+                            }
+                          }}
+                          className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-destructive transition cursor-pointer"
+                          aria-label="Delete review"
+                        >
+                          <FiTrash2 size={13} />
+                        </button>
+                      </div>
+                    )}
+
+                    {isEditing ? (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          if (!editReviewText.trim()) {
+                            toast.error("Please enter review thoughts");
+                            return;
+                          }
+                          updateReviewMutation.mutate({
+                            id: r.id,
+                            rating: editReviewRating,
+                            text: editReviewText,
+                          });
+                        }}
+                        className="space-y-3"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-semibold text-sm text-foreground">{r.author} (Editing)</span>
+                          <button
+                            type="button"
+                            onClick={() => setEditingReviewId(null)}
+                            className="p-1 hover:bg-muted rounded-full text-muted-foreground hover:text-foreground cursor-pointer"
+                          >
+                            <FiX size={14} />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Rating</label>
+                            <select
+                              value={editReviewRating}
+                              onChange={(e) => setEditReviewRating(Number(e.target.value))}
+                              className="w-full rounded-full border border-border bg-background px-3 py-1.5 text-xs outline-none focus:border-accent cursor-pointer"
+                            >
+                              <option value={5}>5 Stars</option>
+                              <option value={4}>4 Stars</option>
+                              <option value={3}>3 Stars</option>
+                              <option value={2}>2 Stars</option>
+                              <option value={1}>1 Star</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Your Thoughts</label>
+                          <textarea
+                            required
+                            value={editReviewText}
+                            onChange={(e) => setEditReviewText(e.target.value)}
+                            rows={3}
+                            className="w-full rounded-xl border border-border bg-background p-3 text-xs outline-none focus:border-accent resize-none"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="submit"
+                            className="rounded-full bg-primary text-primary-foreground px-4 py-1.5 text-[10px] font-bold hover:opacity-90 transition cursor-pointer"
+                          >
+                            Save
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingReviewId(null)}
+                            className="rounded-full border border-border bg-background px-4 py-1.5 text-[10px] font-bold hover:bg-muted transition cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between mb-2 pr-14">
+                          <span className="font-semibold text-sm text-foreground">{r.author}</span>
+                          <span className="text-[10px] text-muted-foreground">{r.date}</span>
+                        </div>
+                        <div className="flex text-amber-500 mb-2">
+                          {Array.from({ length: r.rating }).map((_, i) => (
+                            <FiStar key={i} className="fill-amber-500 text-amber-500" size={11} />
+                          ))}
+                        </div>
+                        <p className="text-muted-foreground italic text-sm leading-relaxed">"{r.text}"</p>
+                      </>
+                    )}
                   </div>
-                  <div className="flex text-amber-500 mb-2">
-                    {Array.from({ length: r.rating }).map((_, i) => (
-                      <FiStar key={i} className="fill-amber-500 text-amber-500" size={11} />
-                    ))}
-                  </div>
-                  <p className="text-muted-foreground italic text-sm leading-relaxed">"{r.text}"</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

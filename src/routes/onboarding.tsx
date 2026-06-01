@@ -77,6 +77,13 @@ function OnboardingPage() {
     }
   }, [user]);
 
+  const handleSkip = () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("pawhaven_skip_onboarding", "true");
+    }
+    navigate({ to: "/" });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step === 1) {
@@ -150,8 +157,10 @@ function OnboardingPage() {
         window.dispatchEvent(new Event("auth-change"));
         toast.success("Profile details saved locally!");
         await refreshProfile();
-        const welcomeHtml = mailTemplates.getWelcomeEmail({ toName: form.full_name });
-        sendEmail(user!.email!, "Welcome to WOOLF.INDIA!", welcomeHtml);
+        if (user?.email) {
+          const welcomeHtml = mailTemplates.getWelcomeEmail({ toName: form.full_name });
+          sendEmail(user.email, "Welcome to WOOLF.INDIA!", welcomeHtml);
+        }
         navigate({ to: "/" });
         return;
       }
@@ -172,8 +181,10 @@ function OnboardingPage() {
 
       toast.success("Welcome aboard! Profile completed successfully.");
       await refreshProfile();
-      const welcomeHtml = mailTemplates.getWelcomeEmail({ toName: form.full_name });
-      sendEmail(user!.email!, "Welcome to WOOLF.INDIA!", welcomeHtml);
+      if (user?.email) {
+        const welcomeHtml = mailTemplates.getWelcomeEmail({ toName: form.full_name });
+        sendEmail(user.email, "Welcome to WOOLF.INDIA!", welcomeHtml);
+      }
       navigate({ to: "/" });
     } catch (err) {
       console.error(err);
@@ -282,7 +293,7 @@ function OnboardingPage() {
                     className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-muted-foreground">City *</label>
                     <input
@@ -348,6 +359,17 @@ function OnboardingPage() {
               </div>
             )}
           </form>
+
+          {/* Skip for now option */}
+          <div className="mt-6 text-center border-t border-border/60 pt-4">
+            <button
+              type="button"
+              onClick={handleSkip}
+              className="text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer underline underline-offset-4"
+            >
+              Skip for now & explore website
+            </button>
+          </div>
         </div>
       </section>
     </SiteLayout>
