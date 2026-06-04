@@ -26,7 +26,8 @@ export function Footer() {
                 alt="WOOLF.INDIA"
                 className="h-16 w-auto sm:h-20 object-contain"
                 style={{
-                  filter: "invert(1) sepia(1) saturate(5) hue-rotate(15deg) brightness(0.9) contrast(1.2)",
+                  filter:
+                    "invert(1) sepia(1) saturate(5) hue-rotate(15deg) brightness(0.9) contrast(1.2)",
                   mixBlendMode: "screen",
                 }}
               />

@@ -77,7 +77,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "WOOLF.INDIA — Premium Companions, Adoption & Care" },
-      { name: "description", content: "Nourishing bonds, naturally. Buy, adopt, and care for companions with WOOLF.INDIA. Premium catalog, training, and care." },
+      {
+        name: "description",
+        content:
+          "Nourishing bonds, naturally. Buy, adopt, and care for companions with WOOLF.INDIA. Premium catalog, training, and care.",
+      },
       { property: "og:title", content: "WOOLF.INDIA" },
       { property: "og:description", content: "Premium companions, adoption and care." },
       { property: "og:type", content: "website" },
@@ -87,7 +91,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Karla:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700;800&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Karla:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700;800&display=swap",
+      },
     ],
   }),
   shellComponent: RootShell,

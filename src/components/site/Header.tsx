@@ -64,7 +64,8 @@ export function Header() {
               alt="WOOLF.INDIA"
               className="h-16 w-auto sm:h-20 object-contain group-hover:scale-105 transition-transform duration-300 shrink-0"
               style={{
-                filter: "invert(1) sepia(1) saturate(5) hue-rotate(15deg) brightness(0.9) contrast(1.2)",
+                filter:
+                  "invert(1) sepia(1) saturate(5) hue-rotate(15deg) brightness(0.9) contrast(1.2)",
                 mixBlendMode: "screen",
               }}
             />
@@ -107,7 +108,11 @@ export function Header() {
           </button>
 
           {/* Cart Icon - visible everywhere */}
-          <Link to="/cart" aria-label="Cart" className="relative rounded-full p-2 hover:bg-muted flex items-center justify-center">
+          <Link
+            to="/cart"
+            aria-label="Cart"
+            className="relative rounded-full p-2 hover:bg-muted flex items-center justify-center"
+          >
             <FiShoppingBag size={18} />
             {count > 0 && (
               <span className="absolute -top-1 -right-1 grid h-4 w-4 sm:h-5 sm:w-5 place-items-center rounded-full bg-accent text-[9px] sm:text-[10px] font-bold text-accent-foreground">
@@ -146,7 +151,11 @@ export function Header() {
           </div>
 
           {/* Mobile hamburger menu - below lg */}
-          <button className="lg:hidden p-2 hover:bg-muted rounded-full" onClick={() => setOpen((v) => !v)} aria-label="Menu">
+          <button
+            className="lg:hidden p-2 hover:bg-muted rounded-full"
+            onClick={() => setOpen((v) => !v)}
+            aria-label="Menu"
+          >
             {open ? <FiX size={22} /> : <FiMenu size={22} />}
           </button>
         </div>

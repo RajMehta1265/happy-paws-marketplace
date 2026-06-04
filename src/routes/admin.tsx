@@ -1,7 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { dbService, Pet, parseImages, type TrainingBooking, type HostellingBooking, type ContactSubmission } from "@/services/db-service";
+import {
+  dbService,
+  Pet,
+  parseImages,
+  type TrainingBooking,
+  type HostellingBooking,
+  type ContactSubmission,
+} from "@/services/db-service";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,7 +31,7 @@ import {
   FiPhoneCall,
   FiMail,
   FiEye,
-  FiEyeOff
+  FiEyeOff,
 } from "react-icons/fi";
 import { BookingCalendar } from "@/components/BookingCalendar";
 
@@ -34,20 +41,34 @@ export const Route = createFileRoute("/admin")({
 });
 
 const PRESETS = {
-  dogImage: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=800",
-  catImage: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&q=80&w=800",
-  dogVideo: "https://assets.mixkit.co/videos/preview/mixkit-golden-retriever-puppy-sitting-on-grass-32860-large.mp4",
-  catVideo: "https://assets.mixkit.co/videos/preview/mixkit-cat-resting-on-a-cushion-41484-large.mp4",
-  productImage: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&q=80&w=800"
+  dogImage:
+    "https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=800",
+  catImage:
+    "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&q=80&w=800",
+  dogVideo:
+    "https://assets.mixkit.co/videos/preview/mixkit-golden-retriever-puppy-sitting-on-grass-32860-large.mp4",
+  catVideo:
+    "https://assets.mixkit.co/videos/preview/mixkit-cat-resting-on-a-cushion-41484-large.mp4",
+  productImage:
+    "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&q=80&w=800",
 };
 
 const BREED_PRESETS: Record<string, string[]> = {
-  Dog: ["Labrador", "Golden Retriever", "Beagle", "German Shepherd", "Poodle", "Husky", "Pug", "Shih Tzu"],
+  Dog: [
+    "Labrador",
+    "Golden Retriever",
+    "Beagle",
+    "German Shepherd",
+    "Poodle",
+    "Husky",
+    "Pug",
+    "Shih Tzu",
+  ],
   Cat: ["Persian", "Siamese", "Maine Coon", "Bengal", "Ragdoll", "British Shorthair"],
   Rabbit: ["Holland Lop", "Mini Rex", "Netherland Dwarf", "Flemish Giant"],
   Bird: ["Budgerigar", "Cockatiel", "Scarlet Macaw", "Lovebird", "Canary"],
   Hamster: ["Syrian", "Dwarf Campbell", "Roborovski"],
-  Exotic: ["Veiled Chameleon", "Sugar Glider", "Red-Eyed Tree Frog", "Bearded Dragon", "Axolotl"]
+  Exotic: ["Veiled Chameleon", "Sugar Glider", "Red-Eyed Tree Frog", "Bearded Dragon", "Axolotl"],
 };
 
 function AdminPage() {
@@ -55,7 +76,16 @@ function AdminPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<"overview" | "pets" | "exotics" | "products" | "consent" | "consultations" | "bookings" | "contacts">("pets");
+  const [activeTab, setActiveTab] = useState<
+    | "overview"
+    | "pets"
+    | "exotics"
+    | "products"
+    | "consent"
+    | "consultations"
+    | "bookings"
+    | "contacts"
+  >("pets");
   const [selectedConsent, setSelectedConsent] = useState<any | null>(null);
 
   const [bookingSubTab, setBookingSubTab] = useState<"training" | "hostelling">("training");
@@ -85,7 +115,7 @@ function AdminPage() {
     qc.invalidateQueries({ queryKey: ["hostellingBookings"] });
     toast.success("Hostelling stay record removed.");
   };
-  
+
   // Companion CRUD states
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -102,7 +132,7 @@ function AdminPage() {
     vaccinated: false,
     adoption: false,
     status: "available",
-    description: ""
+    description: "",
   });
 
   // Shop Item CRUD states
@@ -117,7 +147,7 @@ function AdminPage() {
     image_url: "",
     description: "",
     stock: 10,
-    rating: 5.0
+    rating: 5.0,
   });
 
   // Guard routing
@@ -135,31 +165,39 @@ function AdminPage() {
   // Automatically sync any local-only pets when admin portal mounts
   useEffect(() => {
     if (user && isAdmin) {
-      dbService.syncLocalOnlyPets().then(() => {
-        qc.invalidateQueries({ queryKey: ["pets"] });
-        qc.invalidateQueries({ queryKey: ["adminStats"] });
-      }).catch((err) => {
-        console.warn("Failed to automatically sync local-only pets:", err);
-      });
+      dbService
+        .syncLocalOnlyPets()
+        .then(() => {
+          qc.invalidateQueries({ queryKey: ["pets"] });
+          qc.invalidateQueries({ queryKey: ["adminStats"] });
+        })
+        .catch((err) => {
+          console.warn("Failed to automatically sync local-only pets:", err);
+        });
     }
   }, [user, isAdmin, qc]);
 
   // Handle local file uploads and convert to Base64 data URLs
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, formType: "pet" | "product") => {
+  const handleImageUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    formType: "pet" | "product",
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     if (file.size > 3 * 1024 * 1024) {
-      toast.warning("File is larger than 3MB. High resolution images may affect database sync and load speeds.");
+      toast.warning(
+        "File is larger than 3MB. High resolution images may affect database sync and load speeds.",
+      );
     }
 
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
       if (formType === "product") {
-        setProductFormData(prev => ({ ...prev, image_url: base64String }));
+        setProductFormData((prev) => ({ ...prev, image_url: base64String }));
       } else {
-        setFormData(prev => ({ ...prev, image_url: base64String }));
+        setFormData((prev) => ({ ...prev, image_url: base64String }));
       }
       toast.success("Image successfully loaded from computer!");
     };
@@ -177,7 +215,9 @@ function AdminPage() {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (file.size > 3 * 1024 * 1024) {
-        toast.warning(`${file.name} is larger than 3MB. High resolution images may affect database sync and load speeds.`);
+        toast.warning(
+          `${file.name} is larger than 3MB. High resolution images may affect database sync and load speeds.`,
+        );
       }
 
       const reader = new FileReader();
@@ -186,7 +226,7 @@ function AdminPage() {
         newImages.push(base64String);
         loadedCount++;
         if (loadedCount === files.length) {
-          setFormData(prev => ({ ...prev, image_url: JSON.stringify(newImages) }));
+          setFormData((prev) => ({ ...prev, image_url: JSON.stringify(newImages) }));
           toast.success(`Successfully loaded ${files.length} image(s) from computer!`);
         }
       };
@@ -197,15 +237,17 @@ function AdminPage() {
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     if (file.size > 15 * 1024 * 1024) {
-      toast.warning("File is larger than 15MB. Storing large video files directly in the database may affect database sync and load speeds.");
+      toast.warning(
+        "File is larger than 15MB. Storing large video files directly in the database may affect database sync and load speeds.",
+      );
     }
 
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
-      setFormData(prev => ({ ...prev, video_url: base64String }));
+      setFormData((prev) => ({ ...prev, video_url: base64String }));
       toast.success("Video successfully loaded from computer!");
     };
     reader.readAsDataURL(file);
@@ -219,12 +261,15 @@ function AdminPage() {
       if (isMock) {
         const storedOrders = localStorage.getItem("pawhaven_orders") || "[]";
         let localOrders = [];
-        try { localOrders = JSON.parse(storedOrders); } catch {}
+        try {
+          localOrders = JSON.parse(storedOrders);
+        } catch {}
         const localRev = localOrders.reduce((sum: number, o: any) => sum + Number(o.total), 0);
-        
+
         let localUserCount = 1;
         try {
-          localUserCount = Object.keys(localStorage).filter(k => k.startsWith("pawhaven_profile_")).length || 1;
+          localUserCount =
+            Object.keys(localStorage).filter((k) => k.startsWith("pawhaven_profile_")).length || 1;
         } catch {}
 
         const localPetCount = dbService.initLocalData().length;
@@ -233,15 +278,23 @@ function AdminPage() {
           { label: "Total Users", value: String(localUserCount), icon: FiUsers },
           { label: "Total Orders", value: String(localOrders.length), icon: FiPackage },
           { label: "Total Companions", value: String(localPetCount), icon: FiCalendar },
-          { label: "Total Revenue", value: `₹${localRev.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: FiTrendingUp },
+          {
+            label: "Total Revenue",
+            value: `₹${localRev.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+            icon: FiTrendingUp,
+          },
         ];
       }
 
       // Real Supabase counts
       try {
-        const { count: userCount } = await supabase.from("profiles").select("*", { count: "exact", head: true });
+        const { count: userCount } = await supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true });
         const { data: ordersData } = await supabase.from("orders").select("total");
-        const { count: petCount } = await supabase.from("pets").select("*", { count: "exact", head: true });
+        const { count: petCount } = await supabase
+          .from("pets")
+          .select("*", { count: "exact", head: true });
 
         const orderCount = ordersData?.length ?? 0;
         const totalRevenue = ordersData?.reduce((sum, o) => sum + Number(o.total), 0) ?? 0;
@@ -250,7 +303,11 @@ function AdminPage() {
           { label: "Total Users", value: String(userCount ?? 0), icon: FiUsers },
           { label: "Total Orders", value: String(orderCount), icon: FiPackage },
           { label: "Total Companions", value: String(petCount ?? 0), icon: FiCalendar },
-          { label: "Total Revenue", value: `₹${totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: FiTrendingUp },
+          {
+            label: "Total Revenue",
+            value: `₹${totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+            icon: FiTrendingUp,
+          },
         ];
       } catch (err) {
         console.warn("Failed to fetch real database statistics:", err);
@@ -261,7 +318,7 @@ function AdminPage() {
           { label: "Total Revenue", value: "₹0", icon: FiTrendingUp },
         ];
       }
-    }
+    },
   });
 
   // Fetch companions (pets)
@@ -320,7 +377,11 @@ function AdminPage() {
   });
 
   // Fetch contact submissions
-  const { data: contactSubmissions = [], isLoading: contactsLoading, refetch: refetchContacts } = useQuery({
+  const {
+    data: contactSubmissions = [],
+    isLoading: contactsLoading,
+    refetch: refetchContacts,
+  } = useQuery({
     queryKey: ["contactSubmissions"],
     queryFn: () => dbService.getContactSubmissions(),
   });
@@ -332,7 +393,11 @@ function AdminPage() {
       const isMock = !!localStorage.getItem("pawhaven_mock_session");
       if (isMock) {
         const storedOrders = localStorage.getItem("pawhaven_orders") || "[]";
-        try { return JSON.parse(storedOrders); } catch { return []; }
+        try {
+          return JSON.parse(storedOrders);
+        } catch {
+          return [];
+        }
       }
       const { data, error } = await supabase
         .from("orders")
@@ -340,14 +405,14 @@ function AdminPage() {
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data;
-    }
+    },
   });
 
   const getMonthlyData = () => {
     // Generate the last 12 months dynamically
     const monthsData: { key: string; label: string; revenue: number }[] = [];
     const now = new Date();
-    
+
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; // e.g. "2026-05"
@@ -362,7 +427,7 @@ function AdminPage() {
         if (!o.created_at) return;
         const date = new Date(o.created_at);
         const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-        const match = monthsData.find(m => m.key === key);
+        const match = monthsData.find((m) => m.key === key);
         if (match) {
           match.revenue += Number(o.total);
           hasActualData = true;
@@ -372,7 +437,9 @@ function AdminPage() {
 
     // If there is no real order revenue yet, populate with realistic mock numbers so it's not empty
     if (!hasActualData) {
-      const mockRevenues = [15000, 22000, 18000, 32000, 25000, 40000, 35000, 48000, 42000, 55000, 50000, 68000];
+      const mockRevenues = [
+        15000, 22000, 18000, 32000, 25000, 40000, 35000, 48000, 42000, 55000, 50000, 68000,
+      ];
       monthsData.forEach((m, idx) => {
         m.revenue = mockRevenues[idx];
       });
@@ -382,7 +449,7 @@ function AdminPage() {
   };
 
   const monthlyData = getMonthlyData();
-  const maxRevenue = Math.max(...monthlyData.map(m => m.revenue)) || 1;
+  const maxRevenue = Math.max(...monthlyData.map((m) => m.revenue)) || 1;
 
   // Fetch products (shop items)
   const { data: productsData, isLoading: productsLoading } = useQuery({
@@ -392,10 +459,12 @@ function AdminPage() {
       if (isMock) {
         const stored = localStorage.getItem("pawhaven_products");
         if (stored) {
-          try { return JSON.parse(stored); } catch {}
+          try {
+            return JSON.parse(stored);
+          } catch {}
         }
         const { products: sampleProducts } = await import("@/data/sample");
-        const list = sampleProducts.map(p => ({
+        const list = sampleProducts.map((p) => ({
           id: p.id,
           name: p.name,
           category: p.category,
@@ -403,16 +472,19 @@ function AdminPage() {
           image_url: p.image || null,
           rating: p.rating,
           description: "Curated premium care product by WOOLF.INDIA",
-          stock: 10
+          stock: 10,
         }));
         localStorage.setItem("pawhaven_products", JSON.stringify(list));
         return list;
       }
 
-      const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
-    }
+    },
   });
 
   // Pet CRUD Handlers
@@ -430,7 +502,7 @@ function AdminPage() {
       vaccinated: pet.vaccinated,
       adoption: pet.adoption,
       status: pet.status,
-      description: pet.description || ""
+      description: pet.description || "",
     });
   };
 
@@ -448,14 +520,15 @@ function AdminPage() {
       vaccinated: false,
       adoption: false,
       status: "available",
-      description: ""
+      description: "",
     });
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return toast.error("Pet Name is required");
-    if (!formData.image_url.trim()) return toast.error("Image is required. Please upload or specify a URL.");
+    if (!formData.image_url.trim())
+      return toast.error("Image is required. Please upload or specify a URL.");
 
     const payload = {
       name: formData.name.trim(),
@@ -468,7 +541,7 @@ function AdminPage() {
       vaccinated: formData.vaccinated,
       adoption: formData.adoption,
       status: formData.status,
-      description: formData.description.trim()
+      description: formData.description.trim(),
     };
 
     try {
@@ -501,10 +574,10 @@ function AdminPage() {
   };
 
   const autofillPreset = (key: keyof typeof PRESETS) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       image_url: key === "dogImage" || key === "catImage" ? PRESETS[key] : prev.image_url,
-      video_url: key === "dogVideo" || key === "catVideo" ? PRESETS[key] : prev.video_url
+      video_url: key === "dogVideo" || key === "catVideo" ? PRESETS[key] : prev.video_url,
     }));
     toast.info("Autofilled preset URL!");
   };
@@ -520,7 +593,7 @@ function AdminPage() {
       image_url: prod.image_url || "",
       description: prod.description || "",
       stock: prod.stock ?? 10,
-      rating: Number(prod.rating ?? 5.0)
+      rating: Number(prod.rating ?? 5.0),
     });
   };
 
@@ -534,14 +607,15 @@ function AdminPage() {
       image_url: "",
       description: "",
       stock: 10,
-      rating: 5.0
+      rating: 5.0,
     });
   };
 
   const handleProductFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!productFormData.name.trim()) return toast.error("Product Name is required");
-    if (!productFormData.image_url.trim()) return toast.error("Image is required. Please upload or specify a URL.");
+    if (!productFormData.image_url.trim())
+      return toast.error("Image is required. Please upload or specify a URL.");
 
     const payload = {
       name: productFormData.name.trim(),
@@ -550,7 +624,7 @@ function AdminPage() {
       image_url: productFormData.image_url.trim(),
       description: productFormData.description.trim(),
       stock: Number(productFormData.stock),
-      rating: Number(productFormData.rating)
+      rating: Number(productFormData.rating),
     };
 
     const isMock = !!localStorage.getItem("pawhaven_mock_session");
@@ -558,7 +632,9 @@ function AdminPage() {
       if (isMock) {
         const stored = localStorage.getItem("pawhaven_products") || "[]";
         let localProds = [];
-        try { localProds = JSON.parse(stored); } catch {}
+        try {
+          localProds = JSON.parse(stored);
+        } catch {}
 
         if (editingProduct) {
           const index = localProds.findIndex((p: any) => p.id === editingProduct.id);
@@ -573,7 +649,10 @@ function AdminPage() {
         localStorage.setItem("pawhaven_products", JSON.stringify(localProds));
       } else {
         if (editingProduct) {
-          const { error } = await supabase.from("products").update(payload).eq("id", editingProduct.id);
+          const { error } = await supabase
+            .from("products")
+            .update(payload)
+            .eq("id", editingProduct.id);
           if (error) throw error;
           toast.success(`Successfully updated ${payload.name}!`);
         } else {
@@ -597,7 +676,9 @@ function AdminPage() {
       if (isMock) {
         const stored = localStorage.getItem("pawhaven_products") || "[]";
         let localProds = [];
-        try { localProds = JSON.parse(stored); } catch {}
+        try {
+          localProds = JSON.parse(stored);
+        } catch {}
         localProds = localProds.filter((p: any) => p.id !== id);
         localStorage.setItem("pawhaven_products", JSON.stringify(localProds));
         toast.success(`${name} deleted successfully (locally)`);
@@ -613,16 +694,16 @@ function AdminPage() {
   };
 
   const autofillProductPreset = () => {
-    setProductFormData(prev => ({
+    setProductFormData((prev) => ({
       ...prev,
-      image_url: PRESETS.productImage
+      image_url: PRESETS.productImage,
     }));
     toast.info("Autofilled preset product image!");
   };
 
   // Lists filtering
-  const standardPets = (pets ?? []).filter(p => p.type.toLowerCase() !== "exotic");
-  const exoticPets = (pets ?? []).filter(p => p.type.toLowerCase() === "exotic");
+  const standardPets = (pets ?? []).filter((p) => p.type.toLowerCase() !== "exotic");
+  const exoticPets = (pets ?? []).filter((p) => p.type.toLowerCase() === "exotic");
 
   if (authLoading || !user || !isAdmin) {
     return (
@@ -646,7 +727,11 @@ function AdminPage() {
         {/* Tab Controls */}
         <div className="mt-8 flex border-b border-border gap-6 overflow-x-auto">
           <button
-            onClick={() => { setActiveTab("overview"); setIsAdding(false); setEditingPet(null); }}
+            onClick={() => {
+              setActiveTab("overview");
+              setIsAdding(false);
+              setEditingPet(null);
+            }}
             className={`pb-3 text-sm font-semibold transition cursor-pointer border-b-2 whitespace-nowrap ${
               activeTab === "overview"
                 ? "border-primary text-foreground"
@@ -656,7 +741,11 @@ function AdminPage() {
             Overview & Stats
           </button>
           <button
-            onClick={() => { setActiveTab("pets"); setIsAdding(false); setEditingPet(null); }}
+            onClick={() => {
+              setActiveTab("pets");
+              setIsAdding(false);
+              setEditingPet(null);
+            }}
             className={`pb-3 text-sm font-semibold transition cursor-pointer border-b-2 whitespace-nowrap ${
               activeTab === "pets"
                 ? "border-primary text-foreground"
@@ -666,7 +755,11 @@ function AdminPage() {
             Manage Pets (Companions)
           </button>
           <button
-            onClick={() => { setActiveTab("exotics"); setIsAdding(false); setEditingPet(null); }}
+            onClick={() => {
+              setActiveTab("exotics");
+              setIsAdding(false);
+              setEditingPet(null);
+            }}
             className={`pb-3 text-sm font-semibold transition cursor-pointer border-b-2 whitespace-nowrap ${
               activeTab === "exotics"
                 ? "border-primary text-foreground"
@@ -676,7 +769,11 @@ function AdminPage() {
             Manage Exotics (Rare Species)
           </button>
           <button
-            onClick={() => { setActiveTab("products"); setIsAddingProduct(false); setEditingProduct(null); }}
+            onClick={() => {
+              setActiveTab("products");
+              setIsAddingProduct(false);
+              setEditingProduct(null);
+            }}
             className={`pb-3 text-sm font-semibold transition cursor-pointer border-b-2 whitespace-nowrap ${
               activeTab === "products"
                 ? "border-primary text-foreground"
@@ -686,7 +783,11 @@ function AdminPage() {
             Manage Shop Items (Products)
           </button>
           <button
-            onClick={() => { setActiveTab("consent"); setIsAdding(false); setEditingPet(null); }}
+            onClick={() => {
+              setActiveTab("consent");
+              setIsAdding(false);
+              setEditingPet(null);
+            }}
             className={`pb-3 text-sm font-semibold transition cursor-pointer border-b-2 whitespace-nowrap ${
               activeTab === "consent"
                 ? "border-primary text-foreground"
@@ -696,7 +797,11 @@ function AdminPage() {
             Liability & Consent Basis
           </button>
           <button
-            onClick={() => { setActiveTab("consultations"); setIsAdding(false); setEditingPet(null); }}
+            onClick={() => {
+              setActiveTab("consultations");
+              setIsAdding(false);
+              setEditingPet(null);
+            }}
             className={`pb-3 text-sm font-semibold transition cursor-pointer border-b-2 whitespace-nowrap ${
               activeTab === "consultations"
                 ? "border-primary text-foreground"
@@ -706,7 +811,11 @@ function AdminPage() {
             Consultation Requests
           </button>
           <button
-            onClick={() => { setActiveTab("bookings"); setIsAdding(false); setEditingPet(null); }}
+            onClick={() => {
+              setActiveTab("bookings");
+              setIsAdding(false);
+              setEditingPet(null);
+            }}
             className={`pb-3 text-sm font-semibold transition cursor-pointer border-b-2 whitespace-nowrap ${
               activeTab === "bookings"
                 ? "border-primary text-foreground"
@@ -716,7 +825,11 @@ function AdminPage() {
             Training Bookings
           </button>
           <button
-            onClick={() => { setActiveTab("contacts"); setIsAdding(false); setEditingPet(null); }}
+            onClick={() => {
+              setActiveTab("contacts");
+              setIsAdding(false);
+              setEditingPet(null);
+            }}
             className={`pb-3 text-sm font-semibold transition cursor-pointer border-b-2 whitespace-nowrap ${
               activeTab === "contacts"
                 ? "border-primary text-foreground"
@@ -731,19 +844,23 @@ function AdminPage() {
           <div className="mt-8 space-y-8 animate-fade-in">
             {/* Stats Cards */}
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {statsLoading ? (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="rounded-3xl bg-card border border-border p-6 shadow-sm animate-pulse h-[120px]" />
-                ))
-              ) : (
-                stats?.map((s) => (
-                  <div key={s.label} className="rounded-3xl bg-card border border-border p-6 shadow-sm hover:shadow-md transition">
-                    <s.icon className="text-accent" size={22} />
-                    <div className="mt-3 font-display text-3xl">{s.value}</div>
-                    <div className="text-sm text-muted-foreground">{s.label}</div>
-                  </div>
-                ))
-              )}
+              {statsLoading
+                ? Array.from({ length: 4 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="rounded-3xl bg-card border border-border p-6 shadow-sm animate-pulse h-[120px]"
+                    />
+                  ))
+                : stats?.map((s) => (
+                    <div
+                      key={s.label}
+                      className="rounded-3xl bg-card border border-border p-6 shadow-sm hover:shadow-md transition"
+                    >
+                      <s.icon className="text-accent" size={22} />
+                      <div className="mt-3 font-display text-3xl">{s.value}</div>
+                      <div className="text-sm text-muted-foreground">{s.label}</div>
+                    </div>
+                  ))}
             </div>
 
             {/* Chart Widget */}
@@ -751,12 +868,19 @@ function AdminPage() {
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h3 className="font-display text-2xl">Monthly Revenue Analytics</h3>
-                  <p className="text-xs text-muted-foreground mt-1">Sales revenue trends grouped by month over the past year.</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Sales revenue trends grouped by month over the past year.
+                  </p>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-accent block">Total Revenue</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-accent block">
+                    Total Revenue
+                  </span>
                   <strong className="font-display text-xl font-bold text-foreground">
-                    ₹{monthlyData.reduce((sum, m) => sum + m.revenue, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    ₹
+                    {monthlyData
+                      .reduce((sum, m) => sum + m.revenue, 0)
+                      .toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </strong>
                 </div>
               </div>
@@ -771,7 +895,10 @@ function AdminPage() {
                     const percent = Math.max((m.revenue / maxRevenue) * 100, 5); // min 5% so it's always visible
                     const isPeak = m.revenue === maxRevenue;
                     return (
-                      <div key={m.key} className="flex-1 flex flex-col items-center h-full justify-end group relative">
+                      <div
+                        key={m.key}
+                        className="flex-1 flex flex-col items-center h-full justify-end group relative"
+                      >
                         {/* Tooltip on hover */}
                         <div className="absolute bottom-full mb-2 bg-neutral-900 text-white text-[10px] sm:text-xs font-bold px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-md z-10">
                           ₹{m.revenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
@@ -804,7 +931,10 @@ function AdminPage() {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h2 className="font-display text-3xl">Pets Database</h2>
-                <p className="text-sm text-muted-foreground">Add, update, or remove standard pets (Dogs, Cats, Rabbits, etc.) in the active system catalog.</p>
+                <p className="text-sm text-muted-foreground">
+                  Add, update, or remove standard pets (Dogs, Cats, Rabbits, etc.) in the active
+                  system catalog.
+                </p>
               </div>
               {!isAdding && !editingPet && (
                 <button
@@ -817,22 +947,30 @@ function AdminPage() {
             </div>
 
             {/* Pet Form */}
-            {((isAdding || editingPet) && formData.type.toLowerCase() !== "exotic") && (
+            {(isAdding || editingPet) && formData.type.toLowerCase() !== "exotic" && (
               <div className="rounded-3xl bg-card border-2 border-accent/20 p-8 shadow-md relative animate-slide-down">
-                <button onClick={() => { setIsAdding(false); setEditingPet(null); }}
+                <button
+                  onClick={() => {
+                    setIsAdding(false);
+                    setEditingPet(null);
+                  }}
                   className="absolute top-6 right-6 p-2 rounded-full hover:bg-muted text-muted-foreground transition cursor-pointer"
                 >
                   <FiX size={20} />
                 </button>
 
                 <h3 className="font-display text-2xl mb-6">
-                  {editingPet ? `Modify Companion Profile: ${editingPet.name}` : "Register New Companion Pet"}
+                  {editingPet
+                    ? `Modify Companion Profile: ${editingPet.name}`
+                    : "Register New Companion Pet"}
                 </h3>
 
                 <form onSubmit={handleFormSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">Pet Name *</label>
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Pet Name *
+                      </label>
                       <input
                         required
                         type="text"
@@ -845,14 +983,18 @@ function AdminPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Pet Type</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Pet Type
+                        </label>
                         <input
                           required
                           type="text"
                           placeholder="e.g. Dog, Cat, Rabbit"
                           className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={formData.type}
-                          onChange={(e) => setFormData({ ...formData, type: e.target.value, breed: "" })}
+                          onChange={(e) =>
+                            setFormData({ ...formData, type: e.target.value, breed: "" })
+                          }
                           list="pet-type-options"
                         />
                         <datalist id="pet-type-options">
@@ -893,7 +1035,9 @@ function AdminPage() {
                       </div>
 
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Price (₹) *</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Price (₹) *
+                        </label>
                         <input
                           required
                           type="number"
@@ -901,7 +1045,9 @@ function AdminPage() {
                           placeholder="e.g. 45000"
                           className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={formData.price}
-                          onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                          onChange={(e) =>
+                            setFormData({ ...formData, price: Number(e.target.value) })
+                          }
                         />
                       </div>
                     </div>
@@ -912,14 +1058,18 @@ function AdminPage() {
                           type="checkbox"
                           className="rounded text-primary h-4 w-4 border-input focus:ring-primary"
                           checked={formData.vaccinated}
-                          onChange={(e) => setFormData({ ...formData, vaccinated: e.target.checked })}
+                          onChange={(e) =>
+                            setFormData({ ...formData, vaccinated: e.target.checked })
+                          }
                         />
                         <span>Vaccinated</span>
                       </label>
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">Availability Status</label>
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Availability Status
+                      </label>
                       <select
                         className="rounded-full border border-input bg-background px-4 py-3 text-sm focus:outline-primary"
                         value={formData.status}
@@ -944,8 +1094,8 @@ function AdminPage() {
                             formData.image_url.trim().startsWith("[")
                               ? `${parseImages(formData.image_url).length} images selected`
                               : formData.image_url.startsWith("data:")
-                              ? "Image loaded from computer"
-                              : formData.image_url
+                                ? "Image loaded from computer"
+                                : formData.image_url
                           }
                           onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                         />
@@ -965,15 +1115,29 @@ function AdminPage() {
                       {parseImages(formData.image_url).length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2 p-3 bg-muted/40 rounded-2xl border border-border">
                           {parseImages(formData.image_url).map((url, idx) => (
-                            <div key={idx} className="relative w-16 h-16 group rounded-lg overflow-hidden border border-border bg-background">
-                              <img src={url} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+                            <div
+                              key={idx}
+                              className="relative w-16 h-16 group rounded-lg overflow-hidden border border-border bg-background"
+                            >
+                              <img
+                                src={url}
+                                alt={`Preview ${idx + 1}`}
+                                className="w-full h-full object-cover"
+                              />
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const updated = parseImages(formData.image_url).filter((_, i) => i !== idx);
-                                  setFormData(prev => ({
+                                  const updated = parseImages(formData.image_url).filter(
+                                    (_, i) => i !== idx,
+                                  );
+                                  setFormData((prev) => ({
                                     ...prev,
-                                    image_url: updated.length === 1 ? updated[0] : (updated.length > 1 ? JSON.stringify(updated) : "")
+                                    image_url:
+                                      updated.length === 1
+                                        ? updated[0]
+                                        : updated.length > 1
+                                          ? JSON.stringify(updated)
+                                          : "",
                                   }));
                                 }}
                                 className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md hover:scale-105 transition cursor-pointer flex items-center justify-center"
@@ -988,22 +1152,31 @@ function AdminPage() {
                       <div className="flex gap-2 mt-1">
                         <button
                           type="button"
-                          onClick={() => autofillPreset(formData.type === "Cat" ? "catImage" : "dogImage")}
+                          onClick={() =>
+                            autofillPreset(formData.type === "Cat" ? "catImage" : "dogImage")
+                          }
                           className="text-[10px] bg-muted hover:bg-border px-2 py-1 rounded transition flex items-center gap-1 cursor-pointer"
                         >
-                          <FiImage size={10} /> Use preset {formData.type === "Cat" ? "Cat" : "Dog"} image
+                          <FiImage size={10} /> Use preset {formData.type === "Cat" ? "Cat" : "Dog"}{" "}
+                          image
                         </button>
                       </div>
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">Video URL (Optional)</label>
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Video URL (Optional)
+                      </label>
                       <div className="flex gap-2">
                         <input
                           type="text"
                           placeholder="Video stream MP4 link or upload below"
                           className="flex-1 rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
-                          value={formData.video_url?.startsWith("data:") ? "Video loaded from computer" : formData.video_url || ""}
+                          value={
+                            formData.video_url?.startsWith("data:")
+                              ? "Video loaded from computer"
+                              : formData.video_url || ""
+                          }
                           onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
                         />
                         <label className="rounded-full bg-primary/10 border border-primary/20 px-5 py-3 text-sm text-primary hover:bg-primary/20 transition cursor-pointer flex items-center gap-2 whitespace-nowrap font-medium">
@@ -1019,7 +1192,9 @@ function AdminPage() {
                       <div className="flex gap-2 mt-1">
                         <button
                           type="button"
-                          onClick={() => autofillPreset(formData.type === "Cat" ? "catVideo" : "dogVideo")}
+                          onClick={() =>
+                            autofillPreset(formData.type === "Cat" ? "catVideo" : "dogVideo")
+                          }
                           className="text-[10px] bg-muted hover:bg-border px-2 py-1 rounded transition flex items-center gap-1 cursor-pointer"
                         >
                           <FiPlay size={10} /> Use preset video stream
@@ -1028,7 +1203,7 @@ function AdminPage() {
                           <button
                             type="button"
                             onClick={() => {
-                              setFormData(prev => ({ ...prev, video_url: "" }));
+                              setFormData((prev) => ({ ...prev, video_url: "" }));
                               toast.info("Video reference removed");
                             }}
                             className="text-[10px] bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition flex items-center gap-1 cursor-pointer font-semibold"
@@ -1040,7 +1215,9 @@ function AdminPage() {
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">Description</label>
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Description
+                      </label>
                       <textarea
                         rows={4}
                         placeholder="Provide details about the companion's behavior, training, etc."
@@ -1052,12 +1229,18 @@ function AdminPage() {
                   </div>
 
                   <div className="col-span-1 md:col-span-2 pt-4 border-t border-border/60 flex justify-end gap-3">
-                    <button type="button" onClick={() => { setIsAdding(false); setEditingPet(null); }}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAdding(false);
+                        setEditingPet(null);
+                      }}
                       className="rounded-full border border-border bg-background px-6 py-2.5 text-sm hover:bg-muted transition cursor-pointer"
                     >
                       Cancel
                     </button>
-                    <button type="submit"
+                    <button
+                      type="submit"
                       className="rounded-full bg-primary px-7 py-2.5 text-sm text-primary-foreground font-semibold hover:opacity-90 transition cursor-pointer"
                     >
                       {editingPet ? "Update profile" : "Save profile"}
@@ -1088,7 +1271,10 @@ function AdminPage() {
                   <tbody className="divide-y divide-border/60">
                     {petsLoading ? (
                       <tr>
-                        <td colSpan={7} className="px-6 py-10 text-center text-muted-foreground animate-pulse">
+                        <td
+                          colSpan={7}
+                          className="px-6 py-10 text-center text-muted-foreground animate-pulse"
+                        >
                           Loading companions catalog...
                         </td>
                       </tr>
@@ -1129,16 +1315,26 @@ function AdminPage() {
                             )}
                           </td>
                           <td className="px-6 py-4">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${p.status === "available" ? "bg-emerald-100 text-emerald-800" : "bg-orange-100 text-orange-800"}`}>
+                            <span
+                              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${p.status === "available" ? "bg-emerald-100 text-emerald-800" : "bg-orange-100 text-orange-800"}`}
+                            >
                               {p.status}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
-                              <button onClick={() => handleEditClick(p)} className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition cursor-pointer" title="Edit companion details">
+                              <button
+                                onClick={() => handleEditClick(p)}
+                                className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition cursor-pointer"
+                                title="Edit companion details"
+                              >
                                 <FiEdit2 size={14} />
                               </button>
-                              <button onClick={() => handleDeletePet(p.id, p.name)} className="p-2 rounded-full hover:bg-red-500/10 text-muted-foreground hover:text-red-600 transition cursor-pointer" title="Delete companion from catalog">
+                              <button
+                                onClick={() => handleDeletePet(p.id, p.name)}
+                                className="p-2 rounded-full hover:bg-red-500/10 text-muted-foreground hover:text-red-600 transition cursor-pointer"
+                                title="Delete companion from catalog"
+                              >
                                 <FiTrash2 size={14} />
                               </button>
                             </div>
@@ -1159,7 +1355,9 @@ function AdminPage() {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h2 className="font-display text-3xl">Exotic Pets Database</h2>
-                <p className="text-sm text-muted-foreground">Add, update, or remove rare and ethically-sourced exotic pets in the catalog.</p>
+                <p className="text-sm text-muted-foreground">
+                  Add, update, or remove rare and ethically-sourced exotic pets in the catalog.
+                </p>
               </div>
               {!isAdding && !editingPet && (
                 <button
@@ -1172,22 +1370,30 @@ function AdminPage() {
             </div>
 
             {/* Exotic Pet Form */}
-            {((isAdding || editingPet) && formData.type.toLowerCase() === "exotic") && (
+            {(isAdding || editingPet) && formData.type.toLowerCase() === "exotic" && (
               <div className="rounded-3xl bg-card border-2 border-amber-500/20 p-8 shadow-md relative animate-slide-down">
-                <button onClick={() => { setIsAdding(false); setEditingPet(null); }}
+                <button
+                  onClick={() => {
+                    setIsAdding(false);
+                    setEditingPet(null);
+                  }}
                   className="absolute top-6 right-6 p-2 rounded-full hover:bg-muted text-muted-foreground transition cursor-pointer"
                 >
                   <FiX size={20} />
                 </button>
 
                 <h3 className="font-display text-2xl mb-6 text-amber-950">
-                  {editingPet ? `Modify Exotic Profile: ${editingPet.name}` : "Register New Exotic Pet / Species"}
+                  {editingPet
+                    ? `Modify Exotic Profile: ${editingPet.name}`
+                    : "Register New Exotic Pet / Species"}
                 </h3>
 
                 <form onSubmit={handleFormSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">Exotic Pet Name *</label>
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Exotic Pet Name *
+                      </label>
                       <input
                         required
                         type="text"
@@ -1200,7 +1406,9 @@ function AdminPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Classification / Type</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Classification / Type
+                        </label>
                         <input
                           disabled
                           type="text"
@@ -1210,7 +1418,9 @@ function AdminPage() {
                       </div>
 
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Species / Breed *</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Species / Breed *
+                        </label>
                         <input
                           required
                           type="text"
@@ -1230,7 +1440,9 @@ function AdminPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Age / Lifespan</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Age / Lifespan
+                        </label>
                         <input
                           type="text"
                           placeholder="e.g. 6 months, 3 years"
@@ -1241,7 +1453,9 @@ function AdminPage() {
                       </div>
 
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Price (₹) *</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Price (₹) *
+                        </label>
                         <input
                           required
                           type="number"
@@ -1249,7 +1463,9 @@ function AdminPage() {
                           placeholder="e.g. 120000"
                           className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={formData.price}
-                          onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                          onChange={(e) =>
+                            setFormData({ ...formData, price: Number(e.target.value) })
+                          }
                         />
                       </div>
                     </div>
@@ -1260,14 +1476,18 @@ function AdminPage() {
                           type="checkbox"
                           className="rounded text-primary h-4 w-4 border-input focus:ring-primary"
                           checked={formData.vaccinated}
-                          onChange={(e) => setFormData({ ...formData, vaccinated: e.target.checked })}
+                          onChange={(e) =>
+                            setFormData({ ...formData, vaccinated: e.target.checked })
+                          }
                         />
                         <span>Health Certified & Vaccinated</span>
                       </label>
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">Availability Status</label>
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Availability Status
+                      </label>
                       <select
                         className="rounded-full border border-input bg-background px-4 py-3 text-sm focus:outline-primary"
                         value={formData.status}
@@ -1292,8 +1512,8 @@ function AdminPage() {
                             formData.image_url.trim().startsWith("[")
                               ? `${parseImages(formData.image_url).length} images selected`
                               : formData.image_url.startsWith("data:")
-                              ? "Image loaded from computer"
-                              : formData.image_url
+                                ? "Image loaded from computer"
+                                : formData.image_url
                           }
                           onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                         />
@@ -1313,15 +1533,29 @@ function AdminPage() {
                       {parseImages(formData.image_url).length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2 p-3 bg-muted/40 rounded-2xl border border-border">
                           {parseImages(formData.image_url).map((url, idx) => (
-                            <div key={idx} className="relative w-16 h-16 group rounded-lg overflow-hidden border border-border bg-background">
-                              <img src={url} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+                            <div
+                              key={idx}
+                              className="relative w-16 h-16 group rounded-lg overflow-hidden border border-border bg-background"
+                            >
+                              <img
+                                src={url}
+                                alt={`Preview ${idx + 1}`}
+                                className="w-full h-full object-cover"
+                              />
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const updated = parseImages(formData.image_url).filter((_, i) => i !== idx);
-                                  setFormData(prev => ({
+                                  const updated = parseImages(formData.image_url).filter(
+                                    (_, i) => i !== idx,
+                                  );
+                                  setFormData((prev) => ({
                                     ...prev,
-                                    image_url: updated.length === 1 ? updated[0] : (updated.length > 1 ? JSON.stringify(updated) : "")
+                                    image_url:
+                                      updated.length === 1
+                                        ? updated[0]
+                                        : updated.length > 1
+                                          ? JSON.stringify(updated)
+                                          : "",
                                   }));
                                 }}
                                 className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md hover:scale-105 transition cursor-pointer flex items-center justify-center"
@@ -1335,13 +1569,19 @@ function AdminPage() {
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">Enclosure / Video Stream (Optional)</label>
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Enclosure / Video Stream (Optional)
+                      </label>
                       <div className="flex gap-2">
                         <input
                           type="text"
                           placeholder="Video stream MP4 link or upload below"
                           className="flex-1 rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
-                          value={formData.video_url?.startsWith("data:") ? "Video loaded from computer" : formData.video_url || ""}
+                          value={
+                            formData.video_url?.startsWith("data:")
+                              ? "Video loaded from computer"
+                              : formData.video_url || ""
+                          }
                           onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
                         />
                         <label className="rounded-full bg-primary/10 border border-primary/20 px-5 py-3 text-sm text-primary hover:bg-primary/20 transition cursor-pointer flex items-center gap-2 whitespace-nowrap font-medium">
@@ -1359,7 +1599,7 @@ function AdminPage() {
                           <button
                             type="button"
                             onClick={() => {
-                              setFormData(prev => ({ ...prev, video_url: "" }));
+                              setFormData((prev) => ({ ...prev, video_url: "" }));
                               toast.info("Video reference removed");
                             }}
                             className="text-[10px] bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition flex items-center gap-1 cursor-pointer font-semibold w-fit"
@@ -1371,7 +1611,9 @@ function AdminPage() {
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">Description & Ethological Requirements</label>
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Description & Ethological Requirements
+                      </label>
                       <textarea
                         rows={4}
                         placeholder="Detail the specialized lighting, temperature, feed, and behavior habits..."
@@ -1383,12 +1625,18 @@ function AdminPage() {
                   </div>
 
                   <div className="col-span-1 md:col-span-2 pt-4 border-t border-border/60 flex justify-end gap-3">
-                    <button type="button" onClick={() => { setIsAdding(false); setEditingPet(null); }}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAdding(false);
+                        setEditingPet(null);
+                      }}
                       className="rounded-full border border-border bg-background px-6 py-2.5 text-sm hover:bg-muted transition cursor-pointer"
                     >
                       Cancel
                     </button>
-                    <button type="submit"
+                    <button
+                      type="submit"
                       className="rounded-full bg-primary px-7 py-2.5 text-sm text-primary-foreground font-semibold hover:opacity-90 transition cursor-pointer"
                     >
                       {editingPet ? "Update profile" : "Save profile"}
@@ -1418,7 +1666,10 @@ function AdminPage() {
                   <tbody className="divide-y divide-border/60">
                     {petsLoading ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-10 text-center text-muted-foreground animate-pulse">
+                        <td
+                          colSpan={6}
+                          className="px-6 py-10 text-center text-muted-foreground animate-pulse"
+                        >
                           Loading exotic pets catalog...
                         </td>
                       </tr>
@@ -1443,7 +1694,9 @@ function AdminPage() {
                             </div>
                           </td>
                           <td className="px-6 py-4">{p.breed}</td>
-                          <td className="px-6 py-4 font-display font-medium text-accent-foreground">₹{Number(p.price).toLocaleString()}</td>
+                          <td className="px-6 py-4 font-display font-medium text-accent-foreground">
+                            ₹{Number(p.price).toLocaleString()}
+                          </td>
                           <td className="px-6 py-4">
                             {p.vaccinated ? (
                               <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">
@@ -1454,16 +1707,26 @@ function AdminPage() {
                             )}
                           </td>
                           <td className="px-6 py-4">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${p.status === "available" ? "bg-emerald-100 text-emerald-800" : "bg-orange-100 text-orange-800"}`}>
+                            <span
+                              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${p.status === "available" ? "bg-emerald-100 text-emerald-800" : "bg-orange-100 text-orange-800"}`}
+                            >
                               {p.status}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
-                              <button onClick={() => handleEditClick(p)} className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition cursor-pointer font-medium" title="Edit companion details">
+                              <button
+                                onClick={() => handleEditClick(p)}
+                                className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition cursor-pointer font-medium"
+                                title="Edit companion details"
+                              >
                                 <FiEdit2 size={14} />
                               </button>
-                              <button onClick={() => handleDeletePet(p.id, p.name)} className="p-2 rounded-full hover:bg-red-500/10 text-muted-foreground hover:text-red-600 transition cursor-pointer" title="Delete companion from catalog">
+                              <button
+                                onClick={() => handleDeletePet(p.id, p.name)}
+                                className="p-2 rounded-full hover:bg-red-500/10 text-muted-foreground hover:text-red-600 transition cursor-pointer"
+                                title="Delete companion from catalog"
+                              >
                                 <FiTrash2 size={14} />
                               </button>
                             </div>
@@ -1485,7 +1748,9 @@ function AdminPage() {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h2 className="font-display text-3xl">Shop Products Database</h2>
-                <p className="text-sm text-muted-foreground">Add, update, or remove pet care products in the shop catalog.</p>
+                <p className="text-sm text-muted-foreground">
+                  Add, update, or remove pet care products in the shop catalog.
+                </p>
               </div>
               {!isAddingProduct && !editingProduct && (
                 <button
@@ -1511,30 +1776,43 @@ function AdminPage() {
                 </button>
 
                 <h3 className="font-display text-2xl mb-6">
-                  {editingProduct ? `Modify Shop Item: ${editingProduct.name}` : "Add New Shop Item"}
+                  {editingProduct
+                    ? `Modify Shop Item: ${editingProduct.name}`
+                    : "Add New Shop Item"}
                 </h3>
 
-                <form onSubmit={handleProductFormSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <form
+                  onSubmit={handleProductFormSubmit}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                >
                   <div className="space-y-4">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">Product Name *</label>
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Product Name *
+                      </label>
                       <input
                         required
                         type="text"
                         placeholder="e.g. Grain-Free Kibble, Wool Bed"
                         className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                         value={productFormData.name}
-                        onChange={(e) => setProductFormData({ ...productFormData, name: e.target.value })}
+                        onChange={(e) =>
+                          setProductFormData({ ...productFormData, name: e.target.value })
+                        }
                       />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Category</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Category
+                        </label>
                         <select
                           className="rounded-full border border-input bg-background px-4 py-3 text-sm focus:outline-primary"
                           value={productFormData.category}
-                          onChange={(e) => setProductFormData({ ...productFormData, category: e.target.value })}
+                          onChange={(e) =>
+                            setProductFormData({ ...productFormData, category: e.target.value })
+                          }
                         >
                           <option value="Food">Food</option>
                           <option value="Toys">Toys</option>
@@ -1544,7 +1822,9 @@ function AdminPage() {
                       </div>
 
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Price (₹) *</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Price (₹) *
+                        </label>
                         <input
                           required
                           type="number"
@@ -1552,14 +1832,21 @@ function AdminPage() {
                           placeholder="e.g. 1500"
                           className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={productFormData.price}
-                          onChange={(e) => setProductFormData({ ...productFormData, price: Number(e.target.value) })}
+                          onChange={(e) =>
+                            setProductFormData({
+                              ...productFormData,
+                              price: Number(e.target.value),
+                            })
+                          }
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Rating (0 - 5) *</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Rating (0 - 5) *
+                        </label>
                         <input
                           required
                           type="number"
@@ -1568,19 +1855,31 @@ function AdminPage() {
                           max={5}
                           className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={productFormData.rating}
-                          onChange={(e) => setProductFormData({ ...productFormData, rating: Number(e.target.value) })}
+                          onChange={(e) =>
+                            setProductFormData({
+                              ...productFormData,
+                              rating: Number(e.target.value),
+                            })
+                          }
                         />
                       </div>
 
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Stock *</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Stock *
+                        </label>
                         <input
                           required
                           type="number"
                           min={0}
                           className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={productFormData.stock}
-                          onChange={(e) => setProductFormData({ ...productFormData, stock: Number(e.target.value) })}
+                          onChange={(e) =>
+                            setProductFormData({
+                              ...productFormData,
+                              stock: Number(e.target.value),
+                            })
+                          }
                         />
                       </div>
                     </div>
@@ -1595,8 +1894,14 @@ function AdminPage() {
                           type="text"
                           placeholder="Image URL"
                           className="flex-1 rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
-                          value={productFormData.image_url.startsWith("data:") ? "Image loaded from computer" : productFormData.image_url}
-                          onChange={(e) => setProductFormData({ ...productFormData, image_url: e.target.value })}
+                          value={
+                            productFormData.image_url.startsWith("data:")
+                              ? "Image loaded from computer"
+                              : productFormData.image_url
+                          }
+                          onChange={(e) =>
+                            setProductFormData({ ...productFormData, image_url: e.target.value })
+                          }
                         />
                         <label className="rounded-full bg-primary/10 border border-primary/20 px-5 py-3 text-sm text-primary hover:bg-primary/20 transition cursor-pointer flex items-center gap-2 whitespace-nowrap font-medium">
                           <FiUploadCloud /> Upload from PC
@@ -1620,24 +1925,34 @@ function AdminPage() {
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">Description</label>
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Description
+                      </label>
                       <textarea
                         rows={4}
                         placeholder="Provide details about the product's benefits, ingredients, dimensions, etc."
                         className="rounded-2xl border border-input bg-background px-5 py-3 text-sm focus:outline-primary resize-none"
                         value={productFormData.description}
-                        onChange={(e) => setProductFormData({ ...productFormData, description: e.target.value })}
+                        onChange={(e) =>
+                          setProductFormData({ ...productFormData, description: e.target.value })
+                        }
                       />
                     </div>
                   </div>
 
                   <div className="col-span-1 md:col-span-2 pt-4 border-t border-border/60 flex justify-end gap-3">
-                    <button type="button" onClick={() => { setIsAddingProduct(false); setEditingProduct(null); }}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingProduct(false);
+                        setEditingProduct(null);
+                      }}
                       className="rounded-full border border-border bg-background px-6 py-2.5 text-sm hover:bg-muted transition cursor-pointer"
                     >
                       Cancel
                     </button>
-                    <button type="submit"
+                    <button
+                      type="submit"
                       className="rounded-full bg-primary px-7 py-2.5 text-sm text-primary-foreground font-semibold hover:opacity-90 transition cursor-pointer"
                     >
                       {editingProduct ? "Update item" : "Save item"}
@@ -1667,7 +1982,10 @@ function AdminPage() {
                   <tbody className="divide-y divide-border/60">
                     {productsLoading ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-10 text-center text-muted-foreground animate-pulse">
+                        <td
+                          colSpan={6}
+                          className="px-6 py-10 text-center text-muted-foreground animate-pulse"
+                        >
                           Loading products catalog...
                         </td>
                       </tr>
@@ -1682,25 +2000,41 @@ function AdminPage() {
                         <tr key={p.id} className="hover:bg-muted/20 transition">
                           <td className="px-6 py-4 font-medium text-foreground flex items-center gap-3">
                             <img
-                              src={p.image_url.startsWith("data:") ? p.image_url : p.image_url || "/product-1.jpg"}
+                              src={
+                                p.image_url.startsWith("data:")
+                                  ? p.image_url
+                                  : p.image_url || "/product-1.jpg"
+                              }
                               alt={p.name}
                               className="h-10 w-10 rounded-full object-cover border border-border bg-muted"
                             />
                             <div>
                               <div className="font-semibold">{p.name}</div>
-                              <div className="text-xs text-muted-foreground max-w-[250px] truncate">{p.description}</div>
+                              <div className="text-xs text-muted-foreground max-w-[250px] truncate">
+                                {p.description}
+                              </div>
                             </div>
                           </td>
                           <td className="px-6 py-4">{p.category}</td>
-                          <td className="px-6 py-4 font-display font-medium text-accent-foreground font-semibold">₹{Number(p.price).toFixed(0)}</td>
+                          <td className="px-6 py-4 font-display font-medium text-accent-foreground font-semibold">
+                            ₹{Number(p.price).toFixed(0)}
+                          </td>
                           <td className="px-6 py-4">{p.stock} units</td>
                           <td className="px-6 py-4">⭐ {Number(p.rating).toFixed(1)}</td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
-                              <button onClick={() => handleEditProductClick(p)} className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition cursor-pointer font-medium" title="Edit product details">
+                              <button
+                                onClick={() => handleEditProductClick(p)}
+                                className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition cursor-pointer font-medium"
+                                title="Edit product details"
+                              >
                                 <FiEdit2 size={14} />
                               </button>
-                              <button onClick={() => handleDeleteProduct(p.id, p.name)} className="p-2 rounded-full hover:bg-red-500/10 text-muted-foreground hover:text-red-600 transition cursor-pointer" title="Delete product from catalog">
+                              <button
+                                onClick={() => handleDeleteProduct(p.id, p.name)}
+                                className="p-2 rounded-full hover:bg-red-500/10 text-muted-foreground hover:text-red-600 transition cursor-pointer"
+                                title="Delete product from catalog"
+                              >
                                 <FiTrash2 size={14} />
                               </button>
                             </div>
@@ -1743,7 +2077,10 @@ function AdminPage() {
                   <tbody className="divide-y divide-border">
                     {consentsLoading ? (
                       <tr>
-                        <td colSpan={7} className="px-6 py-10 text-center text-muted-foreground animate-pulse">
+                        <td
+                          colSpan={7}
+                          className="px-6 py-10 text-center text-muted-foreground animate-pulse"
+                        >
                           Loading liability consent submissions...
                         </td>
                       </tr>
@@ -1782,7 +2119,9 @@ function AdminPage() {
                                 className="h-8 max-w-[120px] object-contain bg-white border border-border rounded p-0.5"
                               />
                             ) : (
-                              <span className="text-xs text-muted-foreground italic">Text Sign</span>
+                              <span className="text-xs text-muted-foreground italic">
+                                Text Sign
+                              </span>
                             )}
                           </td>
                           <td className="px-6 py-4 text-muted-foreground">
@@ -1815,39 +2154,63 @@ function AdminPage() {
                   <div className="space-y-4 text-sm">
                     <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-2xl border border-border/50">
                       <div>
-                        <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wider">Signee / Owner</span>
-                        <strong className="text-base text-foreground font-semibold">{selectedConsent.full_name}</strong>
+                        <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wider">
+                          Signee / Owner
+                        </span>
+                        <strong className="text-base text-foreground font-semibold">
+                          {selectedConsent.full_name}
+                        </strong>
                       </div>
                       <div>
-                        <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wider">Email Address</span>
-                        <span className="text-sm font-medium text-foreground block truncate">{selectedConsent.email}</span>
+                        <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wider">
+                          Email Address
+                        </span>
+                        <span className="text-sm font-medium text-foreground block truncate">
+                          {selectedConsent.email}
+                        </span>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-2xl border border-border/50">
                       <div>
-                        <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wider">Pet Companion Name</span>
-                        <strong className="text-base text-foreground font-semibold">{selectedConsent.pet_name}</strong>
+                        <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wider">
+                          Pet Companion Name
+                        </span>
+                        <strong className="text-base text-foreground font-semibold">
+                          {selectedConsent.pet_name}
+                        </strong>
                       </div>
                       <div>
-                        <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wider">Date Signed</span>
+                        <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wider">
+                          Date Signed
+                        </span>
                         <span className="text-sm font-medium text-foreground block">
-                          {selectedConsent.created_at ? new Date(selectedConsent.created_at).toLocaleString() : "Recently"}
+                          {selectedConsent.created_at
+                            ? new Date(selectedConsent.created_at).toLocaleString()
+                            : "Recently"}
                         </span>
                       </div>
                     </div>
 
                     <div className="bg-muted/30 p-4 rounded-2xl border border-border/50 space-y-2">
-                      <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wider">Legal Terms Verification</span>
+                      <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wider">
+                        Legal Terms Verification
+                      </span>
                       <div className="flex flex-col gap-1.5 text-xs text-foreground/90 font-medium">
-                        <span className="flex items-center gap-1.5 text-green-600 font-semibold">✓ Liability Release Accepted</span>
-                        <span className="flex items-center gap-1.5 text-green-600 font-semibold">✓ Training & Vaccination Consent Granted</span>
+                        <span className="flex items-center gap-1.5 text-green-600 font-semibold">
+                          ✓ Liability Release Accepted
+                        </span>
+                        <span className="flex items-center gap-1.5 text-green-600 font-semibold">
+                          ✓ Training & Vaccination Consent Granted
+                        </span>
                       </div>
                     </div>
 
                     {selectedConsent.signature_data_url && (
                       <div className="border border-border/80 rounded-2xl bg-white p-4">
-                        <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-2">Customer Signature Representation</div>
+                        <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-2">
+                          Customer Signature Representation
+                        </div>
                         <div className="border border-border/50 rounded-xl bg-card p-2 h-24 flex justify-center items-center">
                           <img
                             src={selectedConsent.signature_data_url}
@@ -1907,7 +2270,10 @@ function AdminPage() {
                   <tbody className="divide-y divide-border">
                     {consultationsLoading ? (
                       <tr>
-                        <td colSpan={7} className="px-6 py-10 text-center text-muted-foreground animate-pulse">
+                        <td
+                          colSpan={7}
+                          className="px-6 py-10 text-center text-muted-foreground animate-pulse"
+                        >
                           Loading consultation requests...
                         </td>
                       </tr>
@@ -1923,9 +2289,15 @@ function AdminPage() {
                           <td className="px-6 py-4 font-semibold text-foreground">{c.name}</td>
                           <td className="px-6 py-4 text-muted-foreground">{c.email}</td>
                           <td className="px-6 py-4 font-medium text-foreground">{c.pet_type}</td>
-                          <td className="px-6 py-4 text-muted-foreground font-medium">{c.breed || "Any"}</td>
-                          <td className="px-6 py-4 font-semibold text-accent-foreground">₹{Number(c.price_min).toLocaleString()}</td>
-                          <td className="px-6 py-4 font-semibold text-accent-foreground">₹{Number(c.price_max).toLocaleString()}</td>
+                          <td className="px-6 py-4 text-muted-foreground font-medium">
+                            {c.breed || "Any"}
+                          </td>
+                          <td className="px-6 py-4 font-semibold text-accent-foreground">
+                            ₹{Number(c.price_min).toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4 font-semibold text-accent-foreground">
+                            ₹{Number(c.price_max).toLocaleString()}
+                          </td>
                           <td className="px-6 py-4 text-muted-foreground">
                             {c.created_at ? new Date(c.created_at).toLocaleString() : "Recently"}
                           </td>
@@ -1972,21 +2344,31 @@ function AdminPage() {
                 {/* Stats Row */}
                 <div className="grid md:grid-cols-3 gap-6">
                   <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
-                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Total Training Bookings</div>
-                    <div className="mt-2 font-display text-4xl text-foreground">{trainingBookings.length}</div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">
+                      Total Training Bookings
+                    </div>
+                    <div className="mt-2 font-display text-4xl text-foreground">
+                      {trainingBookings.length}
+                    </div>
                   </div>
                   <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
-                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Completed Training</div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">
+                      Completed Training
+                    </div>
                     <div className="mt-2 font-display text-4xl text-emerald-600">
                       {trainingBookings.filter((b) => b.completed).length}
                     </div>
                   </div>
                   <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
-                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Most Popular Program</div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">
+                      Most Popular Program
+                    </div>
                     <div className="mt-2 font-display text-2xl text-[#673ab7]">
                       {(() => {
                         const counts: Record<string, number> = {};
-                        trainingBookings.forEach((b) => { counts[b.trainingType] = (counts[b.trainingType] || 0) + 1; });
+                        trainingBookings.forEach((b) => {
+                          counts[b.trainingType] = (counts[b.trainingType] || 0) + 1;
+                        });
                         const sorted = Object.entries(counts).sort(([, a], [, b]) => b - a);
                         return sorted.length > 0 ? `${sorted[0][0]} (${sorted[0][1]})` : "N/A";
                       })()}
@@ -1997,7 +2379,10 @@ function AdminPage() {
                 {/* Calendar */}
                 <div>
                   <h2 className="font-display text-3xl mb-4 text-foreground">Booking Calendar</h2>
-                  <p className="text-sm text-muted-foreground mb-6">Click on any date to view booking details. You can cancel individual bookings to free up slots.</p>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Click on any date to view booking details. You can cancel individual bookings to
+                    free up slots.
+                  </p>
                   <div className="max-w-2xl">
                     <BookingCalendar
                       mode="admin"
@@ -2010,39 +2395,71 @@ function AdminPage() {
 
                 {/* All Bookings Table */}
                 <div>
-                  <h3 className="font-display text-2xl mb-4 text-foreground">All Booking Records</h3>
+                  <h3 className="font-display text-2xl mb-4 text-foreground">
+                    All Booking Records
+                  </h3>
                   <div className="overflow-x-auto rounded-2xl border border-border shadow-sm">
                     <table className="min-w-full bg-card text-sm text-left">
                       <thead>
                         <tr className="border-b border-border bg-muted/30">
-                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground text-center">Completed</th>
-                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Owner</th>
-                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Pet</th>
-                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Program</th>
-                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Date</th>
-                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Commands</th>
-                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Medical</th>
-                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Signature</th>
-                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground text-right">Actions</th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground text-center">
+                            Completed
+                          </th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                            Owner
+                          </th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                            Pet
+                          </th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                            Program
+                          </th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                            Date
+                          </th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                            Commands
+                          </th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                            Medical
+                          </th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                            Signature
+                          </th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground text-right">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
                         {trainingBookings.length === 0 ? (
                           <tr>
-                            <td colSpan={9} className="text-center py-10 text-muted-foreground italic">No training bookings yet.</td>
+                            <td
+                              colSpan={9}
+                              className="text-center py-10 text-muted-foreground italic"
+                            >
+                              No training bookings yet.
+                            </td>
                           </tr>
                         ) : (
                           trainingBookings.map((b) => (
-                            <tr key={b.id} className={`hover:bg-muted/20 transition ${b.completed ? "opacity-60 bg-muted/5" : ""}`}>
+                            <tr
+                              key={b.id}
+                              className={`hover:bg-muted/20 transition ${b.completed ? "opacity-60 bg-muted/5" : ""}`}
+                            >
                               <td className="px-5 py-3 text-center">
                                 <input
                                   type="checkbox"
                                   checked={b.completed || false}
                                   onChange={async (e) => {
                                     try {
-                                      await dbService.updateTrainingBooking(b.id, { completed: e.target.checked });
+                                      await dbService.updateTrainingBooking(b.id, {
+                                        completed: e.target.checked,
+                                      });
                                       refetchTraining();
-                                      toast.success(`Session marked as ${e.target.checked ? 'completed' : 'pending'}`);
+                                      toast.success(
+                                        `Session marked as ${e.target.checked ? "completed" : "pending"}`,
+                                      );
                                     } catch {
                                       toast.error("Failed to update status");
                                     }
@@ -2050,18 +2467,37 @@ function AdminPage() {
                                   className="rounded text-primary h-5 w-5 border-input focus:ring-primary cursor-pointer accent-primary"
                                 />
                               </td>
-                              <td className="px-5 py-3 font-semibold text-foreground">{b.ownerName}</td>
-                              <td className="px-5 py-3 text-foreground">{b.petName} <span className="text-muted-foreground">({b.breed}, {b.age})</span></td>
+                              <td className="px-5 py-3 font-semibold text-foreground">
+                                {b.ownerName}
+                              </td>
+                              <td className="px-5 py-3 text-foreground">
+                                {b.petName}{" "}
+                                <span className="text-muted-foreground">
+                                  ({b.breed}, {b.age})
+                                </span>
+                              </td>
                               <td className="px-5 py-3">
-                                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                                  b.trainingType === "Basic" ? "bg-emerald-500/10 text-emerald-600"
-                                    : b.trainingType === "Moderate" ? "bg-amber-500/10 text-amber-600"
-                                      : "bg-primary/10 text-primary"
-                                }`}>{b.trainingType}</span>
+                                <span
+                                  className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                                    b.trainingType === "Basic"
+                                      ? "bg-emerald-500/10 text-emerald-600"
+                                      : b.trainingType === "Moderate"
+                                        ? "bg-amber-500/10 text-amber-600"
+                                        : "bg-primary/10 text-primary"
+                                  }`}
+                                >
+                                  {b.trainingType}
+                                </span>
                               </td>
                               <td className="px-5 py-3 text-foreground">{b.preferredDate}</td>
-                              <td className="px-5 py-3 text-muted-foreground text-xs">{b.selectedCommands && b.selectedCommands.length > 0 ? b.selectedCommands.join(", ") : "—"}</td>
-                              <td className="px-5 py-3 text-muted-foreground text-xs">{b.medicalConditions}</td>
+                              <td className="px-5 py-3 text-muted-foreground text-xs">
+                                {b.selectedCommands && b.selectedCommands.length > 0
+                                  ? b.selectedCommands.join(", ")
+                                  : "—"}
+                              </td>
+                              <td className="px-5 py-3 text-muted-foreground text-xs">
+                                {b.medicalConditions}
+                              </td>
                               <td className="px-5 py-3">
                                 {b.signatureDataUrl ? (
                                   <div className="flex flex-col gap-1">
@@ -2070,7 +2506,9 @@ function AdminPage() {
                                       alt="Signature"
                                       className="h-8 max-w-[100px] object-contain bg-white border border-border rounded p-0.5"
                                     />
-                                    <span className="text-[9px] font-semibold text-emerald-600">✓ Consent Granted</span>
+                                    <span className="text-[9px] font-semibold text-emerald-600">
+                                      ✓ Consent Granted
+                                    </span>
                                   </div>
                                 ) : (
                                   <span className="text-xs text-muted-foreground italic">—</span>
@@ -2109,17 +2547,25 @@ function AdminPage() {
                 {/* Hostelling Stats Row */}
                 <div className="grid md:grid-cols-3 gap-6">
                   <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
-                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Total Stays Registered</div>
-                    <div className="mt-2 font-display text-4xl text-foreground">{hostellingBookings.length}</div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">
+                      Total Stays Registered
+                    </div>
+                    <div className="mt-2 font-display text-4xl text-foreground">
+                      {hostellingBookings.length}
+                    </div>
                   </div>
                   <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
-                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Completed Stays</div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">
+                      Completed Stays
+                    </div>
                     <div className="mt-2 font-display text-4xl text-emerald-600">
                       {hostellingBookings.filter((b) => b.completed).length}
                     </div>
                   </div>
                   <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
-                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Active / Pending Stays</div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">
+                      Active / Pending Stays
+                    </div>
                     <div className="mt-2 font-display text-4xl text-amber-600">
                       {hostellingBookings.filter((b) => !b.completed).length}
                     </div>
@@ -2128,37 +2574,65 @@ function AdminPage() {
 
                 {/* All Hostelling Table */}
                 <div>
-                  <h3 className="font-display text-2xl mb-4 text-foreground">All Boarding Stays Records</h3>
+                  <h3 className="font-display text-2xl mb-4 text-foreground">
+                    All Boarding Stays Records
+                  </h3>
                   <div className="overflow-x-auto rounded-2xl border border-border shadow-sm">
                     <table className="min-w-full bg-card text-sm text-left">
                       <thead>
                         <tr className="border-b border-border bg-muted/30">
-                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground text-center">Completed</th>
-                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Parent Details</th>
-                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Pet Details</th>
-                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Duration</th>
-                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Behavior & Health</th>
-                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Signature</th>
-                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground text-right">Actions</th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground text-center">
+                            Completed
+                          </th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                            Parent Details
+                          </th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                            Pet Details
+                          </th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                            Duration
+                          </th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                            Behavior & Health
+                          </th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                            Signature
+                          </th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground text-right">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
                         {hostellingBookings.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="text-center py-10 text-muted-foreground italic">No hostelling stays yet.</td>
+                            <td
+                              colSpan={7}
+                              className="text-center py-10 text-muted-foreground italic"
+                            >
+                              No hostelling stays yet.
+                            </td>
                           </tr>
                         ) : (
                           hostellingBookings.map((b) => (
-                            <tr key={b.id} className={`hover:bg-muted/20 transition ${b.completed ? "opacity-60 bg-muted/5" : ""}`}>
+                            <tr
+                              key={b.id}
+                              className={`hover:bg-muted/20 transition ${b.completed ? "opacity-60 bg-muted/5" : ""}`}
+                            >
                               <td className="px-5 py-3 text-center">
                                 <input
                                   type="checkbox"
                                   checked={b.completed || false}
                                   onChange={async (e) => {
                                     try {
-                                      await dbService.updateHostellingBooking(b.id, { completed: e.target.checked });
+                                      await dbService.updateHostellingBooking(b.id, {
+                                        completed: e.target.checked,
+                                      });
                                       refetchHostelling();
-                                      toast.success(`Stay marked as ${e.target.checked ? 'completed' : 'pending'}`);
+                                      toast.success(
+                                        `Stay marked as ${e.target.checked ? "completed" : "pending"}`,
+                                      );
                                     } catch {
                                       toast.error("Failed to update status");
                                     }
@@ -2173,21 +2647,40 @@ function AdminPage() {
                               </td>
                               <td className="px-5 py-3">
                                 <div className="font-semibold text-foreground">{b.petName}</div>
-                                <div className="text-xs text-muted-foreground">{b.petBreed} ({b.petGender}, {b.petAge})</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {b.petBreed} ({b.petGender}, {b.petAge})
+                                </div>
                               </td>
                               <td className="px-5 py-3">
                                 <div className="font-semibold text-primary">{b.numDays} Days</div>
-                                <div className="text-[10px] text-muted-foreground whitespace-nowrap">{b.checkInDate} to {b.checkOutDate}</div>
+                                <div className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                  {b.checkInDate} to {b.checkOutDate}
+                                </div>
                               </td>
                               <td className="px-5 py-3">
                                 <div className="text-xs text-foreground">
-                                  Temperament: <span className={`font-semibold ${b.temperament === "Friendly" ? "text-emerald-600" : "text-amber-600"}`}>{b.temperament}</span>
+                                  Temperament:{" "}
+                                  <span
+                                    className={`font-semibold ${b.temperament === "Friendly" ? "text-emerald-600" : "text-amber-600"}`}
+                                  >
+                                    {b.temperament}
+                                  </span>
                                 </div>
                                 <div className="text-[10px] text-muted-foreground mt-0.5">
-                                  Trained: {b.urineTrained && b.pottyTrained ? "Urine & Potty" : b.urineTrained ? "Urine Only" : b.pottyTrained ? "Potty Only" : "No"}
+                                  Trained:{" "}
+                                  {b.urineTrained && b.pottyTrained
+                                    ? "Urine & Potty"
+                                    : b.urineTrained
+                                      ? "Urine Only"
+                                      : b.pottyTrained
+                                        ? "Potty Only"
+                                        : "No"}
                                 </div>
                                 {b.medicalConditions && b.medicalConditions !== "N/A" && (
-                                  <div className="text-[10px] text-red-500 font-medium truncate max-w-[150px]" title={b.medicalConditions}>
+                                  <div
+                                    className="text-[10px] text-red-500 font-medium truncate max-w-[150px]"
+                                    title={b.medicalConditions}
+                                  >
                                     Med: {b.medicalConditions}
                                   </div>
                                 )}
@@ -2272,35 +2765,47 @@ function AdminPage() {
                     className="space-y-4 text-sm"
                   >
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">Owner Name</label>
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Owner Name
+                      </label>
                       <input
                         required
                         type="text"
                         className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                         value={editingTraining.ownerName}
-                        onChange={(e) => setEditingTraining({ ...editingTraining, ownerName: e.target.value })}
+                        onChange={(e) =>
+                          setEditingTraining({ ...editingTraining, ownerName: e.target.value })
+                        }
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Pet Name</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Pet Name
+                        </label>
                         <input
                           required
                           type="text"
                           className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={editingTraining.petName}
-                          onChange={(e) => setEditingTraining({ ...editingTraining, petName: e.target.value })}
+                          onChange={(e) =>
+                            setEditingTraining({ ...editingTraining, petName: e.target.value })
+                          }
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Pet Breed</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Pet Breed
+                        </label>
                         <input
                           required
                           type="text"
                           className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={editingTraining.breed}
-                          onChange={(e) => setEditingTraining({ ...editingTraining, breed: e.target.value })}
+                          onChange={(e) =>
+                            setEditingTraining({ ...editingTraining, breed: e.target.value })
+                          }
                         />
                       </div>
                     </div>
@@ -2313,15 +2818,24 @@ function AdminPage() {
                           type="text"
                           className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={editingTraining.age}
-                          onChange={(e) => setEditingTraining({ ...editingTraining, age: e.target.value })}
+                          onChange={(e) =>
+                            setEditingTraining({ ...editingTraining, age: e.target.value })
+                          }
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Training Type</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Training Type
+                        </label>
                         <select
                           className="rounded-full border border-input bg-background px-4 py-3 text-sm focus:outline-primary"
                           value={editingTraining.trainingType}
-                          onChange={(e) => setEditingTraining({ ...editingTraining, trainingType: e.target.value as any })}
+                          onChange={(e) =>
+                            setEditingTraining({
+                              ...editingTraining,
+                              trainingType: e.target.value as any,
+                            })
+                          }
                         >
                           <option value="Basic">Basic</option>
                           <option value="Moderate">Moderate</option>
@@ -2331,29 +2845,42 @@ function AdminPage() {
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">Preferred Date</label>
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Preferred Date
+                      </label>
                       <input
                         required
                         type="date"
                         className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                         value={editingTraining.preferredDate}
-                        onChange={(e) => setEditingTraining({ ...editingTraining, preferredDate: e.target.value })}
+                        onChange={(e) =>
+                          setEditingTraining({ ...editingTraining, preferredDate: e.target.value })
+                        }
                       />
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">Medical Conditions</label>
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Medical Conditions
+                      </label>
                       <textarea
                         rows={3}
                         className="rounded-2xl border border-input bg-background px-5 py-3 text-sm focus:outline-primary resize-none"
                         value={editingTraining.medicalConditions}
-                        onChange={(e) => setEditingTraining({ ...editingTraining, medicalConditions: e.target.value })}
+                        onChange={(e) =>
+                          setEditingTraining({
+                            ...editingTraining,
+                            medicalConditions: e.target.value,
+                          })
+                        }
                       />
                     </div>
 
                     {editingTraining.signatureDataUrl && (
                       <div className="border border-border/80 rounded-2xl bg-white p-4">
-                        <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-2">Virtual Signature Representation</div>
+                        <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-2">
+                          Virtual Signature Representation
+                        </div>
                         <div className="border border-border/50 rounded-xl bg-card p-2 h-20 flex justify-center items-center">
                           <img
                             src={editingTraining.signatureDataUrl}
@@ -2406,7 +2933,10 @@ function AdminPage() {
                       const start = new Date(editingHostelling.checkInDate);
                       const end = new Date(editingHostelling.checkOutDate);
                       const diffTime = end.getTime() - start.getTime();
-                      const calculatedDays = Math.max(Math.ceil(diffTime / (1000 * 60 * 60 * 24)), 1);
+                      const calculatedDays = Math.max(
+                        Math.ceil(diffTime / (1000 * 60 * 60 * 24)),
+                        1,
+                      );
 
                       try {
                         await dbService.updateHostellingBooking(editingHostelling.id, {
@@ -2436,48 +2966,70 @@ function AdminPage() {
                     className="space-y-4 text-sm overflow-y-auto max-h-[80vh] pr-2"
                   >
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">Parent / Owner Name</label>
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Parent / Owner Name
+                      </label>
                       <input
                         required
                         type="text"
                         className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                         value={editingHostelling.parentName}
-                        onChange={(e) => setEditingHostelling({ ...editingHostelling, parentName: e.target.value })}
+                        onChange={(e) =>
+                          setEditingHostelling({ ...editingHostelling, parentName: e.target.value })
+                        }
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Parent Email</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Parent Email
+                        </label>
                         <input
                           required
                           type="email"
                           className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={editingHostelling.parentEmail}
-                          onChange={(e) => setEditingHostelling({ ...editingHostelling, parentEmail: e.target.value })}
+                          onChange={(e) =>
+                            setEditingHostelling({
+                              ...editingHostelling,
+                              parentEmail: e.target.value,
+                            })
+                          }
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Parent Phone</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Parent Phone
+                        </label>
                         <input
                           required
                           type="text"
                           className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={editingHostelling.parentPhone}
-                          onChange={(e) => setEditingHostelling({ ...editingHostelling, parentPhone: e.target.value })}
+                          onChange={(e) =>
+                            setEditingHostelling({
+                              ...editingHostelling,
+                              parentPhone: e.target.value,
+                            })
+                          }
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Pet Name</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Pet Name
+                        </label>
                         <input
                           required
                           type="text"
                           className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={editingHostelling.petName}
-                          onChange={(e) => setEditingHostelling({ ...editingHostelling, petName: e.target.value })}
+                          onChange={(e) =>
+                            setEditingHostelling({ ...editingHostelling, petName: e.target.value })
+                          }
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
@@ -2487,18 +3039,27 @@ function AdminPage() {
                           type="text"
                           className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={editingHostelling.petBreed}
-                          onChange={(e) => setEditingHostelling({ ...editingHostelling, petBreed: e.target.value })}
+                          onChange={(e) =>
+                            setEditingHostelling({ ...editingHostelling, petBreed: e.target.value })
+                          }
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Gender</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Gender
+                        </label>
                         <select
                           className="rounded-full border border-input bg-background px-4 py-3 text-sm focus:outline-primary"
                           value={editingHostelling.petGender}
-                          onChange={(e) => setEditingHostelling({ ...editingHostelling, petGender: e.target.value as any })}
+                          onChange={(e) =>
+                            setEditingHostelling({
+                              ...editingHostelling,
+                              petGender: e.target.value as any,
+                            })
+                          }
                         >
                           <option value="Male">Male</option>
                           <option value="Female">Female</option>
@@ -2511,41 +3072,64 @@ function AdminPage() {
                           type="text"
                           className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={editingHostelling.petAge}
-                          onChange={(e) => setEditingHostelling({ ...editingHostelling, petAge: e.target.value })}
+                          onChange={(e) =>
+                            setEditingHostelling({ ...editingHostelling, petAge: e.target.value })
+                          }
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Check-in Date</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Check-in Date
+                        </label>
                         <input
                           required
                           type="date"
                           className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={editingHostelling.checkInDate}
-                          onChange={(e) => setEditingHostelling({ ...editingHostelling, checkInDate: e.target.value })}
+                          onChange={(e) =>
+                            setEditingHostelling({
+                              ...editingHostelling,
+                              checkInDate: e.target.value,
+                            })
+                          }
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Check-out Date</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Check-out Date
+                        </label>
                         <input
                           required
                           type="date"
                           className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={editingHostelling.checkOutDate}
-                          onChange={(e) => setEditingHostelling({ ...editingHostelling, checkOutDate: e.target.value })}
+                          onChange={(e) =>
+                            setEditingHostelling({
+                              ...editingHostelling,
+                              checkOutDate: e.target.value,
+                            })
+                          }
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Temperament</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Temperament
+                        </label>
                         <select
                           className="rounded-full border border-input bg-background px-4 py-3 text-sm focus:outline-primary"
                           value={editingHostelling.temperament}
-                          onChange={(e) => setEditingHostelling({ ...editingHostelling, temperament: e.target.value as any })}
+                          onChange={(e) =>
+                            setEditingHostelling({
+                              ...editingHostelling,
+                              temperament: e.target.value as any,
+                            })
+                          }
                         >
                           <option value="Friendly">Friendly</option>
                           <option value="Aggressive">Aggressive</option>
@@ -2557,7 +3141,12 @@ function AdminPage() {
                             type="checkbox"
                             className="rounded text-primary h-4 w-4 border-input focus:ring-primary accent-primary"
                             checked={editingHostelling.urineTrained}
-                            onChange={(e) => setEditingHostelling({ ...editingHostelling, urineTrained: e.target.checked })}
+                            onChange={(e) =>
+                              setEditingHostelling({
+                                ...editingHostelling,
+                                urineTrained: e.target.checked,
+                              })
+                            }
                           />
                           <span>Urine Trained</span>
                         </label>
@@ -2566,7 +3155,12 @@ function AdminPage() {
                             type="checkbox"
                             className="rounded text-primary h-4 w-4 border-input focus:ring-primary accent-primary"
                             checked={editingHostelling.pottyTrained}
-                            onChange={(e) => setEditingHostelling({ ...editingHostelling, pottyTrained: e.target.checked })}
+                            onChange={(e) =>
+                              setEditingHostelling({
+                                ...editingHostelling,
+                                pottyTrained: e.target.checked,
+                              })
+                            }
                           />
                           <span>Potty Trained</span>
                         </label>
@@ -2575,24 +3169,38 @@ function AdminPage() {
 
                     {editingHostelling.temperament === "Aggressive" && (
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">Aggression Details / Triggers</label>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Aggression Details / Triggers
+                        </label>
                         <input
                           required
                           type="text"
                           className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={editingHostelling.aggressionDetails || ""}
-                          onChange={(e) => setEditingHostelling({ ...editingHostelling, aggressionDetails: e.target.value })}
+                          onChange={(e) =>
+                            setEditingHostelling({
+                              ...editingHostelling,
+                              aggressionDetails: e.target.value,
+                            })
+                          }
                         />
                       </div>
                     )}
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">Medical Conditions</label>
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Medical Conditions
+                      </label>
                       <textarea
                         rows={3}
                         className="rounded-2xl border border-input bg-background px-5 py-3 text-sm focus:outline-primary resize-none"
                         value={editingHostelling.medicalConditions}
-                        onChange={(e) => setEditingHostelling({ ...editingHostelling, medicalConditions: e.target.value })}
+                        onChange={(e) =>
+                          setEditingHostelling({
+                            ...editingHostelling,
+                            medicalConditions: e.target.value,
+                          })
+                        }
                       />
                     </div>
 
@@ -2623,16 +3231,26 @@ function AdminPage() {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h2 className="font-display text-3xl">Contact Messages</h2>
-                <p className="text-sm text-muted-foreground">View and manage messages submitted through the contact form by website visitors.</p>
+                <p className="text-sm text-muted-foreground">
+                  View and manage messages submitted through the contact form by website visitors.
+                </p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="rounded-2xl bg-card border border-border px-5 py-3 shadow-sm">
-                  <span className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Total Messages</span>
-                  <span className="ml-2 font-display text-2xl text-foreground">{contactSubmissions.length}</span>
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground font-bold">
+                    Total Messages
+                  </span>
+                  <span className="ml-2 font-display text-2xl text-foreground">
+                    {contactSubmissions.length}
+                  </span>
                 </div>
                 <div className="rounded-2xl bg-card border border-border px-5 py-3 shadow-sm">
-                  <span className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Unread</span>
-                  <span className="ml-2 font-display text-2xl text-amber-500">{contactSubmissions.filter(c => !c.read).length}</span>
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground font-bold">
+                    Unread
+                  </span>
+                  <span className="ml-2 font-display text-2xl text-amber-500">
+                    {contactSubmissions.filter((c) => !c.read).length}
+                  </span>
                 </div>
               </div>
             </div>
@@ -2653,7 +3271,10 @@ function AdminPage() {
                 <tbody className="divide-y divide-border">
                   {contactsLoading ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-10 text-center text-muted-foreground animate-pulse">
+                      <td
+                        colSpan={7}
+                        className="px-6 py-10 text-center text-muted-foreground animate-pulse"
+                      >
                         Loading contact messages...
                       </td>
                     </tr>
@@ -2665,7 +3286,10 @@ function AdminPage() {
                     </tr>
                   ) : (
                     contactSubmissions.map((c) => (
-                      <tr key={c.id} className={`hover:bg-muted/20 transition ${c.read ? "opacity-60" : ""}`}>
+                      <tr
+                        key={c.id}
+                        className={`hover:bg-muted/20 transition ${c.read ? "opacity-60" : ""}`}
+                      >
                         <td className="px-6 py-4 text-center">
                           {c.read ? (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
@@ -2679,11 +3303,18 @@ function AdminPage() {
                         </td>
                         <td className="px-6 py-4 font-semibold text-foreground">{c.name}</td>
                         <td className="px-6 py-4 text-muted-foreground">
-                          <a href={`mailto:${c.email}`} className="hover:underline hover:text-accent transition">{c.email}</a>
+                          <a
+                            href={`mailto:${c.email}`}
+                            className="hover:underline hover:text-accent transition"
+                          >
+                            {c.email}
+                          </a>
                         </td>
                         <td className="px-6 py-4 font-medium text-foreground">{c.subject}</td>
                         <td className="px-6 py-4 text-muted-foreground max-w-[250px]">
-                          <div className="line-clamp-2" title={c.message}>{c.message}</div>
+                          <div className="line-clamp-2" title={c.message}>
+                            {c.message}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
                           {c.created_at ? new Date(c.created_at).toLocaleString() : "Recently"}

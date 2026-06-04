@@ -153,7 +153,10 @@ const storeMedia = async (key: string, value: string): Promise<string> => {
 
 const loadMedia = async (value: string | null | undefined): Promise<string | null> => {
   if (!value) return null;
-  if (value.startsWith("blob:") || (!value.startsWith("indexeddb://") && !value.startsWith("data:"))) {
+  if (
+    value.startsWith("blob:") ||
+    (!value.startsWith("indexeddb://") && !value.startsWith("data:"))
+  ) {
     return value;
   }
   if (value.startsWith("data:")) {
@@ -213,8 +216,14 @@ const withTimeout = <T>(promise: PromiseLike<T>, ms = 10000): Promise<T> => {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("Database request timeout")), ms);
     promise.then(
-      (res) => { clearTimeout(timer); resolve(res); },
-      (err) => { clearTimeout(timer); reject(err); }
+      (res) => {
+        clearTimeout(timer);
+        resolve(res);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
     );
   });
 };
@@ -255,7 +264,7 @@ const storeMediaArrayOrSingle = async (keyPrefix: string, value: string): Promis
         const storedArray = await Promise.all(
           parsed.map(async (item, index) => {
             return await storeMedia(`${keyPrefix}_${index}`, item);
-          })
+          }),
         );
         return JSON.stringify(storedArray);
       }
@@ -277,7 +286,7 @@ const loadMediaArrayOrSingle = async (value: string | null | undefined): Promise
           parsed.map(async (item) => {
             const loaded = await loadMedia(item);
             return loaded || item;
-          })
+          }),
         );
         return JSON.stringify(loadedArray);
       }
@@ -388,11 +397,46 @@ const TRAINING_BOOKINGS_LOCAL_KEY = "pawhaven_training_bookings";
 const HOSTELLING_BOOKINGS_LOCAL_KEY = "pawhaven_hostelling_bookings_list";
 
 const DEFAULT_REVIEWS: Review[] = [
-  { id: "1", petId: "d1111111-1111-1111-1111-111111111111", author: "Sarah M.", rating: 5, text: "Milo is a bundle of joy! Very healthy and well-behaved.", date: "2026-05-15" },
-  { id: "2", petId: "d1111111-1111-1111-1111-111111111111", author: "Aman P.", rating: 5, text: "Extremely friendly. The onboarding instructions were super helpful.", date: "2026-05-20" },
-  { id: "3", petId: "d2222222-2222-2222-2222-222222222222", author: "Deepak S.", rating: 5, text: "Luna is the sweetest Persian kitten. Pure white fur and green eyes!", date: "2026-05-18" },
-  { id: "4", petId: "d4444444-4444-4444-4444-444444444444", author: "Priyah K.", rating: 4, text: "Kiwi sings beautifully every morning. Healthy bird.", date: "2026-05-22" },
-  { id: "5", petId: "d6666666-6666-6666-6666-666666666666", author: "Vikram R.", rating: 5, text: "Mochi loves curling up in my lap. So content and quiet.", date: "2026-05-25" },
+  {
+    id: "1",
+    petId: "d1111111-1111-1111-1111-111111111111",
+    author: "Sarah M.",
+    rating: 5,
+    text: "Milo is a bundle of joy! Very healthy and well-behaved.",
+    date: "2026-05-15",
+  },
+  {
+    id: "2",
+    petId: "d1111111-1111-1111-1111-111111111111",
+    author: "Aman P.",
+    rating: 5,
+    text: "Extremely friendly. The onboarding instructions were super helpful.",
+    date: "2026-05-20",
+  },
+  {
+    id: "3",
+    petId: "d2222222-2222-2222-2222-222222222222",
+    author: "Deepak S.",
+    rating: 5,
+    text: "Luna is the sweetest Persian kitten. Pure white fur and green eyes!",
+    date: "2026-05-18",
+  },
+  {
+    id: "4",
+    petId: "d4444444-4444-4444-4444-444444444444",
+    author: "Priyah K.",
+    rating: 4,
+    text: "Kiwi sings beautifully every morning. Healthy bird.",
+    date: "2026-05-22",
+  },
+  {
+    id: "5",
+    petId: "d6666666-6666-6666-6666-666666666666",
+    author: "Vikram R.",
+    rating: 5,
+    text: "Mochi loves curling up in my lap. So content and quiet.",
+    date: "2026-05-25",
+  },
 ];
 
 // Default seed data matching sample.ts, plus video placeholders
@@ -543,18 +587,18 @@ export const dbService = {
     try {
       const parsed = JSON.parse(data) as Pet[];
       // Migrate legacy non-UUID storage to prevent deletion key mismatch issues
-      const hasLegacyId = parsed.some(pet => !pet.id.includes("-"));
+      const hasLegacyId = parsed.some((pet) => !pet.id.includes("-"));
       if (hasLegacyId) {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(DEFAULT_PETS));
         localStorage.removeItem(DELETED_IDS_KEY);
         return DEFAULT_PETS;
       }
       let changed = false;
-      const filtered = parsed.filter(pet => pet.name.toLowerCase() !== "bella");
+      const filtered = parsed.filter((pet) => pet.name.toLowerCase() !== "bella");
       if (filtered.length !== parsed.length) {
         changed = true;
       }
-      const cleaned = filtered.map(pet => {
+      const cleaned = filtered.map((pet) => {
         let cleanImg = pet.image_url;
         let cleanVid = pet.video_url;
         // If it's a huge base64 in local storage
@@ -592,29 +636,34 @@ export const dbService = {
       const cleanupRan = sessionStorage.getItem("pawhaven_db_cleanup_ran");
       if (!cleanupRan) {
         sessionStorage.setItem("pawhaven_db_cleanup_ran", "true");
-        const badIds = ["e132fa4c-aea1-40c3-abd0-9253adf4c01e", "ebda8e22-fda3-4e77-8654-f5010f576818"];
-        
+        const badIds = [
+          "e132fa4c-aea1-40c3-abd0-9253adf4c01e",
+          "ebda8e22-fda3-4e77-8654-f5010f576818",
+        ];
+
         // Remove from local storage
         const local = localStorage.getItem(LOCAL_STORAGE_KEY);
         if (local) {
           try {
             const parsed = JSON.parse(local) as Pet[];
-            const filtered = parsed.filter(p => !badIds.includes(p.id));
+            const filtered = parsed.filter((p) => !badIds.includes(p.id));
             if (filtered.length !== parsed.length) {
               localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(filtered));
             }
           } catch {}
         }
-        
+
         // Mark as deleted locally to prevent revival
-        badIds.forEach(id => {
+        badIds.forEach((id) => {
           addDeletedPetId(id);
         });
 
         // Delete from Supabase tables (runs using the user's admin credentials if signed in)
-        Promise.resolve(supabase.from("pets").delete().in("id", badIds)).then(() => {
-          Promise.resolve(supabase.from("exotic_pets").delete().in("id", badIds)).catch(() => {});
-        }).catch(() => {});
+        Promise.resolve(supabase.from("pets").delete().in("id", badIds))
+          .then(() => {
+            Promise.resolve(supabase.from("exotic_pets").delete().in("id", badIds)).catch(() => {});
+          })
+          .catch(() => {});
       }
     }
 
@@ -624,23 +673,23 @@ export const dbService = {
     try {
       // Query standard pets
       const petsPromise = withTimeout(
-        supabase
-          .from("pets")
-          .select("*")
-          .order("created_at", { ascending: false })
+        supabase.from("pets").select("*").order("created_at", { ascending: false }),
       );
 
       // Query exotic pets
       const exoticsPromise = withTimeout(
-        supabase
-          .from("exotic_pets")
-          .select("*")
-          .order("created_at", { ascending: false })
+        supabase.from("exotic_pets").select("*").order("created_at", { ascending: false }),
       );
 
       const [petsResult, exoticsResult] = await Promise.all([
-        petsPromise.catch((err) => { console.warn("Failed standard pets fetch:", err); return { data: [], error: err }; }),
-        exoticsPromise.catch((err) => { console.warn("Failed exotic pets fetch:", err); return { data: [], error: err }; }),
+        petsPromise.catch((err) => {
+          console.warn("Failed standard pets fetch:", err);
+          return { data: [], error: err };
+        }),
+        exoticsPromise.catch((err) => {
+          console.warn("Failed exotic pets fetch:", err);
+          return { data: [], error: err };
+        }),
       ]);
 
       const standardData = petsResult.data || [];
@@ -650,15 +699,23 @@ export const dbService = {
       let finalExoticData: any[] = [...exoticData];
 
       // Proactive auto-migration of misaligned pets (e.g. Exotic pets inside "pets" table)
-      const misalignedExotics = standardData.filter((sp: any) => sp.type.toLowerCase() === "exotic");
-      const misalignedStandards = exoticData.filter((ep: any) => ep.type.toLowerCase() !== "exotic");
+      const misalignedExotics = standardData.filter(
+        (sp: any) => sp.type.toLowerCase() === "exotic",
+      );
+      const misalignedStandards = exoticData.filter(
+        (ep: any) => ep.type.toLowerCase() !== "exotic",
+      );
 
       if (misalignedExotics.length > 0 && typeof window !== "undefined") {
-        finalStandardData = finalStandardData.filter((sp: any) => sp.type.toLowerCase() !== "exotic");
+        finalStandardData = finalStandardData.filter(
+          (sp: any) => sp.type.toLowerCase() !== "exotic",
+        );
         finalExoticData = [...finalExoticData, ...misalignedExotics];
-        
+
         misalignedExotics.forEach(async (pet: any) => {
-          console.log(`Auto-migrating exotic pet "${pet.name}" (${pet.id}) to exotic_pets table...`);
+          console.log(
+            `Auto-migrating exotic pet "${pet.name}" (${pet.id}) to exotic_pets table...`,
+          );
           const { error } = await supabase.from("exotic_pets").upsert({
             id: pet.id,
             name: pet.name,
@@ -767,7 +824,9 @@ export const dbService = {
 
       // Merge Supabase data with local videos/details (keeping light indexeddb:// references)
       const mergedRaw = activeData.map((sp: any) => {
-        const lp = localPets.find((l) => l.name.toLowerCase() === sp.name.toLowerCase() || l.id === sp.id);
+        const lp = localPets.find(
+          (l) => l.name.toLowerCase() === sp.name.toLowerCase() || l.id === sp.id,
+        );
         const rawImg = sp.image_url || lp?.image_url || pet1;
         const rawVid = sp.video_url || lp?.video_url || null;
         return {
@@ -792,7 +851,11 @@ export const dbService = {
 
       // Find local pets that are NOT in the Supabase data (i.e. newly created locally, or pending remote sync)
       const localOnly = localPets.filter(
-        (lp) => !deletedIds.includes(lp.id) && !activeData.some((sp: any) => sp.id === lp.id || sp.name.toLowerCase() === lp.name.toLowerCase())
+        (lp) =>
+          !deletedIds.includes(lp.id) &&
+          !activeData.some(
+            (sp: any) => sp.id === lp.id || sp.name.toLowerCase() === lp.name.toLowerCase(),
+          ),
       );
 
       const finalMerged = [...localOnly, ...merged];
@@ -820,7 +883,7 @@ export const dbService = {
           image_url: img || pet.image_url,
           video_url: vid || pet.video_url,
         };
-      })
+      }),
     );
   },
 
@@ -829,7 +892,10 @@ export const dbService = {
     let image_url = pet.image_url;
     let video_url = pet.video_url;
 
-    if (image_url && (image_url.startsWith("data:") || (image_url.startsWith("[") && image_url.includes("data:")))) {
+    if (
+      image_url &&
+      (image_url.startsWith("data:") || (image_url.startsWith("[") && image_url.includes("data:")))
+    ) {
       image_url = await storeMediaArrayOrSingle(`pet_img_${pet.id}`, image_url);
     }
     if (video_url && video_url.startsWith("data:")) {
@@ -850,8 +916,12 @@ export const dbService = {
     const deletedIds = getDeletedPetIds();
 
     try {
-      const { data: standardData, error: standardError } = await supabase.from("pets").select("id, name");
-      const { data: exoticData, error: exoticError } = await supabase.from("exotic_pets").select("id, name");
+      const { data: standardData, error: standardError } = await supabase
+        .from("pets")
+        .select("id, name");
+      const { data: exoticData, error: exoticError } = await supabase
+        .from("exotic_pets")
+        .select("id, name");
 
       if (standardError || exoticError) {
         console.warn("Failed to fetch remote pets for sync check:", standardError || exoticError);
@@ -860,15 +930,18 @@ export const dbService = {
 
       const remoteIds = new Set([
         ...(standardData || []).map((p: any) => p.id),
-        ...(exoticData || []).map((p: any) => p.id)
+        ...(exoticData || []).map((p: any) => p.id),
       ]);
       const remoteNames = new Set([
         ...(standardData || []).map((p: any) => p.name.toLowerCase()),
-        ...(exoticData || []).map((p: any) => p.name.toLowerCase())
+        ...(exoticData || []).map((p: any) => p.name.toLowerCase()),
       ]);
 
       const localOnly = localPets.filter(
-        (lp) => !deletedIds.includes(lp.id) && !remoteIds.has(lp.id) && !remoteNames.has(lp.name.toLowerCase())
+        (lp) =>
+          !deletedIds.includes(lp.id) &&
+          !remoteIds.has(lp.id) &&
+          !remoteNames.has(lp.name.toLowerCase()),
       );
 
       if (localOnly.length === 0) {
@@ -876,7 +949,10 @@ export const dbService = {
         return;
       }
 
-      console.log(`Syncing ${localOnly.length} local-only pets to Supabase:`, localOnly.map(p => p.name));
+      console.log(
+        `Syncing ${localOnly.length} local-only pets to Supabase:`,
+        localOnly.map((p) => p.name),
+      );
 
       for (const pet of localOnly) {
         const resolvedImg = await loadMediaArrayOrSingle(pet.image_url);
@@ -931,13 +1007,13 @@ export const dbService = {
     try {
       if (isExotic) {
         const { data, error } = await withTimeout(
-          supabase.from("exotic_pets").select("*").eq("id", id).maybeSingle()
+          supabase.from("exotic_pets").select("*").eq("id", id).maybeSingle(),
         );
 
         if (error || !data) {
           // If not found in exotic_pets, try pets as fallback
           const { data: altData, error: altError } = await withTimeout(
-            supabase.from("pets").select("*").eq("id", id).maybeSingle()
+            supabase.from("pets").select("*").eq("id", id).maybeSingle(),
           );
 
           if (altError || !altData) {
@@ -989,13 +1065,13 @@ export const dbService = {
         };
       } else {
         const { data, error } = await withTimeout(
-          supabase.from("pets").select("*").eq("id", id).maybeSingle()
+          supabase.from("pets").select("*").eq("id", id).maybeSingle(),
         );
 
         if (error || !data) {
           // If not found in pets, try exotic_pets as fallback
           const { data: altData, error: altError } = await withTimeout(
-            supabase.from("exotic_pets").select("*").eq("id", id).maybeSingle()
+            supabase.from("exotic_pets").select("*").eq("id", id).maybeSingle(),
           );
 
           if (altError || !altData) {
@@ -1127,8 +1203,14 @@ export const dbService = {
     const currentBase64Img = updatedPet ? await loadMediaArrayOrSingle(updatedPet.image_url) : null;
     const currentBase64Vid = updatedPet ? await loadMedia(updatedPet.video_url) : null;
 
-    const hasImageChanged = petInput.image_url !== undefined && petInput.image_url !== currentBase64Img && petInput.image_url !== updatedPet?.image_url;
-    const hasVideoChanged = petInput.video_url !== undefined && petInput.video_url !== currentBase64Vid && petInput.video_url !== updatedPet?.video_url;
+    const hasImageChanged =
+      petInput.image_url !== undefined &&
+      petInput.image_url !== currentBase64Img &&
+      petInput.image_url !== updatedPet?.image_url;
+    const hasVideoChanged =
+      petInput.video_url !== undefined &&
+      petInput.video_url !== currentBase64Vid &&
+      petInput.video_url !== updatedPet?.video_url;
 
     let storedImageUrl = updatedPet ? updatedPet.image_url : petInput.image_url;
     if (hasImageChanged && petInput.image_url) {
@@ -1164,17 +1246,26 @@ export const dbService = {
       // Construct the fully merged payload (to support table transfers if classification changes)
       const fullPayload = {
         id,
-        name: petInput.name !== undefined ? petInput.name : (updatedPet?.name || ""),
+        name: petInput.name !== undefined ? petInput.name : updatedPet?.name || "",
         type: newType,
-        breed: petInput.breed !== undefined ? petInput.breed : (updatedPet?.breed || ""),
-        age: petInput.age !== undefined ? petInput.age : (updatedPet?.age || ""),
-        price: petInput.price !== undefined ? petInput.price : (updatedPet?.price || 0),
-        image_url: petInput.image_url !== undefined ? petInput.image_url : (currentBase64Img || updatedPet?.image_url || ""),
-        video_url: petInput.video_url !== undefined ? petInput.video_url : (currentBase64Vid || updatedPet?.video_url || null),
-        description: petInput.description !== undefined ? petInput.description : (updatedPet?.description || ""),
-        vaccinated: petInput.vaccinated !== undefined ? petInput.vaccinated : (updatedPet?.vaccinated || false),
-        adoption: petInput.adoption !== undefined ? petInput.adoption : (updatedPet?.adoption || false),
-        status: petInput.status !== undefined ? petInput.status : (updatedPet?.status || "available"),
+        breed: petInput.breed !== undefined ? petInput.breed : updatedPet?.breed || "",
+        age: petInput.age !== undefined ? petInput.age : updatedPet?.age || "",
+        price: petInput.price !== undefined ? petInput.price : updatedPet?.price || 0,
+        image_url:
+          petInput.image_url !== undefined
+            ? petInput.image_url
+            : currentBase64Img || updatedPet?.image_url || "",
+        video_url:
+          petInput.video_url !== undefined
+            ? petInput.video_url
+            : currentBase64Vid || updatedPet?.video_url || null,
+        description:
+          petInput.description !== undefined ? petInput.description : updatedPet?.description || "",
+        vaccinated:
+          petInput.vaccinated !== undefined ? petInput.vaccinated : updatedPet?.vaccinated || false,
+        adoption:
+          petInput.adoption !== undefined ? petInput.adoption : updatedPet?.adoption || false,
+        status: petInput.status !== undefined ? petInput.status : updatedPet?.status || "available",
       };
 
       if (isExoticNew) {
@@ -1208,7 +1299,9 @@ export const dbService = {
           const { error } = await supabase.from("exotic_pets").update(partialPayload).eq("id", id);
           if (error) throw new Error(`Failed to update exotic pet: ${error.message}`);
         } else {
-          const { error } = await (supabase.from("pets") as any).update(partialPayload).eq("id", id);
+          const { error } = await (supabase.from("pets") as any)
+            .update(partialPayload)
+            .eq("id", id);
           if (error) throw new Error(`Failed to update pet: ${error.message}`);
         }
       }
@@ -1240,23 +1333,27 @@ export const dbService = {
 
     // Delete from Supabase (attempt)
     if (isExotic) {
-      Promise.resolve(supabase.from("exotic_pets").delete().eq("id", id)).then(({ error }) => {
-        if (error) {
-          // Fallback delete from standard pets just in case
+      Promise.resolve(supabase.from("exotic_pets").delete().eq("id", id))
+        .then(({ error }) => {
+          if (error) {
+            // Fallback delete from standard pets just in case
+            Promise.resolve(supabase.from("pets").delete().eq("id", id)).catch(() => {});
+          }
+        })
+        .catch((err: any) => {
           Promise.resolve(supabase.from("pets").delete().eq("id", id)).catch(() => {});
-        }
-      }).catch((err: any) => {
-        Promise.resolve(supabase.from("pets").delete().eq("id", id)).catch(() => {});
-      });
+        });
     } else {
-      Promise.resolve(supabase.from("pets").delete().eq("id", id)).then(({ error }) => {
-        if (error) {
-          // Fallback delete from exotic pets just in case
+      Promise.resolve(supabase.from("pets").delete().eq("id", id))
+        .then(({ error }) => {
+          if (error) {
+            // Fallback delete from exotic pets just in case
+            Promise.resolve(supabase.from("exotic_pets").delete().eq("id", id)).catch(() => {});
+          }
+        })
+        .catch((err: any) => {
           Promise.resolve(supabase.from("exotic_pets").delete().eq("id", id)).catch(() => {});
-        }
-      }).catch((err: any) => {
-        Promise.resolve(supabase.from("exotic_pets").delete().eq("id", id)).catch(() => {});
-      });
+        });
     }
 
     return true;
@@ -1279,7 +1376,7 @@ export const dbService = {
         (supabase as any)
           .from("consultations")
           .select("*")
-          .order("created_at", { ascending: false })
+          .order("created_at", { ascending: false }),
       );
 
       if (error) {
@@ -1325,10 +1422,13 @@ export const dbService = {
           breed: newConsultation.breed,
           price_min: Number(newConsultation.price_min),
           price_max: Number(newConsultation.price_max),
-        }
+        },
       ]);
       if (error) {
-        console.warn("Could not save consultation to Supabase (saved locally instead):", error.message);
+        console.warn(
+          "Could not save consultation to Supabase (saved locally instead):",
+          error.message,
+        );
       }
     } catch (err: any) {
       console.warn("Supabase consultation insert failed, saved locally:", err);
@@ -1354,11 +1454,14 @@ export const dbService = {
         (supabase as any)
           .from("liability_consent")
           .select("*")
-          .order("created_at", { ascending: false })
+          .order("created_at", { ascending: false }),
       );
 
       if (error) {
-        console.warn("Supabase liability_consent fetch failed, using local fallback:", error.message);
+        console.warn(
+          "Supabase liability_consent fetch failed, using local fallback:",
+          error.message,
+        );
         return fallback;
       }
       return data || fallback;
@@ -1403,15 +1506,20 @@ export const dbService = {
           liability_accepted: newConsent.liability_accepted,
           consent_given: newConsent.consent_given,
           signature_data_url: newConsent.signature_data_url || null,
+        },
+      ]),
+    )
+      .then(({ error }) => {
+        if (error) {
+          console.warn(
+            "Could not save liability consent to Supabase (saved locally instead):",
+            error.message,
+          );
         }
-      ])
-    ).then(({ error }) => {
-      if (error) {
-        console.warn("Could not save liability consent to Supabase (saved locally instead):", error.message);
-      }
-    }).catch((err: any) => {
-      console.warn("Supabase liability consent insert failed, saved locally:", err);
-    });
+      })
+      .catch((err: any) => {
+        console.warn("Supabase liability consent insert failed, saved locally:", err);
+      });
 
     return newConsent;
   },
@@ -1441,7 +1549,7 @@ export const dbService = {
           .from("pet_reviews")
           .select("*")
           .eq("pet_id", petId)
-          .order("created_at", { ascending: false })
+          .order("created_at", { ascending: false }),
       );
 
       if (error) {
@@ -1455,15 +1563,14 @@ export const dbService = {
         author: row.author,
         rating: row.rating,
         text: row.text,
-        date: row.created_at ? row.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
+        date: row.created_at
+          ? row.created_at.split("T")[0]
+          : new Date().toISOString().split("T")[0],
       }));
 
       if (typeof window !== "undefined") {
         const allLocal = this.initLocalReviews();
-        const updated = [
-          ...remoteReviews,
-          ...allLocal.filter((r) => r.petId !== petId)
-        ];
+        const updated = [...remoteReviews, ...allLocal.filter((r) => r.petId !== petId)];
         localStorage.setItem(REVIEWS_LOCAL_KEY, JSON.stringify(updated));
       }
 
@@ -1498,7 +1605,7 @@ export const dbService = {
           author: newReview.author,
           rating: newReview.rating,
           text: newReview.text,
-        }
+        },
       ]);
       if (error) {
         console.warn("Could not save review to Supabase (saved locally instead):", error.message);
@@ -1529,7 +1636,10 @@ export const dbService = {
         .update({ rating, text })
         .eq("id", id);
       if (error) {
-        console.warn("Could not update review in Supabase (updated locally instead):", error.message);
+        console.warn(
+          "Could not update review in Supabase (updated locally instead):",
+          error.message,
+        );
       }
     } catch (err: any) {
       console.warn("Supabase review update failed, updated locally:", err);
@@ -1552,12 +1662,12 @@ export const dbService = {
     }
 
     try {
-      const { error } = await (supabase as any)
-        .from("pet_reviews")
-        .delete()
-        .eq("id", id);
+      const { error } = await (supabase as any).from("pet_reviews").delete().eq("id", id);
       if (error) {
-        console.warn("Could not delete review from Supabase (deleted locally instead):", error.message);
+        console.warn(
+          "Could not delete review from Supabase (deleted locally instead):",
+          error.message,
+        );
       }
     } catch (err: any) {
       console.warn("Supabase review delete failed, deleted locally:", err);
@@ -1583,11 +1693,14 @@ export const dbService = {
         (supabase as any)
           .from("training_bookings")
           .select("*")
-          .order("created_at", { ascending: false })
+          .order("created_at", { ascending: false }),
       );
 
       if (error) {
-        console.warn("Supabase training_bookings fetch failed, using local fallback:", error.message);
+        console.warn(
+          "Supabase training_bookings fetch failed, using local fallback:",
+          error.message,
+        );
         return fallback;
       }
 
@@ -1618,10 +1731,12 @@ export const dbService = {
   },
 
   // GET BOOKED DATES ONLY (user view — no personal data exposed, uses RPC)
-  async getBookedDates(maxPerDay: number = 3): Promise<{ bookedDates: string[]; dateCounts: Record<string, number> }> {
+  async getBookedDates(
+    maxPerDay: number = 3,
+  ): Promise<{ bookedDates: string[]; dateCounts: Record<string, number> }> {
     try {
       const { data, error } = await withTimeout<any>(
-        (supabase as any).rpc("get_training_date_counts")
+        (supabase as any).rpc("get_training_date_counts"),
       );
 
       if (error) {
@@ -1660,7 +1775,9 @@ export const dbService = {
   },
 
   // CREATE TRAINING BOOKING
-  async createTrainingBooking(input: Omit<TrainingBooking, "id" | "createdAt" | "completed">): Promise<TrainingBooking> {
+  async createTrainingBooking(
+    input: Omit<TrainingBooking, "id" | "createdAt" | "completed">,
+  ): Promise<TrainingBooking> {
     const newId = safeUUID();
     const newBooking: TrainingBooking = {
       ...input,
@@ -1700,27 +1817,35 @@ export const dbService = {
           liability_accepted: newBooking.liabilityAccepted || false,
           consent_given: newBooking.consentGiven || false,
           signature_data_url: newBooking.signatureDataUrl || null,
+        },
+      ]),
+    )
+      .then(({ error }) => {
+        if (error) {
+          console.warn(
+            "Could not save training booking to Supabase (saved locally):",
+            error.message,
+          );
         }
-      ])
-    ).then(({ error }) => {
-      if (error) {
-        console.warn("Could not save training booking to Supabase (saved locally):", error.message);
-      }
-    }).catch((err: any) => {
-      console.warn("Supabase training insert failed, saved locally:", err);
-    });
+      })
+      .catch((err: any) => {
+        console.warn("Supabase training insert failed, saved locally:", err);
+      });
 
     return newBooking;
   },
 
   // UPDATE TRAINING BOOKING
-  async updateTrainingBooking(id: string, updates: Partial<TrainingBooking>): Promise<TrainingBooking> {
+  async updateTrainingBooking(
+    id: string,
+    updates: Partial<TrainingBooking>,
+  ): Promise<TrainingBooking> {
     if (typeof window !== "undefined") {
       const current = localStorage.getItem(TRAINING_BOOKINGS_LOCAL_KEY);
       if (current) {
         try {
           const list = JSON.parse(current) as TrainingBooking[];
-          const index = list.findIndex(b => b.id === id);
+          const index = list.findIndex((b) => b.id === id);
           if (index !== -1) {
             list[index] = { ...list[index], ...updates };
             localStorage.setItem(TRAINING_BOOKINGS_LOCAL_KEY, JSON.stringify(list));
@@ -1736,12 +1861,16 @@ export const dbService = {
     if (updates.age !== undefined) dbPayload.age = updates.age;
     if (updates.trainingType !== undefined) dbPayload.training_type = updates.trainingType;
     if (updates.preferredDate !== undefined) dbPayload.preferred_date = updates.preferredDate;
-    if (updates.selectedCommands !== undefined) dbPayload.selected_commands = updates.selectedCommands;
-    if (updates.medicalConditions !== undefined) dbPayload.medical_conditions = updates.medicalConditions;
+    if (updates.selectedCommands !== undefined)
+      dbPayload.selected_commands = updates.selectedCommands;
+    if (updates.medicalConditions !== undefined)
+      dbPayload.medical_conditions = updates.medicalConditions;
     if (updates.completed !== undefined) dbPayload.completed = updates.completed;
-    if (updates.liabilityAccepted !== undefined) dbPayload.liability_accepted = updates.liabilityAccepted;
+    if (updates.liabilityAccepted !== undefined)
+      dbPayload.liability_accepted = updates.liabilityAccepted;
     if (updates.consentGiven !== undefined) dbPayload.consent_given = updates.consentGiven;
-    if (updates.signatureDataUrl !== undefined) dbPayload.signature_data_url = updates.signatureDataUrl;
+    if (updates.signatureDataUrl !== undefined)
+      dbPayload.signature_data_url = updates.signatureDataUrl;
 
     const { error } = await (supabase as any)
       .from("training_bookings")
@@ -1753,7 +1882,7 @@ export const dbService = {
     }
 
     const updatedList = await this.getTrainingBookings();
-    const updated = updatedList.find(b => b.id === id);
+    const updated = updatedList.find((b) => b.id === id);
     if (!updated) throw new Error("Booking not found after update");
     return updated;
   },
@@ -1765,10 +1894,7 @@ export const dbService = {
     const filtered = bookings.filter((b) => b.id !== id);
     localStorage.setItem(TRAINING_BOOKINGS_LOCAL_KEY, JSON.stringify(filtered));
 
-    const { error } = await (supabase as any)
-      .from("training_bookings")
-      .delete()
-      .eq("id", id);
+    const { error } = await (supabase as any).from("training_bookings").delete().eq("id", id);
 
     if (error) {
       console.warn("Could not delete training booking from Supabase:", error.message);
@@ -1795,11 +1921,14 @@ export const dbService = {
         (supabase as any)
           .from("hostelling_bookings")
           .select("*")
-          .order("created_at", { ascending: false })
+          .order("created_at", { ascending: false }),
       );
 
       if (error) {
-        console.warn("Supabase hostelling_bookings fetch failed, using local fallback:", error.message);
+        console.warn(
+          "Supabase hostelling_bookings fetch failed, using local fallback:",
+          error.message,
+        );
         return fallback;
       }
 
@@ -1837,7 +1966,9 @@ export const dbService = {
   },
 
   // CREATE HOSTELLING BOOKING
-  async createHostellingBooking(input: Omit<HostellingBooking, "id" | "createdAt" | "completed" | "submittedAt">): Promise<HostellingBooking> {
+  async createHostellingBooking(
+    input: Omit<HostellingBooking, "id" | "createdAt" | "completed" | "submittedAt">,
+  ): Promise<HostellingBooking> {
     const newId = safeUUID();
     const newBooking: HostellingBooking = {
       ...input,
@@ -1884,27 +2015,35 @@ export const dbService = {
           num_days: newBooking.numDays,
           signature_data_url: newBooking.signatureDataUrl,
           completed: false,
+        },
+      ]),
+    )
+      .then(({ error }) => {
+        if (error) {
+          console.warn(
+            "Could not save hostelling booking to Supabase (saved locally):",
+            error.message,
+          );
         }
-      ])
-    ).then(({ error }) => {
-      if (error) {
-        console.warn("Could not save hostelling booking to Supabase (saved locally):", error.message);
-      }
-    }).catch((err: any) => {
-      console.warn("Supabase hostelling insert failed, saved locally:", err);
-    });
+      })
+      .catch((err: any) => {
+        console.warn("Supabase hostelling insert failed, saved locally:", err);
+      });
 
     return newBooking;
   },
 
   // UPDATE HOSTELLING BOOKING
-  async updateHostellingBooking(id: string, updates: Partial<HostellingBooking>): Promise<HostellingBooking> {
+  async updateHostellingBooking(
+    id: string,
+    updates: Partial<HostellingBooking>,
+  ): Promise<HostellingBooking> {
     if (typeof window !== "undefined") {
       const current = localStorage.getItem(HOSTELLING_BOOKINGS_LOCAL_KEY);
       if (current) {
         try {
           const list = JSON.parse(current) as HostellingBooking[];
-          const index = list.findIndex(b => b.id === id);
+          const index = list.findIndex((b) => b.id === id);
           if (index !== -1) {
             list[index] = { ...list[index], ...updates };
             localStorage.setItem(HOSTELLING_BOOKINGS_LOCAL_KEY, JSON.stringify(list));
@@ -1921,16 +2060,19 @@ export const dbService = {
     if (updates.petBreed !== undefined) dbPayload.pet_breed = updates.petBreed;
     if (updates.petGender !== undefined) dbPayload.pet_gender = updates.petGender;
     if (updates.petAge !== undefined) dbPayload.pet_age = updates.petAge;
-    if (updates.medicalConditions !== undefined) dbPayload.medical_conditions = updates.medicalConditions;
+    if (updates.medicalConditions !== undefined)
+      dbPayload.medical_conditions = updates.medicalConditions;
     if (updates.medicalImage !== undefined) dbPayload.medical_image = updates.medicalImage;
     if (updates.temperament !== undefined) dbPayload.temperament = updates.temperament;
-    if (updates.aggressionDetails !== undefined) dbPayload.aggression_details = updates.aggressionDetails;
+    if (updates.aggressionDetails !== undefined)
+      dbPayload.aggression_details = updates.aggressionDetails;
     if (updates.urineTrained !== undefined) dbPayload.urine_trained = updates.urineTrained;
     if (updates.pottyTrained !== undefined) dbPayload.potty_trained = updates.pottyTrained;
     if (updates.checkInDate !== undefined) dbPayload.check_in_date = updates.checkInDate;
     if (updates.checkOutDate !== undefined) dbPayload.check_out_date = updates.checkOutDate;
     if (updates.numDays !== undefined) dbPayload.num_days = updates.numDays;
-    if (updates.signatureDataUrl !== undefined) dbPayload.signature_data_url = updates.signatureDataUrl;
+    if (updates.signatureDataUrl !== undefined)
+      dbPayload.signature_data_url = updates.signatureDataUrl;
     if (updates.completed !== undefined) dbPayload.completed = updates.completed;
 
     const { error } = await (supabase as any)
@@ -1943,7 +2085,7 @@ export const dbService = {
     }
 
     const updatedList = await this.getHostellingBookings();
-    const updated = updatedList.find(b => b.id === id);
+    const updated = updatedList.find((b) => b.id === id);
     if (!updated) throw new Error("Booking not found after update");
     return updated;
   },
@@ -1955,10 +2097,7 @@ export const dbService = {
     const filtered = bookings.filter((b) => b.id !== id);
     localStorage.setItem(HOSTELLING_BOOKINGS_LOCAL_KEY, JSON.stringify(filtered));
 
-    const { error } = await (supabase as any)
-      .from("hostelling_bookings")
-      .delete()
-      .eq("id", id);
+    const { error } = await (supabase as any).from("hostelling_bookings").delete().eq("id", id);
 
     if (error) {
       console.warn("Could not delete hostelling booking from Supabase:", error.message);
@@ -2000,8 +2139,8 @@ export const dbService = {
       }));
 
       // Merge remote + local (deduplicate by id)
-      const ids = new Set(remote.map(r => r.id));
-      const merged = [...remote, ...local.filter(l => !ids.has(l.id))];
+      const ids = new Set(remote.map((r) => r.id));
+      const merged = [...remote, ...local.filter((l) => !ids.has(l.id))];
       return merged;
     } catch (err) {
       console.warn("Error fetching contact submissions, returning local:", err);
@@ -2016,15 +2155,12 @@ export const dbService = {
     try {
       const stored = localStorage.getItem("pawhaven_contact_submissions") || "[]";
       let list: ContactSubmission[] = JSON.parse(stored);
-      list = list.filter(s => s.id !== id);
+      list = list.filter((s) => s.id !== id);
       localStorage.setItem("pawhaven_contact_submissions", JSON.stringify(list));
     } catch {}
 
     // Remove from Supabase
-    const { error } = await (supabase as any)
-      .from("contact_submissions")
-      .delete()
-      .eq("id", id);
+    const { error } = await (supabase as any).from("contact_submissions").delete().eq("id", id);
 
     if (error) {
       console.warn("Could not delete contact submission from Supabase:", error.message);
@@ -2037,7 +2173,7 @@ export const dbService = {
     try {
       const stored = localStorage.getItem("pawhaven_contact_submissions") || "[]";
       let list: ContactSubmission[] = JSON.parse(stored);
-      const idx = list.findIndex(s => s.id === id);
+      const idx = list.findIndex((s) => s.id === id);
       if (idx !== -1) {
         list[idx].read = read;
         localStorage.setItem("pawhaven_contact_submissions", JSON.stringify(list));
@@ -2045,10 +2181,7 @@ export const dbService = {
     } catch {}
 
     // Update Supabase
-    await (supabase as any)
-      .from("contact_submissions")
-      .update({ read })
-      .eq("id", id);
+    await (supabase as any).from("contact_submissions").update({ read }).eq("id", id);
   },
 };
 

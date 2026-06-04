@@ -118,7 +118,7 @@ function CartPage() {
         return;
       }
     }
-    
+
     if (hasPet) {
       if (!signedName.trim()) {
         toast.error("Please sign your full legal name for the Liability and Consent Basis.");
@@ -350,133 +350,166 @@ function CartPage() {
           <div className="mt-10 grid lg:grid-cols-[1fr_360px] gap-8">
             <div className="space-y-6">
               <ul className="space-y-4">
-              {items.map((i) => (
-                <li
-                  key={i.id}
-                  className="flex items-center gap-4 rounded-2xl bg-card border border-border p-4"
-                >
-                  <img
-                    src={parseImages(i.product?.image_url)[0] || i.product?.image_url || "/product-1.jpg"}
-                    alt={i.product?.name}
-                    className="h-20 w-20 rounded-xl object-cover"
-                  />
-                  <div className="flex-1">
-                    <div className="font-display text-lg">{i.product?.name}</div>
-                    <div className="text-xs text-muted-foreground">{i.product?.category}</div>
-                    <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-border px-2 py-1">
+                {items.map((i) => (
+                  <li
+                    key={i.id}
+                    className="flex items-center gap-4 rounded-2xl bg-card border border-border p-4"
+                  >
+                    <img
+                      src={
+                        parseImages(i.product?.image_url)[0] ||
+                        i.product?.image_url ||
+                        "/product-1.jpg"
+                      }
+                      alt={i.product?.name}
+                      className="h-20 w-20 rounded-xl object-cover"
+                    />
+                    <div className="flex-1">
+                      <div className="font-display text-lg">{i.product?.name}</div>
+                      <div className="text-xs text-muted-foreground">{i.product?.category}</div>
+                      <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-border px-2 py-1">
+                        <button
+                          onClick={() => setQty.mutate({ id: i.id, qty: i.quantity - 1 })}
+                          className="p-1 hover:bg-muted rounded-full"
+                        >
+                          <FiMinus size={12} />
+                        </button>
+                        <span className="w-6 text-center text-sm">{i.quantity}</span>
+                        <button
+                          onClick={() => setQty.mutate({ id: i.id, qty: i.quantity + 1 })}
+                          className="p-1 hover:bg-muted rounded-full"
+                        >
+                          <FiPlus size={12} />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-display text-lg text-accent">
+                        ₹{((i.product?.price ?? 0) * i.quantity).toFixed(2)}
+                      </div>
                       <button
-                        onClick={() => setQty.mutate({ id: i.id, qty: i.quantity - 1 })}
-                        className="p-1 hover:bg-muted rounded-full"
+                        onClick={() => remove.mutate(i.id)}
+                        className="mt-2 text-muted-foreground hover:text-destructive"
                       >
-                        <FiMinus size={12} />
-                      </button>
-                      <span className="w-6 text-center text-sm">{i.quantity}</span>
-                      <button
-                        onClick={() => setQty.mutate({ id: i.id, qty: i.quantity + 1 })}
-                        className="p-1 hover:bg-muted rounded-full"
-                      >
-                        <FiPlus size={12} />
+                        <FiTrash2 />
                       </button>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-display text-lg text-accent">
-                      ₹{((i.product?.price ?? 0) * i.quantity).toFixed(2)}
-                    </div>
-                    <button
-                      onClick={() => remove.mutate(i.id)}
-                      className="mt-2 text-muted-foreground hover:text-destructive"
-                    >
-                      <FiTrash2 />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
 
-            {/* Shipping Details form */}
-            <div className="rounded-3xl bg-card border border-border p-8 shadow-soft">
-              <h3 className="font-display text-2xl mb-1 text-foreground">Shipping Information</h3>
-              <p className="text-xs text-muted-foreground mb-6">Enter your contact and delivery details to place the order.</p>
-              
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Full Name *</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="John Doe"
-                    value={shippingDetails.full_name}
-                    onChange={(e) => setShippingDetails({ ...shippingDetails, full_name: e.target.value.replace(/[^A-Za-z\s]/g, "") })}
-                    className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Phone Number *</label>
-                  <input
-                    required
-                    type="tel"
-                    maxLength={10}
-                    placeholder="10-digit number"
-                    value={shippingDetails.phone}
-                    onChange={(e) => setShippingDetails({ ...shippingDetails, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
-                    className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
-                  />
-                </div>
-                <div className="sm:col-span-2 flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Address Line *</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="Apartment, Street address"
-                    value={shippingDetails.address_line}
-                    onChange={(e) => setShippingDetails({ ...shippingDetails, address_line: e.target.value })}
-                    className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">City *</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="e.g. Mumbai"
-                    value={shippingDetails.city}
-                    onChange={(e) => setShippingDetails({ ...shippingDetails, city: e.target.value })}
-                    className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Postal Code *</label>
-                  <input
-                    required
-                    type="text"
-                    maxLength={6}
-                    placeholder="e.g. 400001"
-                    value={shippingDetails.postal_code}
-                    onChange={(e) => setShippingDetails({
-                      ...shippingDetails,
-                      postal_code: shippingDetails.country.toLowerCase() === "india"
-                        ? e.target.value.replace(/\D/g, "").slice(0, 6)
-                        : e.target.value.replace(/[^A-Za-z0-9\s-]/g, "")
-                    })}
-                    className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
-                  />
-                </div>
-                <div className="sm:col-span-2 flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Country *</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="e.g. India"
-                    value={shippingDetails.country}
-                    onChange={(e) => setShippingDetails({ ...shippingDetails, country: e.target.value })}
-                    className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
-                  />
+              {/* Shipping Details form */}
+              <div className="rounded-3xl bg-card border border-border p-8 shadow-soft">
+                <h3 className="font-display text-2xl mb-1 text-foreground">Shipping Information</h3>
+                <p className="text-xs text-muted-foreground mb-6">
+                  Enter your contact and delivery details to place the order.
+                </p>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">
+                      Full Name *
+                    </label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="John Doe"
+                      value={shippingDetails.full_name}
+                      onChange={(e) =>
+                        setShippingDetails({
+                          ...shippingDetails,
+                          full_name: e.target.value.replace(/[^A-Za-z\s]/g, ""),
+                        })
+                      }
+                      className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">
+                      Phone Number *
+                    </label>
+                    <input
+                      required
+                      type="tel"
+                      maxLength={10}
+                      placeholder="10-digit number"
+                      value={shippingDetails.phone}
+                      onChange={(e) =>
+                        setShippingDetails({
+                          ...shippingDetails,
+                          phone: e.target.value.replace(/\D/g, "").slice(0, 10),
+                        })
+                      }
+                      className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">
+                      Address Line *
+                    </label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="Apartment, Street address"
+                      value={shippingDetails.address_line}
+                      onChange={(e) =>
+                        setShippingDetails({ ...shippingDetails, address_line: e.target.value })
+                      }
+                      className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">City *</label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="e.g. Mumbai"
+                      value={shippingDetails.city}
+                      onChange={(e) =>
+                        setShippingDetails({ ...shippingDetails, city: e.target.value })
+                      }
+                      className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">
+                      Postal Code *
+                    </label>
+                    <input
+                      required
+                      type="text"
+                      maxLength={6}
+                      placeholder="e.g. 400001"
+                      value={shippingDetails.postal_code}
+                      onChange={(e) =>
+                        setShippingDetails({
+                          ...shippingDetails,
+                          postal_code:
+                            shippingDetails.country.toLowerCase() === "india"
+                              ? e.target.value.replace(/\D/g, "").slice(0, 6)
+                              : e.target.value.replace(/[^A-Za-z0-9\s-]/g, ""),
+                        })
+                      }
+                      className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">Country *</label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="e.g. India"
+                      value={shippingDetails.country}
+                      onChange={(e) =>
+                        setShippingDetails({ ...shippingDetails, country: e.target.value })
+                      }
+                      className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary focus:ring-1 focus:ring-primary font-medium"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          <aside className="rounded-3xl bg-card border border-border p-6 h-fit">
+            <aside className="rounded-3xl bg-card border border-border p-6 h-fit">
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span>₹{total.toFixed(2)}</span>
@@ -494,11 +527,14 @@ function CartPage() {
               {/* Liability & Consent Section */}
               {hasPet && (
                 <div className="mt-6 border-t border-border pt-6 space-y-4">
-                  <h4 className="font-display text-sm font-semibold text-foreground">Liability & Consent Basis</h4>
+                  <h4 className="font-display text-sm font-semibold text-foreground">
+                    Liability & Consent Basis
+                  </h4>
                   <p className="text-xs text-muted-foreground leading-relaxed bg-muted/40 p-3 rounded-2xl border border-border">
-                    This order contains companion/exotic pets. By signing below, you agree to take full responsibility for their welfare and legal ownership guidelines.
+                    This order contains companion/exotic pets. By signing below, you agree to take
+                    full responsibility for their welfare and legal ownership guidelines.
                   </p>
-                  
+
                   <div className="space-y-3">
                     <label className="flex items-start gap-2.5 text-xs text-muted-foreground cursor-pointer select-none">
                       <input
@@ -522,7 +558,9 @@ function CartPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Full Legal Name Signature</label>
+                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      Full Legal Name Signature
+                    </label>
                     <input
                       type="text"
                       placeholder="Sign your full name"

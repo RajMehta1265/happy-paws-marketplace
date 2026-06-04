@@ -66,7 +66,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
 
       if (!profile) {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const {
+          data: { user: authUser },
+        } = await supabase.auth.getUser();
         if (authUser) {
           const fullName = authUser.user_metadata?.full_name || authUser.email || "User";
           await supabase.from("profiles").insert({
@@ -96,8 +98,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAndClaimAdmin = async (userId: string) => {
     try {
       // Backup check: if user email is woolf.indiaa@gmail.com or woolf.india@gmail.com, force isAdmin to true
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser?.email && ["woolf.indiaa@gmail.com", "woolf.india@gmail.com"].includes(authUser.email)) {
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
+      if (
+        authUser?.email &&
+        ["woolf.indiaa@gmail.com", "woolf.india@gmail.com"].includes(authUser.email)
+      ) {
         setIsAdmin(true);
         return;
       }
@@ -130,7 +137,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const parsed = JSON.parse(stored);
           setSession({ user: parsed.user } as any);
-          setIsAdmin(parsed.isAdmin || (parsed.user?.email && ["woolf.indiaa@gmail.com", "woolf.india@gmail.com"].includes(parsed.user.email)));
+          setIsAdmin(
+            parsed.isAdmin ||
+              (parsed.user?.email &&
+                ["woolf.indiaa@gmail.com", "woolf.india@gmail.com"].includes(parsed.user.email)),
+          );
           fetchProfileAndCheckComplete(parsed.user.id);
           setLoading(false);
           return true;
@@ -161,7 +172,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // If mock auth is present, don't query Supabase auth initially
     if (!checkMockAuth()) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_e, s) => {
         if (!localStorage.getItem("pawhaven_mock_session")) {
           setSession(s);
           qc.invalidateQueries();
@@ -215,7 +228,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <Ctx.Provider value={{ user: session?.user ?? null, session, isAdmin, isProfileComplete, loading, signOut, refreshProfile }}>
+    <Ctx.Provider
+      value={{
+        user: session?.user ?? null,
+        session,
+        isAdmin,
+        isProfileComplete,
+        loading,
+        signOut,
+        refreshProfile,
+      }}
+    >
       {children}
     </Ctx.Provider>
   );

@@ -2,7 +2,18 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { FiCheck, FiHeart, FiStar, FiMessageSquare, FiSend, FiShoppingBag, FiPlay, FiEdit2, FiTrash2, FiX } from "react-icons/fi";
+import {
+  FiCheck,
+  FiHeart,
+  FiStar,
+  FiMessageSquare,
+  FiSend,
+  FiShoppingBag,
+  FiPlay,
+  FiEdit2,
+  FiTrash2,
+  FiX,
+} from "react-icons/fi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect } from "react";
 import { useCart } from "@/hooks/use-cart";
@@ -58,7 +69,10 @@ function PetDetail() {
         date: new Date().toISOString().split("T")[0],
       };
 
-      queryClient.setQueryData<Review[]>(["reviews", petId], [optimisticReview, ...previousReviews]);
+      queryClient.setQueryData<Review[]>(
+        ["reviews", petId],
+        [optimisticReview, ...previousReviews],
+      );
 
       return { previousReviews };
     },
@@ -87,7 +101,7 @@ function PetDetail() {
 
       queryClient.setQueryData<Review[]>(
         ["reviews", petId],
-        previousReviews.filter((r) => r.id !== deletedId)
+        previousReviews.filter((r) => r.id !== deletedId),
       );
 
       return { previousReviews };
@@ -115,7 +129,9 @@ function PetDetail() {
 
       queryClient.setQueryData<Review[]>(
         ["reviews", petId],
-        previousReviews.map((r) => (r.id === variables.id ? { ...r, rating: variables.rating, text: variables.text } : r))
+        previousReviews.map((r) =>
+          r.id === variables.id ? { ...r, rating: variables.rating, text: variables.text } : r,
+        ),
       );
 
       return { previousReviews };
@@ -162,21 +178,57 @@ function PetDetail() {
     });
   };
 
-  if (isLoading) return <SiteLayout><div className="mx-auto max-w-7xl px-6 py-32"><Skeleton className="h-96 rounded-3xl" /></div></SiteLayout>;
-  if (!pet) return <SiteLayout><div className="mx-auto max-w-3xl px-6 py-32 text-center"><h1 className="font-display text-4xl">Pet not found</h1><Link to="/pets" className="text-accent mt-4 inline-block">Back to all pets →</Link></div></SiteLayout>;
+  if (isLoading)
+    return (
+      <SiteLayout>
+        <div className="mx-auto max-w-7xl px-6 py-32">
+          <Skeleton className="h-96 rounded-3xl" />
+        </div>
+      </SiteLayout>
+    );
+  if (!pet)
+    return (
+      <SiteLayout>
+        <div className="mx-auto max-w-3xl px-6 py-32 text-center">
+          <h1 className="font-display text-4xl">Pet not found</h1>
+          <Link to="/pets" className="text-accent mt-4 inline-block">
+            Back to all pets →
+          </Link>
+        </div>
+      </SiteLayout>
+    );
 
   // Filter reviews for this pet (with name-based fallbacks for default reviews)
-  const petReviews = reviews.filter((r) => 
-    r.petId === pet.id ||
-    (pet.name.toLowerCase() === "milo" && (r.petId === "milo" || r.petId === "d1111111-1111-1111-1111-111111111111")) ||
-    (pet.name.toLowerCase() === "luna" && (r.petId === "luna" || r.petId === "d2222222-2222-2222-2222-222222222222")) ||
-    (pet.name.toLowerCase() === "kiwi" && (r.petId === "kiwi" || r.petId === "d4444444-4444-4444-4444-444444444444")) ||
-    (pet.name.toLowerCase() === "mochi" && (r.petId === "mochi" || r.petId === "d6666666-6666-6666-6666-666666666666"))
+  const petReviews = reviews.filter(
+    (r) =>
+      r.petId === pet.id ||
+      (pet.name.toLowerCase() === "milo" &&
+        (r.petId === "milo" || r.petId === "d1111111-1111-1111-1111-111111111111")) ||
+      (pet.name.toLowerCase() === "luna" &&
+        (r.petId === "luna" || r.petId === "d2222222-2222-2222-2222-222222222222")) ||
+      (pet.name.toLowerCase() === "kiwi" &&
+        (r.petId === "kiwi" || r.petId === "d4444444-4444-4444-4444-444444444444")) ||
+      (pet.name.toLowerCase() === "mochi" &&
+        (r.petId === "mochi" || r.petId === "d6666666-6666-6666-6666-666666666666")),
   );
   if (petReviews.length === 0) {
     petReviews.push(
-      { id: `mock-1-${pet.id}`, petId: pet.id, author: "Aditi G.", rating: 5, text: `Absolutely love ${pet.name}! Super active and healthy.`, date: "2026-05-10" },
-      { id: `mock-2-${pet.id}`, petId: pet.id, author: "Karan J.", rating: 5, text: `Great onboarding assistance from WOOLF.INDIA. Highly recommended.`, date: "2026-05-12" }
+      {
+        id: `mock-1-${pet.id}`,
+        petId: pet.id,
+        author: "Aditi G.",
+        rating: 5,
+        text: `Absolutely love ${pet.name}! Super active and healthy.`,
+        date: "2026-05-10",
+      },
+      {
+        id: `mock-2-${pet.id}`,
+        petId: pet.id,
+        author: "Karan J.",
+        rating: 5,
+        text: `Great onboarding assistance from WOOLF.INDIA. Highly recommended.`,
+        date: "2026-05-12",
+      },
     );
   }
 
@@ -184,7 +236,6 @@ function PetDetail() {
     <SiteLayout>
       {/* Top Detail Block with spacing and aligned tops */}
       <section className="mx-auto max-w-7xl px-6 pt-32 pb-16 grid lg:grid-cols-2 gap-12 items-start">
-        
         {/* Media Block (Left Column) */}
         <div className="space-y-4 w-full">
           {showVideo && pet.video_url ? (
@@ -225,7 +276,11 @@ function PetDetail() {
                       : "border-border hover:border-accent/50"
                   }`}
                 >
-                  <img src={imgUrl} alt={`${pet.name} thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+                  <img
+                    src={imgUrl}
+                    alt={`${pet.name} thumbnail ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                  />
                 </button>
               ))}
               {pet.video_url && (
@@ -244,28 +299,51 @@ function PetDetail() {
             </div>
           )}
         </div>
-        
+
         {/* Details Block (Right Column) */}
         <div className="space-y-6">
           <div>
-            <Link to="/pets" className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">← All pets</Link>
-            <h1 className="mt-2 font-display text-5xl lg:text-6xl text-foreground leading-none">{pet.name}</h1>
-            <div className="mt-2.5 text-xs text-muted-foreground font-medium tracking-wide uppercase">{pet.breed} • {pet.age} • {pet.type}</div>
+            <Link
+              to="/pets"
+              className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            >
+              ← All pets
+            </Link>
+            <h1 className="mt-2 font-display text-5xl lg:text-6xl text-foreground leading-none">
+              {pet.name}
+            </h1>
+            <div className="mt-2.5 text-xs text-muted-foreground font-medium tracking-wide uppercase">
+              {pet.breed} • {pet.age} • {pet.type}
+            </div>
           </div>
-          
+
           <div className="border-t border-b border-border/60 py-4 flex items-center justify-between">
-            <span className="text-xs uppercase font-bold tracking-wider text-muted-foreground">Price</span>
-            <div className="font-display text-4xl text-accent font-semibold">₹{Number(pet.price).toFixed(0)}</div>
+            <span className="text-xs uppercase font-bold tracking-wider text-muted-foreground">
+              Price
+            </span>
+            <div className="font-display text-4xl text-accent font-semibold">
+              ₹{Number(pet.price).toFixed(0)}
+            </div>
           </div>
 
           <div className="space-y-2">
-            <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground">About {pet.name}</h4>
-            <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap break-words">{pet.description}</p>
+            <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground">
+              About {pet.name}
+            </h4>
+            <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap break-words">
+              {pet.description}
+            </p>
           </div>
-          
+
           <div className="flex flex-wrap gap-2 text-xs font-semibold">
-            {pet.vaccinated && <span className="inline-flex items-center gap-1 rounded-full bg-accent/20 px-3 py-1 text-accent"><FiCheck /> Vaccinated</span>}
-            <span className="rounded-full bg-secondary px-3 py-1 text-muted-foreground">Health-checked</span>
+            {pet.vaccinated && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-accent/20 px-3 py-1 text-accent">
+                <FiCheck /> Vaccinated
+              </span>
+            )}
+            <span className="rounded-full bg-secondary px-3 py-1 text-muted-foreground">
+              Health-checked
+            </span>
           </div>
 
           <div className="pt-4 flex flex-wrap gap-3">
@@ -277,10 +355,18 @@ function PetDetail() {
             >
               <FiShoppingBag /> Add to Cart
             </button>
-            <Link to="/contact" className="rounded-full border border-border hover:bg-muted transition px-6 py-3 text-xs font-bold flex items-center justify-center">
+            <Link
+              to="/contact"
+              className="rounded-full border border-border hover:bg-muted transition px-6 py-3 text-xs font-bold flex items-center justify-center"
+            >
               Enquire to buy
             </Link>
-            <button aria-label="Wishlist" className="rounded-full border border-border p-3 hover:bg-muted cursor-pointer transition text-muted-foreground"><FiHeart /></button>
+            <button
+              aria-label="Wishlist"
+              className="rounded-full border border-border p-3 hover:bg-muted cursor-pointer transition text-muted-foreground"
+            >
+              <FiHeart />
+            </button>
           </div>
         </div>
       </section>
@@ -288,18 +374,20 @@ function PetDetail() {
       {/* Reviews Block */}
       <section className="mx-auto max-w-7xl px-6 py-16 border-t border-border/60">
         <div className="grid lg:grid-cols-12 gap-12 items-start">
-          
           {/* Reviews List (Left Column, col-span-7) */}
           <div className="lg:col-span-7 space-y-6">
             <h2 className="font-display text-3xl flex items-center gap-2 text-foreground">
               <FiMessageSquare className="text-accent" /> Customer Reviews ({petReviews.length})
             </h2>
-            
+
             <div className="space-y-4">
               {petReviews.map((r) => {
                 const isEditing = editingReviewId === r.id;
                 return (
-                  <div key={r.id} className="bg-card p-6 rounded-3xl border border-border shadow-xs hover:border-border/100 transition duration-300 relative group">
+                  <div
+                    key={r.id}
+                    className="bg-card p-6 rounded-3xl border border-border shadow-xs hover:border-border/100 transition duration-300 relative group"
+                  >
                     {/* Inline edit/delete buttons - only show if not mock reviews */}
                     {!r.id.startsWith("mock-") && !isEditing && (
                       <div className="absolute top-6 right-6 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -345,7 +433,9 @@ function PetDetail() {
                         className="space-y-3"
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className="font-semibold text-sm text-foreground">{r.author} (Editing)</span>
+                          <span className="font-semibold text-sm text-foreground">
+                            {r.author} (Editing)
+                          </span>
                           <button
                             type="button"
                             onClick={() => setEditingReviewId(null)}
@@ -356,7 +446,9 @@ function PetDetail() {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Rating</label>
+                            <label className="block text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                              Rating
+                            </label>
                             <select
                               value={editReviewRating}
                               onChange={(e) => setEditReviewRating(Number(e.target.value))}
@@ -371,7 +463,9 @@ function PetDetail() {
                           </div>
                         </div>
                         <div>
-                          <label className="block text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Your Thoughts</label>
+                          <label className="block text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                            Your Thoughts
+                          </label>
                           <textarea
                             required
                             value={editReviewText}
@@ -407,7 +501,9 @@ function PetDetail() {
                             <FiStar key={i} className="fill-amber-500 text-amber-500" size={11} />
                           ))}
                         </div>
-                        <p className="text-muted-foreground italic text-sm leading-relaxed">"{r.text}"</p>
+                        <p className="text-muted-foreground italic text-sm leading-relaxed">
+                          "{r.text}"
+                        </p>
                       </>
                     )}
                   </div>
@@ -422,7 +518,9 @@ function PetDetail() {
             <form onSubmit={handleReviewSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Your Name</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                    Your Name
+                  </label>
                   <input
                     type="text"
                     required
@@ -433,7 +531,9 @@ function PetDetail() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Rating</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                    Rating
+                  </label>
                   <select
                     value={newReviewRating}
                     onChange={(e) => setNewReviewRating(Number(e.target.value))}
@@ -448,7 +548,9 @@ function PetDetail() {
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Your Thoughts</label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                  Your Thoughts
+                </label>
                 <textarea
                   required
                   placeholder="Tell us about your experience with this companion..."
@@ -466,7 +568,6 @@ function PetDetail() {
               </button>
             </form>
           </div>
-
         </div>
       </section>
     </SiteLayout>

@@ -123,7 +123,10 @@ function ExoticsPage() {
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span>
-                Max Price: <strong className="text-foreground">₹{currentMaxPrice.toLocaleString("en-IN")}</strong>
+                Max Price:{" "}
+                <strong className="text-foreground">
+                  ₹{currentMaxPrice.toLocaleString("en-IN")}
+                </strong>
               </span>
               <input
                 type="range"
@@ -140,70 +143,72 @@ function ExoticsPage() {
 
         {/* Grid List */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {petsLoading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="aspect-[4/3] rounded-3xl" />
-            ))
-          ) : filtered.map((p) => (
-            <Link
-              key={p.id}
-              to="/pets/$petId"
-              params={{ petId: p.id }}
-              className="group rounded-3xl bg-card overflow-hidden hover-lift border border-border/80 flex flex-col justify-between transition-all hover:border-border/100 hover:shadow-md"
-            >
-              <div>
-                <div className="relative aspect-[4/3] w-full bg-muted overflow-hidden">
-                  <img
-                    src={parseImages(p.image_url)[0] || p.image_url || "/pet-1.jpg"}
-                    alt={p.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-103"
-                    loading="lazy"
-                  />
-                  <div className="absolute top-4 left-4 rounded-full bg-black/40 backdrop-blur-md px-3 py-1 text-[10px] font-semibold text-white">
-                    {p.breed}
-                  </div>
-                </div>
-                <div className="p-5 pb-0">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-display text-2xl group-hover:text-accent transition-colors duration-300">
-                        {p.name}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        Age: {p.age} • Certified Species
+          {petsLoading
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="aspect-[4/3] rounded-3xl" />
+              ))
+            : filtered.map((p) => (
+                <Link
+                  key={p.id}
+                  to="/pets/$petId"
+                  params={{ petId: p.id }}
+                  className="group rounded-3xl bg-card overflow-hidden hover-lift border border-border/80 flex flex-col justify-between transition-all hover:border-border/100 hover:shadow-md"
+                >
+                  <div>
+                    <div className="relative aspect-[4/3] w-full bg-muted overflow-hidden">
+                      <img
+                        src={parseImages(p.image_url)[0] || p.image_url || "/pet-1.jpg"}
+                        alt={p.name}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-103"
+                        loading="lazy"
+                      />
+                      <div className="absolute top-4 left-4 rounded-full bg-black/40 backdrop-blur-md px-3 py-1 text-[10px] font-semibold text-white">
+                        {p.breed}
                       </div>
                     </div>
-                    <div className="shrink-0 ml-2">
-                      <span className="inline-flex rounded-full bg-accent/15 px-3.5 py-1.5 text-xs font-semibold text-accent font-display">
-                        ₹{Number(p.price).toLocaleString("en-IN")}
+                    <div className="p-5 pb-0">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-display text-2xl group-hover:text-accent transition-colors duration-300">
+                            {p.name}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            Age: {p.age} • Certified Species
+                          </div>
+                        </div>
+                        <div className="shrink-0 ml-2">
+                          <span className="inline-flex rounded-full bg-accent/15 px-3.5 py-1.5 text-xs font-semibold text-accent font-display">
+                            ₹{Number(p.price).toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-xs text-muted-foreground line-clamp-3 leading-relaxed">
+                        {p.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-5 pt-4 flex items-center justify-between border-t border-border/40 mt-4 bg-muted/10">
+                    <div className="flex gap-1 text-[10px] text-muted-foreground font-medium">
+                      {p.vaccinated && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-accent/20 px-2.5 py-0.5">
+                          <FiCheck className="text-accent" size={12} /> Vaccinated
+                        </span>
+                      )}
+                      <span className="rounded-full bg-secondary px-2.5 py-0.5">
+                        Health-checked
                       </span>
                     </div>
-                  </div>
-                  <p className="mt-3 text-xs text-muted-foreground line-clamp-3 leading-relaxed">
-                    {p.description}
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-5 pt-4 flex items-center justify-between border-t border-border/40 mt-4 bg-muted/10">
-                <div className="flex gap-1 text-[10px] text-muted-foreground font-medium">
-                  {p.vaccinated && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-accent/20 px-2.5 py-0.5">
-                      <FiCheck className="text-accent" size={12} /> Vaccinated
+                    <span className="text-[11px] font-bold text-accent group-hover:underline flex items-center gap-0.5 transition-colors">
+                      View Details{" "}
+                      <FiArrowRight
+                        size={12}
+                        className="group-hover:translate-x-0.5 transition-transform"
+                      />
                     </span>
-                  )}
-                  <span className="rounded-full bg-secondary px-2.5 py-0.5">Health-checked</span>
-                </div>
-                <span className="text-[11px] font-bold text-accent group-hover:underline flex items-center gap-0.5 transition-colors">
-                  View Details{" "}
-                  <FiArrowRight
-                    size={12}
-                    className="group-hover:translate-x-0.5 transition-transform"
-                  />
-                </span>
-              </div>
-            </Link>
-          ))}
+                  </div>
+                </Link>
+              ))}
           {!petsLoading && filtered.length === 0 && (
             <p className="text-muted-foreground col-span-3 py-12 text-center border border-dashed border-border rounded-3xl bg-muted/10">
               No exotic companions match your active filter settings.

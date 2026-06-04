@@ -7,14 +7,21 @@ export type CartRow = {
   id: string;
   product_id: string;
   quantity: number;
-  product: { id: string; name: string; price: number; image_url: string | null; category: string } | null;
+  product: {
+    id: string;
+    name: string;
+    price: number;
+    image_url: string | null;
+    category: string;
+  } | null;
 };
 
 export function useCart() {
   const { user } = useAuth();
   const qc = useQueryClient();
 
-  const isMock = typeof window !== "undefined" && (!!localStorage.getItem("pawhaven_mock_session") || !user);
+  const isMock =
+    typeof window !== "undefined" && (!!localStorage.getItem("pawhaven_mock_session") || !user);
 
   const cartQuery = useQuery({
     queryKey: ["cart", user?.id],
@@ -28,11 +35,13 @@ export function useCart() {
         } catch {
           localItems = [];
         }
-        
+
         let prods: any[] = [];
         const storedProds = localStorage.getItem("pawhaven_products");
         if (storedProds) {
-          try { prods = JSON.parse(storedProds); } catch {}
+          try {
+            prods = JSON.parse(storedProds);
+          } catch {}
         }
 
         if (prods.length === 0) {
@@ -44,22 +53,40 @@ export function useCart() {
 
         if (prods.length === 0) {
           const { products: sampleProducts } = await import("@/data/sample");
-          prods = sampleProducts.map(p => ({ id: p.id, name: p.name, price: p.price, image_url: p.image, category: p.category }));
+          prods = sampleProducts.map((p) => ({
+            id: p.id,
+            name: p.name,
+            price: p.price,
+            image_url: p.image,
+            category: p.category,
+          }));
         }
 
         let pets: any[] = [];
         const storedPets = localStorage.getItem("pawhaven_pets");
         if (storedPets) {
-          try { pets = JSON.parse(storedPets); } catch {}
+          try {
+            pets = JSON.parse(storedPets);
+          } catch {}
         }
 
         return localItems.map((item: any) => {
-          const p = prods.find((prod) => prod.id === item.product_id) || pets.find((pet) => pet.id === item.product_id);
+          const p =
+            prods.find((prod) => prod.id === item.product_id) ||
+            pets.find((pet) => pet.id === item.product_id);
           return {
             id: item.id,
             product_id: item.product_id,
             quantity: item.quantity,
-            product: p ? { id: p.id, name: p.name, price: Number(p.price), image_url: p.image_url || null, category: p.category || "Pet" } : null
+            product: p
+              ? {
+                  id: p.id,
+                  name: p.name,
+                  price: Number(p.price),
+                  image_url: p.image_url || null,
+                  category: p.category || "Pet",
+                }
+              : null,
           };
         });
       }
@@ -72,22 +99,27 @@ export function useCart() {
 
       const items = (data ?? []) as any[];
       if (items.length > 0) {
-        const itemIds = items.map(item => item.product_id);
+        const itemIds = items.map((item) => item.product_id);
         try {
           // Fetch products, pets, and exotic pets in parallel
           const [productsRes, petsRes, exoticsRes] = await Promise.all([
-            supabase.from("products").select("id, name, price, image_url, category").in("id", itemIds),
+            supabase
+              .from("products")
+              .select("id, name, price, image_url, category")
+              .in("id", itemIds),
             supabase.from("pets").select("id, name, price, image_url").in("id", itemIds),
-            supabase.from("exotic_pets").select("id, name, price, image_url").in("id", itemIds)
+            supabase.from("exotic_pets").select("id, name, price, image_url").in("id", itemIds),
           ]);
 
           const prodsData = productsRes.data || [];
           const petsData = petsRes.data || [];
           const exoticsData = exoticsRes.data || [];
 
-          items.forEach(item => {
-            const prod = prodsData.find(p => p.id === item.product_id);
-            const pet = petsData.find(p => p.id === item.product_id) || exoticsData.find(p => p.id === item.product_id);
+          items.forEach((item) => {
+            const prod = prodsData.find((p) => p.id === item.product_id);
+            const pet =
+              petsData.find((p) => p.id === item.product_id) ||
+              exoticsData.find((p) => p.id === item.product_id);
 
             if (prod) {
               item.product = {
@@ -95,7 +127,7 @@ export function useCart() {
                 name: prod.name,
                 price: Number(prod.price),
                 image_url: prod.image_url,
-                category: prod.category
+                category: prod.category,
               };
             } else if (pet) {
               item.product = {
@@ -103,7 +135,7 @@ export function useCart() {
                 name: pet.name,
                 price: Number(pet.price),
                 image_url: pet.image_url,
-                category: "Pet"
+                category: "Pet",
               };
             } else {
               item.product = null;
@@ -127,7 +159,7 @@ export function useCart() {
         } catch {
           localItems = [];
         }
-        
+
         const existingIndex = localItems.findIndex((c: any) => c.product_id === productId);
         if (existingIndex > -1) {
           localItems[existingIndex].quantity += qty;
@@ -141,14 +173,22 @@ export function useCart() {
       if (!user) throw new Error("Please sign in to add items to your cart.");
       const existing = cartQuery.data?.find((c) => c.product_id === productId);
       if (existing) {
-        const { error } = await supabase.from("cart_items").update({ quantity: existing.quantity + qty }).eq("id", existing.id);
+        const { error } = await supabase
+          .from("cart_items")
+          .update({ quantity: existing.quantity + qty })
+          .eq("id", existing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("cart_items").insert({ user_id: user.id, product_id: productId, quantity: qty });
+        const { error } = await supabase
+          .from("cart_items")
+          .insert({ user_id: user.id, product_id: productId, quantity: qty });
         if (error) throw error;
       }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["cart"] }); toast.success("Added to cart"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["cart"] });
+      toast.success("Added to cart");
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -202,7 +242,10 @@ export function useCart() {
       const { error } = await supabase.from("cart_items").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["cart"] }); toast.success("Removed"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["cart"] });
+      toast.success("Removed");
+    },
   });
 
   const items = cartQuery.data ?? [];

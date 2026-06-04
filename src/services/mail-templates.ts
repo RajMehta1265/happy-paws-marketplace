@@ -174,7 +174,7 @@ export const mailTemplates = {
         </div>
 
         <div class="cta-container">
-          <a href="${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8080'}/" class="cta-button">Explore the Marketplace</a>
+          <a href="${typeof window !== "undefined" ? window.location.origin : "http://localhost:8080"}/" class="cta-button">Explore the Marketplace</a>
         </div>
 
         <p class="body-text" style="margin-bottom: 0;">
@@ -187,8 +187,8 @@ export const mailTemplates = {
         <p>This is an automated message from WOOLF.INDIA. Please do not reply directly.</p>
         <p>© 2026 WOOLF.INDIA. All rights reserved.</p>
         <p>
-          <a href="${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8080'}/about">About Us</a> • 
-          <a href="${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8080'}/contact">Contact Support</a>
+          <a href="${typeof window !== "undefined" ? window.location.origin : "http://localhost:8080"}/about">About Us</a> • 
+          <a href="${typeof window !== "undefined" ? window.location.origin : "http://localhost:8080"}/contact">Contact Support</a>
         </p>
       </div>
     </div>
@@ -397,7 +397,7 @@ export const mailTemplates = {
         </div>
 
         <div class="cta-container">
-          <a href="${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8080'}/dashboard" class="cta-button">Track Order Status</a>
+          <a href="${typeof window !== "undefined" ? window.location.origin : "http://localhost:8080"}/dashboard" class="cta-button">Track Order Status</a>
         </div>
       </div>
       
@@ -621,7 +621,7 @@ export const mailTemplates = {
         </div>
 
         <div class="cta-container">
-          <a href="${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8080'}/dashboard" class="cta-button">Check Application Status</a>
+          <a href="${typeof window !== "undefined" ? window.location.origin : "http://localhost:8080"}/dashboard" class="cta-button">Check Application Status</a>
         </div>
       </div>
       

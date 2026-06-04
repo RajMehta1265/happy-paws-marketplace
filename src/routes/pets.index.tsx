@@ -11,8 +11,12 @@ export const Route = createFileRoute("/pets/")({
   head: () => ({
     meta: [
       { title: "Pets Marketplace — WOOLF.INDIA" },
-      { name: "description", content: "Browse pets by type, breed, age and price, and request a personalized consultation." }
-    ]
+      {
+        name: "description",
+        content:
+          "Browse pets by type, breed, age and price, and request a personalized consultation.",
+      },
+    ],
   }),
   component: PetsPage,
 });
@@ -38,7 +42,7 @@ function PetsPage() {
   // Dynamically resolve maximum price from pet data, fallback to 5000
   const maxSliderValue = useMemo(() => {
     if (!pets || pets.length === 0) return 5000;
-    const prices = pets.map(p => Number(p.price));
+    const prices = pets.map((p) => Number(p.price));
     const rawMax = Math.max(...prices, 5000);
     return Math.ceil(rawMax / 500) * 500;
   }, [pets]);
@@ -48,11 +52,11 @@ function PetsPage() {
 
   // Dynamically compute available types from pet data
   const availableTypes = useMemo(() => {
-    const nonExotic = (pets ?? []).filter(p => p.type.toLowerCase() !== "exotic" && !p.adoption);
-    const dataTypes = [...new Set(nonExotic.map(p => p.type))];
+    const nonExotic = (pets ?? []).filter((p) => p.type.toLowerCase() !== "exotic" && !p.adoption);
+    const dataTypes = [...new Set(nonExotic.map((p) => p.type))];
     // Merge base types with any new types from data, preserving order
     const merged = [...BASE_TYPES];
-    dataTypes.forEach(t => {
+    dataTypes.forEach((t) => {
       if (!merged.includes(t)) merged.push(t);
     });
     return ["All", ...merged];
@@ -60,15 +64,17 @@ function PetsPage() {
 
   // Dynamically compute companion types for the consultation form
   const consultationTypes = useMemo(() => {
-    const types = availableTypes.filter(t => t !== "All" && t.toLowerCase() !== "exotic");
+    const types = availableTypes.filter((t) => t !== "All" && t.toLowerCase() !== "exotic");
     return [...types, "Exotic"];
   }, [availableTypes]);
 
   // Dynamically compute available breeds for the selected type
   const availableBreeds = useMemo(() => {
     if (type === "All") return [];
-    const petsOfType = (pets ?? []).filter(p => p.type === type && p.type.toLowerCase() !== "exotic" && !p.adoption);
-    const breeds = [...new Set(petsOfType.map(p => p.breed).filter(Boolean))] as string[];
+    const petsOfType = (pets ?? []).filter(
+      (p) => p.type === type && p.type.toLowerCase() !== "exotic" && !p.adoption,
+    );
+    const breeds = [...new Set(petsOfType.map((p) => p.breed).filter(Boolean))] as string[];
     breeds.sort((a, b) => a.localeCompare(b));
     return breeds.length > 0 ? ["All Breeds", ...breeds] : [];
   }, [pets, type]);
@@ -86,14 +92,12 @@ function PetsPage() {
   const consultAvailableBreeds = useMemo(() => {
     if (!consultPetType) return [];
     const petsOfType = (pets ?? []).filter(
-      (p) => p.type.toLowerCase() === consultPetType.toLowerCase()
+      (p) => p.type.toLowerCase() === consultPetType.toLowerCase(),
     );
     const breeds = [...new Set(petsOfType.map((p) => p.breed).filter(Boolean))] as string[];
     breeds.sort((a, b) => a.localeCompare(b));
     return breeds;
   }, [pets, consultPetType]);
-
-
 
   // Reset breed filter if animal type changes
   const handleTypeChange = (newType: string) => {
@@ -173,8 +177,12 @@ function PetsPage() {
     <SiteLayout>
       {/* Page Header Section (Full Width with top padding to clear sticky navbar) */}
       <section className="mx-auto max-w-7xl px-6 pt-32 pb-4">
-        <div className="text-xs uppercase tracking-[0.25em] text-accent font-semibold">Marketplace</div>
-        <h1 className="mt-2 font-display text-5xl lg:text-6xl text-foreground leading-tight">Find your companion</h1>
+        <div className="text-xs uppercase tracking-[0.25em] text-accent font-semibold">
+          Marketplace
+        </div>
+        <h1 className="mt-2 font-display text-5xl lg:text-6xl text-foreground leading-tight">
+          Find your companion
+        </h1>
         <p className="mt-3 text-muted-foreground text-sm lg:text-base max-w-2xl">
           Every pet is health-checked, ethically sourced, and ready for a loving home.
         </p>
@@ -182,10 +190,8 @@ function PetsPage() {
 
       {/* Main Layout Grid: Left Catalog, Right Consultation Sidebar */}
       <section className="mx-auto max-w-7xl px-6 pb-20 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
         {/* Left Column: Categories, Filters, & Pet Cards Grid */}
         <div className="lg:col-span-8 space-y-6">
-          
           {/* Filters Bar Card */}
           <div className="space-y-4 bg-card/40 border border-border/80 rounded-3xl p-5 shadow-xs glass transition-all hover:border-border/100">
             {/* Animal Types Category Row */}
@@ -215,7 +221,10 @@ function PetsPage() {
                   {availableBreeds.map((b) => (
                     <button
                       key={b}
-                      onClick={() => { setBreed(b); setCurrentPage(1); }}
+                      onClick={() => {
+                        setBreed(b);
+                        setCurrentPage(1);
+                      }}
                       className={`rounded-full px-3 py-1 text-[11px] font-medium transition cursor-pointer ${
                         breed === b
                           ? "bg-accent text-accent-foreground font-semibold"
@@ -231,7 +240,9 @@ function PetsPage() {
 
             {/* Price Filter */}
             <div className="flex items-center justify-end gap-4 pt-4 border-t border-border/40">
-              <span className="text-xs text-muted-foreground">Max Price: <strong className="text-foreground">₹{currentMaxPrice}</strong></span>
+              <span className="text-xs text-muted-foreground">
+                Max Price: <strong className="text-foreground">₹{currentMaxPrice}</strong>
+              </span>
               <input
                 type="range"
                 min={50}
@@ -246,52 +257,70 @@ function PetsPage() {
 
           {/* Pets Grid */}
           <div className="grid sm:grid-cols-2 gap-6">
-            {petsLoading ? (
-              Array.from({ length: PETS_PER_PAGE }).map((_, i) => <Skeleton key={i} className="aspect-[4/3] rounded-3xl" />)
-            ) : paginatedPets.map((p) => (
-              <Link
-                key={p.id}
-                to="/pets/$petId"
-                params={{ petId: p.id }}
-                className="group rounded-3xl bg-card overflow-hidden hover-lift border border-border/80 flex flex-col justify-between transition-all hover:border-border/100 hover:shadow-md"
-              >
-                <div>
-                  <div className="relative aspect-[4/3] w-full bg-muted overflow-hidden">
-                    <img
-                      src={parseImages(p.image_url)[0] || p.image_url || "/pet-1.jpg"}
-                      alt={p.name}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-103"
-                      loading="lazy"
-                    />
-                  </div>
-                  <div className="p-5 pb-0">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-display text-2xl group-hover:text-accent transition-colors duration-300">{p.name}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">{p.breed} • {p.age}</div>
+            {petsLoading
+              ? Array.from({ length: PETS_PER_PAGE }).map((_, i) => (
+                  <Skeleton key={i} className="aspect-[4/3] rounded-3xl" />
+                ))
+              : paginatedPets.map((p) => (
+                  <Link
+                    key={p.id}
+                    to="/pets/$petId"
+                    params={{ petId: p.id }}
+                    className="group rounded-3xl bg-card overflow-hidden hover-lift border border-border/80 flex flex-col justify-between transition-all hover:border-border/100 hover:shadow-md"
+                  >
+                    <div>
+                      <div className="relative aspect-[4/3] w-full bg-muted overflow-hidden">
+                        <img
+                          src={parseImages(p.image_url)[0] || p.image_url || "/pet-1.jpg"}
+                          alt={p.name}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-103"
+                          loading="lazy"
+                        />
                       </div>
-                      <div className="shrink-0 ml-2">
-                        <span className="inline-flex rounded-full bg-accent/15 px-3.5 py-1.5 text-xs font-semibold text-accent font-display">
-                          ₹{Number(p.price).toFixed(0)}
-                        </span>
+                      <div className="p-5 pb-0">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-display text-2xl group-hover:text-accent transition-colors duration-300">
+                              {p.name}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {p.breed} • {p.age}
+                            </div>
+                          </div>
+                          <div className="shrink-0 ml-2">
+                            <span className="inline-flex rounded-full bg-accent/15 px-3.5 py-1.5 text-xs font-semibold text-accent font-display">
+                              ₹{Number(p.price).toFixed(0)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                <div className="p-5 pt-4 flex items-center justify-between border-t border-border/40 mt-4 bg-muted/10">
-                  <div className="flex gap-1 text-[10px] text-muted-foreground font-medium">
-                    {p.vaccinated && <span className="inline-flex items-center gap-1 rounded-full bg-accent/20 px-2.5 py-0.5"><FiCheck className="text-accent" /> Vaccinated</span>}
-                    <span className="rounded-full bg-secondary px-2.5 py-0.5">Health-checked</span>
-                  </div>
-                  <span className="text-[11px] font-bold text-accent group-hover:underline flex items-center gap-0.5 transition-colors">
-                    View Details <FiArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
-                  </span>
-                </div>
-              </Link>
-            ))}
+                    <div className="p-5 pt-4 flex items-center justify-between border-t border-border/40 mt-4 bg-muted/10">
+                      <div className="flex gap-1 text-[10px] text-muted-foreground font-medium">
+                        {p.vaccinated && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-accent/20 px-2.5 py-0.5">
+                            <FiCheck className="text-accent" /> Vaccinated
+                          </span>
+                        )}
+                        <span className="rounded-full bg-secondary px-2.5 py-0.5">
+                          Health-checked
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-bold text-accent group-hover:underline flex items-center gap-0.5 transition-colors">
+                        View Details{" "}
+                        <FiArrowRight
+                          size={12}
+                          className="group-hover:translate-x-0.5 transition-transform"
+                        />
+                      </span>
+                    </div>
+                  </Link>
+                ))}
             {!petsLoading && filtered.length === 0 && (
-              <p className="text-muted-foreground col-span-2 py-12 text-center border border-dashed border-border rounded-3xl bg-muted/10">No companions match your active filter settings.</p>
+              <p className="text-muted-foreground col-span-2 py-12 text-center border border-dashed border-border rounded-3xl bg-muted/10">
+                No companions match your active filter settings.
+              </p>
             )}
           </div>
 
@@ -311,13 +340,17 @@ function PetsPage() {
               <div className="flex items-center gap-1">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
                   // Show first, last, current, and neighbors; ellipsis for gaps
-                  const showPage = page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
+                  const showPage =
+                    page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
                   const showEllipsisBefore = page === currentPage - 2 && currentPage > 3;
-                  const showEllipsisAfter = page === currentPage + 2 && currentPage < totalPages - 2;
+                  const showEllipsisAfter =
+                    page === currentPage + 2 && currentPage < totalPages - 2;
 
                   if (showEllipsisBefore || showEllipsisAfter) {
                     return (
-                      <span key={page} className="px-1 text-xs text-muted-foreground select-none">…</span>
+                      <span key={page} className="px-1 text-xs text-muted-foreground select-none">
+                        …
+                      </span>
                     );
                   }
 
@@ -353,22 +386,27 @@ function PetsPage() {
           {/* Results Summary */}
           {!petsLoading && filtered.length > 0 && (
             <div className="text-center text-xs text-muted-foreground">
-              Showing {((currentPage - 1) * PETS_PER_PAGE) + 1}–{Math.min(currentPage * PETS_PER_PAGE, filtered.length)} of {filtered.length} companions
+              Showing {(currentPage - 1) * PETS_PER_PAGE + 1}–
+              {Math.min(currentPage * PETS_PER_PAGE, filtered.length)} of {filtered.length}{" "}
+              companions
             </div>
           )}
         </div>
 
         {/* Right Column: Consultation Form & Recent Requests */}
         <div className="lg:col-span-4 space-y-6">
-          
           {/* Consultation Form Card */}
           <div className="rounded-3xl border border-border bg-card p-6 shadow-xs glass transition-all hover:border-border/100">
             <h2 className="font-display text-2xl mb-1 text-foreground">Request a Consultation</h2>
-            <p className="text-xs text-muted-foreground mb-5 leading-relaxed">Let our coordinator team find the perfect companion matching your budget.</p>
-            
+            <p className="text-xs text-muted-foreground mb-5 leading-relaxed">
+              Let our coordinator team find the perfect companion matching your budget.
+            </p>
+
             <form onSubmit={handleConsultSubmit} className="space-y-4">
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Your Name</label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                  Your Name
+                </label>
                 <input
                   type="text"
                   required
@@ -380,7 +418,9 @@ function PetsPage() {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Email / Phone</label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                  Email / Phone
+                </label>
                 <input
                   type="text"
                   required
@@ -392,7 +432,9 @@ function PetsPage() {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Type of Pet Wanted</label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                  Type of Pet Wanted
+                </label>
                 <input
                   type="text"
                   required
@@ -412,7 +454,9 @@ function PetsPage() {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Breed Wanted (Optional)</label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                  Breed Wanted (Optional)
+                </label>
                 <input
                   type="text"
                   list="consult-pet-breeds"
@@ -429,7 +473,9 @@ function PetsPage() {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Budget Range (₹)</label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                  Budget Range (₹)
+                </label>
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     type="number"

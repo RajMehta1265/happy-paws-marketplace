@@ -1,6 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { FiCalendar, FiShield, FiHeart, FiActivity, FiPenTool, FiRefreshCw, FiFileText, FiUploadCloud, FiCheckCircle } from "react-icons/fi";
+import {
+  FiCalendar,
+  FiShield,
+  FiHeart,
+  FiActivity,
+  FiPenTool,
+  FiRefreshCw,
+  FiFileText,
+  FiUploadCloud,
+  FiCheckCircle,
+} from "react-icons/fi";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
@@ -10,7 +20,11 @@ export const Route = createFileRoute("/hostelling")({
   head: () => ({
     meta: [
       { title: "Hostelling & Pet Boarding Stay — WOOLF.INDIA" },
-      { name: "description", content: "Luxury pet boarding and hostelling with 24/7 care. Fill out the medical intake and sign the liability consent form." },
+      {
+        name: "description",
+        content:
+          "Luxury pet boarding and hostelling with 24/7 care. Fill out the medical intake and sign the liability consent form.",
+      },
     ],
   }),
   component: HostellingPage,
@@ -97,7 +111,9 @@ function HostellingPage() {
   }, []);
 
   // Signature canvas drawing functions
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const startDrawing = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
+  ) => {
     e.preventDefault();
     const coords = getCoords(e);
     setLastCoords(coords);
@@ -129,17 +145,21 @@ function HostellingPage() {
     setIsDrawing(false);
   };
 
-  const getCoords = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const getCoords = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
+  ) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    const clientX = "touches" in e && e.touches[0] ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-    const clientY = "touches" in e && e.touches[0] ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-    
+    const clientX =
+      "touches" in e && e.touches[0] ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY =
+      "touches" in e && e.touches[0] ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+
     // Scale coords to account for differences between the canvas's internal resolution and visual CSS dimensions
     const scaleX = canvas.width / (rect.width || 1);
     const scaleY = canvas.height / (rect.height || 1);
-    
+
     return {
       x: (clientX - rect.left) * scaleX,
       y: (clientY - rect.top) * scaleY,
@@ -159,7 +179,15 @@ function HostellingPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!parentName || !parentPhone || !petName || !petBreed || !petAge || !checkInDate || !checkOutDate) {
+    if (
+      !parentName ||
+      !parentPhone ||
+      !petName ||
+      !petBreed ||
+      !petAge ||
+      !checkInDate ||
+      !checkOutDate
+    ) {
       toast.error("Please fill in all the required parent and pet info fields.");
       return;
     }
@@ -210,18 +238,20 @@ function HostellingPage() {
       }
 
       // Submit liability release record to Supabase
-      dbService.submitConsent({
-        user_id: user?.id || null,
-        full_name: parentName,
-        email: parentEmail || "hostelling_guest@example.com",
-        pet_id: null,
-        pet_name: petName,
-        liability_accepted: consentTerms,
-        consent_given: consentTerms,
-        signature_data_url: signatureDataUrl,
-      }).catch((err) => {
-        console.warn("Failed to record liability consent to DB:", err);
-      });
+      dbService
+        .submitConsent({
+          user_id: user?.id || null,
+          full_name: parentName,
+          email: parentEmail || "hostelling_guest@example.com",
+          pet_id: null,
+          pet_name: petName,
+          liability_accepted: consentTerms,
+          consent_given: consentTerms,
+          signature_data_url: signatureDataUrl,
+        })
+        .catch((err) => {
+          console.warn("Failed to record liability consent to DB:", err);
+        });
 
       toast.success("Hostelling request and signed consent submitted successfully!");
     } catch (error) {
@@ -257,7 +287,8 @@ function HostellingPage() {
         <div className="text-xs uppercase tracking-[0.25em] text-accent">Hostelling</div>
         <h1 className="mt-2 font-display text-5xl lg:text-6xl max-w-3xl">Safe, warm lodging.</h1>
         <p className="mt-4 text-muted-foreground max-w-xl">
-          Leave your pet in caring hands. Complete our medical intake form and sign the liability release forms below to request hostelling placement.
+          Leave your pet in caring hands. Complete our medical intake form and sign the liability
+          release forms below to request hostelling placement.
         </p>
       </section>
 
@@ -268,9 +299,12 @@ function HostellingPage() {
             <div className="mx-auto grid place-items-center h-16 w-16 rounded-full bg-emerald-500 text-white">
               <FiCheckCircle size={32} />
             </div>
-            <h3 className="font-display text-3xl text-emerald-800 dark:text-emerald-400">Hostelling Stay Request Submitted!</h3>
+            <h3 className="font-display text-3xl text-emerald-800 dark:text-emerald-400">
+              Hostelling Stay Request Submitted!
+            </h3>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Your hostelling stay intake and consent agreement are successfully registered. A hostelling coordinator will contact you shortly to confirm room availability.
+              Your hostelling stay intake and consent agreement are successfully registered. A
+              hostelling coordinator will contact you shortly to confirm room availability.
             </p>
 
             <div className="bg-background rounded-3xl p-6 md:p-8 border border-border text-left space-y-6 max-w-2xl mx-auto shadow-sm">
@@ -280,56 +314,127 @@ function HostellingPage() {
 
               <div className="grid md:grid-cols-2 gap-6 text-sm">
                 <div className="space-y-2">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Parent Info</h4>
-                  <div>Parent Name: <span className="font-medium text-foreground">{booking.parentName}</span></div>
-                  <div>Email: <span className="font-medium text-foreground">{booking.parentEmail || "N/A"}</span></div>
-                  <div>Phone: <span className="font-medium text-foreground">{booking.parentPhone}</span></div>
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                    Parent Info
+                  </h4>
+                  <div>
+                    Parent Name:{" "}
+                    <span className="font-medium text-foreground">{booking.parentName}</span>
+                  </div>
+                  <div>
+                    Email:{" "}
+                    <span className="font-medium text-foreground">
+                      {booking.parentEmail || "N/A"}
+                    </span>
+                  </div>
+                  <div>
+                    Phone:{" "}
+                    <span className="font-medium text-foreground">{booking.parentPhone}</span>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Pet Info</h4>
-                  <div>Pet Name: <span className="font-medium text-foreground">{booking.petName}</span></div>
-                  <div>Breed: <span className="font-medium text-foreground">{booking.petBreed}</span></div>
-                  <div>Gender: <span className="font-medium text-foreground">{booking.petGender}</span></div>
-                  <div>Age: <span className="font-medium text-foreground">{booking.petAge}</span></div>
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                    Pet Info
+                  </h4>
+                  <div>
+                    Pet Name: <span className="font-medium text-foreground">{booking.petName}</span>
+                  </div>
+                  <div>
+                    Breed: <span className="font-medium text-foreground">{booking.petBreed}</span>
+                  </div>
+                  <div>
+                    Gender: <span className="font-medium text-foreground">{booking.petGender}</span>
+                  </div>
+                  <div>
+                    Age: <span className="font-medium text-foreground">{booking.petAge}</span>
+                  </div>
                 </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-6 text-sm border-t border-border pt-4">
                 <div className="space-y-2">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Detailed Behavior & Health</h4>
-                  <div>Temperament: <span className={`font-semibold ${booking.temperament === "Friendly" ? "text-emerald-600" : "text-amber-600"}`}>{booking.temperament} with other pets</span></div>
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                    Detailed Behavior & Health
+                  </h4>
+                  <div>
+                    Temperament:{" "}
+                    <span
+                      className={`font-semibold ${booking.temperament === "Friendly" ? "text-emerald-600" : "text-amber-600"}`}
+                    >
+                      {booking.temperament} with other pets
+                    </span>
+                  </div>
                   {booking.temperament === "Aggressive" && booking.aggressionDetails && (
                     <div className="pl-4 border-l-2 border-amber-500 text-xs italic text-muted-foreground">
                       Triggers: {booking.aggressionDetails}
                     </div>
                   )}
-                  <div>Bathroom Trained: <span className="font-medium text-foreground">{booking.urineTrained && booking.pottyTrained ? "Yes (Both Urine & Potty)" : booking.urineTrained ? "Only Urine" : booking.pottyTrained ? "Only Potty" : "No"}</span></div>
-                  <div>Medical Conditions: <span className="text-foreground">{booking.medicalConditions}</span></div>
+                  <div>
+                    Bathroom Trained:{" "}
+                    <span className="font-medium text-foreground">
+                      {booking.urineTrained && booking.pottyTrained
+                        ? "Yes (Both Urine & Potty)"
+                        : booking.urineTrained
+                          ? "Only Urine"
+                          : booking.pottyTrained
+                            ? "Only Potty"
+                            : "No"}
+                    </span>
+                  </div>
+                  <div>
+                    Medical Conditions:{" "}
+                    <span className="text-foreground">{booking.medicalConditions}</span>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Stay Details</h4>
-                  <div>Check-in: <span className="font-medium text-foreground">{booking.checkInDate}</span></div>
-                  <div>Check-out: <span className="font-medium text-foreground">{booking.checkOutDate}</span></div>
-                  <div>Duration: <span className="font-semibold text-primary">{booking.numDays} Days</span></div>
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                    Stay Details
+                  </h4>
+                  <div>
+                    Check-in:{" "}
+                    <span className="font-medium text-foreground">{booking.checkInDate}</span>
+                  </div>
+                  <div>
+                    Check-out:{" "}
+                    <span className="font-medium text-foreground">{booking.checkOutDate}</span>
+                  </div>
+                  <div>
+                    Duration:{" "}
+                    <span className="font-semibold text-primary">{booking.numDays} Days</span>
+                  </div>
                 </div>
               </div>
 
               {booking.medicalImage && (
                 <div className="border-t border-border pt-4">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-3">Uploaded Medical Specification</h4>
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-3">
+                    Uploaded Medical Specification
+                  </h4>
                   <div className="max-w-xs rounded-2xl overflow-hidden border border-border shadow-sm">
-                    <img src={booking.medicalImage} alt="Medical Specification" className="w-full h-auto object-cover max-h-48" />
+                    <img
+                      src={booking.medicalImage}
+                      alt="Medical Specification"
+                      className="w-full h-auto object-cover max-h-48"
+                    />
                   </div>
                 </div>
               )}
 
               <div className="border-t border-border pt-4">
-                <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-2">Liability Release & Digital Signature</h4>
-                <div className="text-xs text-muted-foreground mb-3">Submitted At: {booking.submittedAt}</div>
+                <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                  Liability Release & Digital Signature
+                </h4>
+                <div className="text-xs text-muted-foreground mb-3">
+                  Submitted At: {booking.submittedAt}
+                </div>
                 <div className="border border-border/80 rounded-2xl bg-card p-3 h-24 flex justify-center items-center max-w-sm">
-                  <img src={booking.signatureDataUrl} alt="Signature Representation" className="max-h-full max-w-full object-contain" />
+                  <img
+                    src={booking.signatureDataUrl}
+                    alt="Signature Representation"
+                    className="max-h-full max-w-full object-contain"
+                  />
                 </div>
               </div>
             </div>
@@ -346,22 +451,28 @@ function HostellingPage() {
           <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in">
             {/* Styled header resemblance of Google Form style */}
             <div className="bg-primary rounded-t-3xl h-4 w-full shadow-sm" />
-            
             {/* Title Card */}
             <div className="bg-card rounded-b-3xl border border-t-0 border-border p-8 shadow-sm">
-              <h2 className="font-display text-4xl text-foreground">Hostelling Intake & Consent Agreement</h2>
+              <h2 className="font-display text-4xl text-foreground">
+                Hostelling Intake & Consent Agreement
+              </h2>
               <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-                Please complete this comprehensive application and sign the mandatory liability consent at the bottom before checking in your pet for boarding. All questions marked with <span className="text-red-500">*</span> are compulsory.
+                Please complete this comprehensive application and sign the mandatory liability
+                consent at the bottom before checking in your pet for boarding. All questions marked
+                with <span className="text-red-500">*</span> are compulsory.
               </p>
             </div>
-
             {/* 1. Parent & Pet Info Card */}
             <div className="bg-card border-l-8 border-primary border-y border-r border-border rounded-2xl p-6 shadow-sm space-y-6">
-              <h3 className="font-display text-2xl text-foreground pb-2 border-b border-border">1. Parent & Pet Basics</h3>
-              
+              <h3 className="font-display text-2xl text-foreground pb-2 border-b border-border">
+                1. Parent & Pet Basics
+              </h3>
+
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-foreground">Parent Full Name <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-semibold text-foreground">
+                    Parent Full Name <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     required
@@ -373,7 +484,9 @@ function HostellingPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-foreground">Parent Phone Number <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-semibold text-foreground">
+                    Parent Phone Number <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="tel"
                     required
@@ -386,7 +499,9 @@ function HostellingPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-semibold text-foreground">Parent Email Address</label>
+                <label className="text-sm font-semibold text-foreground">
+                  Parent Email Address
+                </label>
                 <input
                   type="email"
                   value={parentEmail}
@@ -398,7 +513,9 @@ function HostellingPage() {
 
               <div className="grid md:grid-cols-3 gap-6 pt-2">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-foreground">Pet Name <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-semibold text-foreground">
+                    Pet Name <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     required
@@ -410,7 +527,9 @@ function HostellingPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-foreground">Pet Breed <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-semibold text-foreground">
+                    Pet Breed <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     required
@@ -422,7 +541,9 @@ function HostellingPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-foreground">Pet Age <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-semibold text-foreground">
+                    Pet Age <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     required
@@ -435,7 +556,9 @@ function HostellingPage() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-foreground">Pet Gender <span className="text-red-500">*</span></label>
+                <label className="text-sm font-semibold text-foreground">
+                  Pet Gender <span className="text-red-500">*</span>
+                </label>
                 <div className="flex gap-4">
                   {(["Male", "Female"] as const).map((g) => (
                     <button
@@ -454,11 +577,12 @@ function HostellingPage() {
                 </div>
               </div>
             </div>
-
             {/* 2. Pet Detailed Info Card */}
             <div className="bg-card border-l-8 border-primary border-y border-r border-border rounded-2xl p-6 shadow-sm space-y-6">
-              <h3 className="font-display text-2xl text-foreground pb-2 border-b border-border">2. Detailed Behavioral & Medical Intake</h3>
-              
+              <h3 className="font-display text-2xl text-foreground pb-2 border-b border-border">
+                2. Detailed Behavioral & Medical Intake
+              </h3>
+
               <div className="flex flex-col gap-3">
                 <label className="flex items-center gap-3 cursor-pointer select-none">
                   <input
@@ -472,12 +596,16 @@ function HostellingPage() {
                     }}
                     className="h-4 w-4 rounded border-border text-primary focus:ring-primary bg-background"
                   />
-                  <span className="text-sm font-semibold text-foreground">My pet has existing medical conditions</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    My pet has existing medical conditions
+                  </span>
                 </label>
-                
+
                 {hasMedical ? (
                   <div className="flex flex-col gap-1.5 animate-slide-down">
-                    <label className="text-xs font-semibold text-muted-foreground">List Medical Conditions *</label>
+                    <label className="text-xs font-semibold text-muted-foreground">
+                      List Medical Conditions *
+                    </label>
                     <textarea
                       required={hasMedical}
                       value={medicalConditions}
@@ -496,7 +624,9 @@ function HostellingPage() {
 
               {/* Medical Image Upload */}
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-foreground">Medical Specification / Vet Document Upload</label>
+                <label className="text-sm font-semibold text-foreground">
+                  Medical Specification / Vet Document Upload
+                </label>
                 <div className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-2xl p-6 bg-muted/20 hover:bg-muted/30 transition relative cursor-pointer group">
                   <input
                     type="file"
@@ -504,13 +634,24 @@ function HostellingPage() {
                     onChange={handleImageChange}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
-                  <FiUploadCloud size={36} className="text-primary mb-2 group-hover:scale-110 transition-transform duration-300" />
-                  <span className="text-xs font-semibold text-foreground">Click to upload prescription or vet record</span>
-                  <span className="text-[10px] text-muted-foreground mt-1">PNG, JPG or JPEG up to 2MB</span>
+                  <FiUploadCloud
+                    size={36}
+                    className="text-primary mb-2 group-hover:scale-110 transition-transform duration-300"
+                  />
+                  <span className="text-xs font-semibold text-foreground">
+                    Click to upload prescription or vet record
+                  </span>
+                  <span className="text-[10px] text-muted-foreground mt-1">
+                    PNG, JPG or JPEG up to 2MB
+                  </span>
                 </div>
                 {medicalImage && (
                   <div className="mt-3 flex items-center gap-4 p-3 border border-border rounded-xl bg-background max-w-xs">
-                    <img src={medicalImage} alt="Uploaded specification preview" className="h-16 w-16 rounded-lg object-cover border border-border" />
+                    <img
+                      src={medicalImage}
+                      alt="Uploaded specification preview"
+                      className="h-16 w-16 rounded-lg object-cover border border-border"
+                    />
                     <div className="flex flex-col">
                       <span className="text-xs font-bold text-emerald-600">Image Loaded</span>
                       <button
@@ -526,7 +667,9 @@ function HostellingPage() {
               </div>
 
               <div className="flex flex-col gap-2 pt-2">
-                <label className="text-sm font-semibold text-foreground">Behavioral Temperament <span className="text-red-500">*</span></label>
+                <label className="text-sm font-semibold text-foreground">
+                  Behavioral Temperament <span className="text-red-500">*</span>
+                </label>
                 <div className="flex gap-4">
                   {(["Friendly", "Aggressive"] as const).map((temp) => (
                     <button
@@ -542,7 +685,9 @@ function HostellingPage() {
                           : "border-border hover:bg-muted text-muted-foreground"
                       }`}
                     >
-                      {temp === "Friendly" ? "Friendly with other pets" : "Aggressive / Prefers isolation"}
+                      {temp === "Friendly"
+                        ? "Friendly with other pets"
+                        : "Aggressive / Prefers isolation"}
                     </button>
                   ))}
                 </div>
@@ -550,7 +695,9 @@ function HostellingPage() {
 
               {temperament === "Aggressive" && (
                 <div className="flex flex-col gap-1.5 pt-2 animate-slide-down">
-                  <label className="text-sm font-semibold text-foreground">Aggression Details & Triggers <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-semibold text-foreground">
+                    Aggression Details & Triggers <span className="text-red-500">*</span>
+                  </label>
                   <textarea
                     required={temperament === "Aggressive"}
                     value={aggressionDetails}
@@ -563,7 +710,9 @@ function HostellingPage() {
               )}
 
               <div className="flex flex-col gap-2 pt-2">
-                <label className="text-sm font-semibold text-foreground">Bathroom Training Status <span className="text-red-500">*</span></label>
+                <label className="text-sm font-semibold text-foreground">
+                  Bathroom Training Status <span className="text-red-500">*</span>
+                </label>
                 <div className="grid grid-cols-2 gap-4 max-w-md">
                   <label className="flex items-center gap-3 rounded-xl border border-border p-4 bg-background hover:bg-muted/10 cursor-pointer select-none">
                     <input
@@ -586,13 +735,18 @@ function HostellingPage() {
                   </label>
                 </div>
               </div>
-            </div>            {/* 3. Stay Details Card */}
+            </div>{" "}
+            {/* 3. Stay Details Card */}
             <div className="bg-card border-l-8 border-primary border-y border-r border-border rounded-2xl p-6 shadow-sm space-y-6">
-              <h3 className="font-display text-2xl text-foreground pb-2 border-b border-border">3. Stay Requirements</h3>
-              
+              <h3 className="font-display text-2xl text-foreground pb-2 border-b border-border">
+                3. Stay Requirements
+              </h3>
+
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-foreground">Check-in Date <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-semibold text-foreground">
+                    Check-in Date <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="date"
                     required
@@ -603,7 +757,9 @@ function HostellingPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-foreground">Check-out Date <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-semibold text-foreground">
+                    Check-out Date <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="date"
                     required
@@ -615,7 +771,9 @@ function HostellingPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-semibold text-foreground">Duration of Hostelling Stay (Days)</label>
+                <label className="text-sm font-semibold text-foreground">
+                  Duration of Hostelling Stay (Days)
+                </label>
                 <div className="flex items-center gap-3">
                   <input
                     type="number"
@@ -624,16 +782,23 @@ function HostellingPage() {
                     onChange={(e) => setNumDays(Number(e.target.value))}
                     className="w-24 rounded-xl border border-border bg-background px-4 py-2 text-sm focus:border-primary focus:outline-none"
                   />
-                  <span className="text-xs text-muted-foreground">calculated automatically from dates</span>
+                  <span className="text-xs text-muted-foreground">
+                    calculated automatically from dates
+                  </span>
                 </div>
               </div>
             </div>
-
             {/* 4. Compulsory Liability Consent Card */}
             <div className="bg-card border-l-8 border-primary border-y border-r border-border rounded-2xl p-6 shadow-sm space-y-4">
-              <h3 className="font-display text-2xl text-foreground pb-2 border-b border-border">4. Liability Release & Consent <span className="text-red-500">*</span></h3>
+              <h3 className="font-display text-2xl text-foreground pb-2 border-b border-border">
+                4. Liability Release & Consent <span className="text-red-500">*</span>
+              </h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                By checking the authorization agreement below, you authorize WOOLF.INDIA, its hostellers, and caretaking assistants to perform boarding services for your pet companion. You release WOOLF.INDIA from liability for any unexpected health developments, illness, injury, or behavioral shifts. You confirm that all medical declarations above are accurate.
+                By checking the authorization agreement below, you authorize WOOLF.INDIA, its
+                hostellers, and caretaking assistants to perform boarding services for your pet
+                companion. You release WOOLF.INDIA from liability for any unexpected health
+                developments, illness, injury, or behavioral shifts. You confirm that all medical
+                declarations above are accurate.
               </p>
               <label className="flex items-start gap-3 cursor-pointer mt-3 select-none">
                 <input
@@ -643,18 +808,22 @@ function HostellingPage() {
                   className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary bg-background"
                 />
                 <span className="text-xs text-foreground/80 font-semibold">
-                  I agree and authorize professional hostelling and boarding services for my pet companion under the terms described. <span className="text-red-500">(Compulsory)</span>
+                  I agree and authorize professional hostelling and boarding services for my pet
+                  companion under the terms described.{" "}
+                  <span className="text-red-500">(Compulsory)</span>
                 </span>
               </label>
             </div>
-
             {/* Virtual Sign Canvas Card */}
             <div className="bg-card rounded-2xl border border-border p-6 shadow-sm space-y-4">
               <div className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                <FiPenTool className="text-primary" /> Draw Virtual Signature <span className="text-red-500">*</span>
+                <FiPenTool className="text-primary" /> Draw Virtual Signature{" "}
+                <span className="text-red-500">*</span>
               </div>
-              <p className="text-xs text-muted-foreground">Please sign within the box below using your mouse or touch screen. This is required.</p>
-              
+              <p className="text-xs text-muted-foreground">
+                Please sign within the box below using your mouse or touch screen. This is required.
+              </p>
+
               <div className="relative border border-border/80 rounded-2xl bg-secondary overflow-hidden h-40 w-full cursor-crosshair">
                 <canvas
                   ref={canvasRef}
@@ -679,7 +848,7 @@ function HostellingPage() {
                 >
                   <FiRefreshCw size={12} className="animate-spin-hover" /> Clear Signature
                 </button>
-                
+
                 <button
                   type="submit"
                   className="rounded-full bg-primary text-primary-foreground hover:opacity-90 transition px-8 py-3 text-sm font-bold shadow-md cursor-pointer"

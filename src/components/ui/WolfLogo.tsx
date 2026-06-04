@@ -13,7 +13,7 @@ export function WolfLogo({ className, ...props }: SVGProps<SVGSVGElement>) {
       {...props}
     >
       {/* Symmetrical Geometric low-poly Wolf Head composed of clean polygons */}
-      
+
       {/* Left Ear outer/inner */}
       <polygon points="50,28 34,10 26,34" />
       <polygon points="34,10 38,24 26,34" />
@@ -21,7 +21,7 @@ export function WolfLogo({ className, ...props }: SVGProps<SVGSVGElement>) {
       <polygon points="34,10 45,16 38,24" />
       <polygon points="45,16 43,29 38,24" />
       <polygon points="50,28 43,29 50,44" />
-      
+
       {/* Right Ear outer/inner */}
       <polygon points="50,28 66,10 74,34" />
       <polygon points="66,10 62,24 74,34" />
@@ -45,7 +45,7 @@ export function WolfLogo({ className, ...props }: SVGProps<SVGSVGElement>) {
       {/* Eyebrows */}
       <polygon points="32,48 34,52 45,52" />
       <polygon points="45,52 50,44 38,38" />
-      
+
       <polygon points="68,48 66,52 55,52" />
       <polygon points="55,52 50,44 62,38" />
 

@@ -2,7 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/site/SiteLayout";
 
 export const Route = createFileRoute("/about")({
-  head: () => ({ meta: [{ title: "About — WOOLF.INDIA" }, { name: "description", content: "Our mission, values, and animal care standards." }] }),
+  head: () => ({
+    meta: [
+      { title: "About — WOOLF.INDIA" },
+      { name: "description", content: "Our mission, values, and animal care standards." },
+    ],
+  }),
   component: AboutPage,
 });
 
@@ -11,9 +16,13 @@ function AboutPage() {
     <SiteLayout>
       <section className="mx-auto max-w-4xl px-6 py-20">
         <div className="text-xs uppercase tracking-[0.25em] text-primary">About</div>
-        <h1 className="mt-2 font-display text-5xl lg:text-6xl">Built by people who'd rather be with animals.</h1>
+        <h1 className="mt-2 font-display text-5xl lg:text-6xl">
+          Built by people who'd rather be with animals.
+        </h1>
         <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
-          WOOLF.INDIA began in 2021 as a small rescue in the countryside. Today we are a marketplace, training studio and care shop — but our heart is unchanged: gentle care, ethical sourcing, and lifelong support for every family we welcome.
+          WOOLF.INDIA began in 2021 as a small rescue in the countryside. Today we are a
+          marketplace, training studio and care shop — but our heart is unchanged: gentle care,
+          ethical sourcing, and lifelong support for every family we welcome.
         </p>
       </section>
 

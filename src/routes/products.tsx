@@ -8,7 +8,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FiShoppingBag, FiStar } from "react-icons/fi";
 
 export const Route = createFileRoute("/products")({
-  head: () => ({ meta: [{ title: "Pet Products — WOOLF.INDIA" }, { name: "description", content: "Food, toys, grooming and accessories for the pets you love." }] }),
+  head: () => ({
+    meta: [
+      { title: "Pet Products — WOOLF.INDIA" },
+      {
+        name: "description",
+        content: "Food, toys, grooming and accessories for the pets you love.",
+      },
+    ],
+  }),
   component: ProductsPage,
 });
 
@@ -20,14 +28,17 @@ function ProductsPage() {
   const { data: products, isLoading } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      const isMock = typeof window !== "undefined" && !!localStorage.getItem("pawhaven_mock_session");
+      const isMock =
+        typeof window !== "undefined" && !!localStorage.getItem("pawhaven_mock_session");
       if (isMock) {
         const stored = localStorage.getItem("pawhaven_products");
         if (stored) {
-          try { return JSON.parse(stored); } catch {}
+          try {
+            return JSON.parse(stored);
+          } catch {}
         }
         const { products: sampleProducts } = await import("@/data/sample");
-        const list = sampleProducts.map(p => ({
+        const list = sampleProducts.map((p) => ({
           id: p.id,
           name: p.name,
           category: p.category,
@@ -35,29 +46,35 @@ function ProductsPage() {
           image_url: p.image || null,
           rating: p.rating,
           description: "Curated premium care product by WOOLF.INDIA",
-          stock: 10
+          stock: 10,
         }));
         localStorage.setItem("pawhaven_products", JSON.stringify(list));
         return list;
       }
 
       try {
-        const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
+        const { data, error } = await supabase
+          .from("products")
+          .select("*")
+          .order("created_at", { ascending: false });
         if (!error && data && data.length > 0) return data;
 
         if (!error && data && data.length === 0) {
           console.log("Supabase products table is empty. Seeding with sample data...");
           const { products: sampleProducts } = await import("@/data/sample");
-          const toInsert = sampleProducts.map(p => ({
+          const toInsert = sampleProducts.map((p) => ({
             name: p.name,
             category: p.category,
             price: p.price,
             image_url: p.image || null,
             rating: p.rating,
             description: "Curated premium care product by WOOLF.INDIA",
-            stock: 10
+            stock: 10,
           }));
-          const { data: seeded, error: seedErr } = await supabase.from("products").insert(toInsert).select();
+          const { data: seeded, error: seedErr } = await supabase
+            .from("products")
+            .insert(toInsert)
+            .select();
           if (!seedErr && seeded && seeded.length > 0) {
             return seeded;
           }
@@ -66,17 +83,17 @@ function ProductsPage() {
       } catch (e) {
         console.warn("Supabase products fetch failed, using sample fallback:", e);
       }
-      
+
       // Fallback to sample data, mapping `image` to `image_url`
       const { products: sampleProducts } = await import("@/data/sample");
-      return sampleProducts.map(p => ({
+      return sampleProducts.map((p) => ({
         id: p.id,
         name: p.name,
         category: p.category,
         price: p.price,
         image_url: p.image || null,
         rating: p.rating,
-        description: "Curated premium care product by WOOLF.INDIA"
+        description: "Curated premium care product by WOOLF.INDIA",
       }));
     },
   });
@@ -91,22 +108,46 @@ function ProductsPage() {
       </section>
       <section className="mx-auto max-w-7xl px-6 mt-10 flex flex-wrap gap-3">
         {CATS.map((c) => (
-          <button key={c} onClick={() => setCat(c)} className={`rounded-full border px-4 py-2 text-sm transition ${cat === c ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{c}</button>
+          <button
+            key={c}
+            onClick={() => setCat(c)}
+            className={`rounded-full border px-4 py-2 text-sm transition ${cat === c ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+          >
+            {c}
+          </button>
         ))}
       </section>
       <section className="mx-auto max-w-7xl px-6 py-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading
-          ? Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="aspect-square rounded-3xl" />)
+          ? Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="aspect-square rounded-3xl" />
+            ))
           : list.map((p: any) => (
-              <div key={p.id} className="rounded-3xl bg-card overflow-hidden hover-lift flex flex-col">
-                <img src={p.image_url ?? "/product-1.jpg"} alt={p.name} className="aspect-[4/3] w-full object-cover" loading="lazy" />
+              <div
+                key={p.id}
+                className="rounded-3xl bg-card overflow-hidden hover-lift flex flex-col"
+              >
+                <img
+                  src={p.image_url ?? "/product-1.jpg"}
+                  alt={p.name}
+                  className="aspect-[4/3] w-full object-cover"
+                  loading="lazy"
+                />
                 <div className="p-5 flex-1 flex flex-col">
                   <div className="text-xs text-muted-foreground">{p.category}</div>
                   <div className="font-display text-xl mt-1">{p.name}</div>
-                  <div className="mt-1 text-xs text-muted-foreground flex items-center gap-1"><FiStar className="text-accent" /> {Number(p.rating).toFixed(1)}</div>
+                  <div className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
+                    <FiStar className="text-accent" /> {Number(p.rating).toFixed(1)}
+                  </div>
                   <div className="mt-auto pt-4 flex items-center justify-between">
-                    <div className="font-display text-xl text-accent">₹{Number(p.price).toFixed(0)}</div>
-                    <button onClick={() => add.mutate({ productId: p.id })} disabled={add.isPending} className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground hover:opacity-90 disabled:opacity-60">
+                    <div className="font-display text-xl text-accent">
+                      ₹{Number(p.price).toFixed(0)}
+                    </div>
+                    <button
+                      onClick={() => add.mutate({ productId: p.id })}
+                      disabled={add.isPending}
+                      className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground hover:opacity-90 disabled:opacity-60"
+                    >
                       <FiShoppingBag /> Add
                     </button>
                   </div>

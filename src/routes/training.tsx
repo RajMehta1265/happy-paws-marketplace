@@ -11,8 +11,12 @@ export const Route = createFileRoute("/training")({
   head: () => ({
     meta: [
       { title: "Pet Training — WOOLF.INDIA" },
-      { name: "description", content: "Gentle, science-based training. Complete intake form and sign consent documents digitally." }
-    ]
+      {
+        name: "description",
+        content:
+          "Gentle, science-based training. Complete intake form and sign consent documents digitally.",
+      },
+    ],
   }),
   component: TrainingPage,
 });
@@ -31,7 +35,18 @@ const trainingPrices = {
   Advance: "₹7,500",
 };
 
-const commandsList = ["Sit", "Stay", "Heel", "Come", "Down", "Leave It", "Leash Walking", "Shake Hands", "Roll Over", "Bathroom Trained"];
+const commandsList = [
+  "Sit",
+  "Stay",
+  "Heel",
+  "Come",
+  "Down",
+  "Leave It",
+  "Leash Walking",
+  "Shake Hands",
+  "Roll Over",
+  "Bathroom Trained",
+];
 
 function TrainingPage() {
   const { user } = useAuth();
@@ -55,12 +70,15 @@ function TrainingPage() {
   const [dateCounts, setDateCounts] = useState<Record<string, number>>({});
 
   const refreshAvailability = useCallback(() => {
-    dbService.getBookedDates(3).then(({ bookedDates: bd, dateCounts: dc }) => {
-      setBookedDates(bd);
-      setDateCounts(dc);
-    }).catch(err => {
-      console.warn("Failed to refresh training availability:", err);
-    });
+    dbService
+      .getBookedDates(3)
+      .then(({ bookedDates: bd, dateCounts: dc }) => {
+        setBookedDates(bd);
+        setDateCounts(dc);
+      })
+      .catch((err) => {
+        console.warn("Failed to refresh training availability:", err);
+      });
   }, []);
 
   useEffect(() => {
@@ -100,7 +118,7 @@ function TrainingPage() {
     setSignatureUrl(signatureDataUrl);
 
     try {
-       // Save booking to db-service with integrated consent and signature details
+      // Save booking to db-service with integrated consent and signature details
       await dbService.createTrainingBooking({
         user_id: user?.id || null,
         ownerName: bookOwnerName,
@@ -126,7 +144,7 @@ function TrainingPage() {
       toast.error("Failed to submit training booking. Please try again.");
     }
   };
-  
+
   // Signature Drawing State
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -134,7 +152,9 @@ function TrainingPage() {
   const [lastCoords, setLastCoords] = useState({ x: 0, y: 0 });
 
   // Drawing Canvas Functions
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const startDrawing = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
+  ) => {
     e.preventDefault();
     const coords = getCoords(e);
     setLastCoords(coords);
@@ -166,22 +186,26 @@ function TrainingPage() {
     setIsDrawing(false);
   };
 
-  const getCoords = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const getCoords = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
+  ) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    
+
     // Check if touch event or mouse event
-    const clientX = "touches" in e && e.touches[0] ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-    const clientY = "touches" in e && e.touches[0] ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-    
+    const clientX =
+      "touches" in e && e.touches[0] ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY =
+      "touches" in e && e.touches[0] ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+
     // Scale coords to account for differences between the canvas's internal resolution and visual CSS dimensions
     const scaleX = canvas.width / (rect.width || 1);
     const scaleY = canvas.height / (rect.height || 1);
-    
+
     return {
       x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY
+      y: (clientY - rect.top) * scaleY,
     };
   };
 
@@ -194,14 +218,17 @@ function TrainingPage() {
     setHasSigned(false);
   };
 
-
-
   return (
     <SiteLayout>
       <section className="mx-auto max-w-7xl px-6 pt-16">
         <div className="text-xs uppercase tracking-[0.25em] text-primary">Training</div>
-        <h1 className="mt-2 font-display text-5xl lg:text-6xl max-w-3xl">Skills built on trust, not fear.</h1>
-        <p className="mt-4 text-muted-foreground max-w-xl">Our certified trainers use positive reinforcement to shape calm, confident pets — at home or in our studio.</p>
+        <h1 className="mt-2 font-display text-5xl lg:text-6xl max-w-3xl">
+          Skills built on trust, not fear.
+        </h1>
+        <p className="mt-4 text-muted-foreground max-w-xl">
+          Our certified trainers use positive reinforcement to shape calm, confident pets — at home
+          or in our studio.
+        </p>
       </section>
 
       {/* Availability Calendar */}
@@ -210,7 +237,8 @@ function TrainingPage() {
           <div className="text-xs uppercase tracking-[0.25em] text-primary mb-2">Availability</div>
           <h2 className="font-display text-4xl">Check available training dates</h2>
           <p className="mt-2 text-sm text-muted-foreground max-w-xl">
-            Green dates are available for booking. Click on an available date to auto-fill your preferred start date below.
+            Green dates are available for booking. Click on an available date to auto-fill your
+            preferred start date below.
           </p>
         </div>
         <div className="max-w-xl">
@@ -222,7 +250,9 @@ function TrainingPage() {
             selectedDate={preferredDate}
             onDateSelect={(dateStr) => {
               setPreferredDate(dateStr);
-              toast.success(`Selected ${new Date(dateStr + "T00:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })} as your preferred date.`);
+              toast.success(
+                `Selected ${new Date(dateStr + "T00:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })} as your preferred date.`,
+              );
             }}
           />
         </div>
@@ -233,9 +263,10 @@ function TrainingPage() {
         <div className="rounded-[2.5rem] bg-accent/40 p-8 md:p-12 lg:p-14 border border-accent/20">
           <h3 className="font-display text-4xl mb-2 text-foreground">Book an Appointment</h3>
           <p className="text-sm text-muted-foreground mb-8">
-            Select your preferred conditioning level, customize commands, and provide health details below.
+            Select your preferred conditioning level, customize commands, and provide health details
+            below.
           </p>
-          
+
           {bookSuccess ? (
             <div className="text-center py-10 bg-background/50 rounded-[2rem] p-8 md:p-10 border border-border/80 max-w-xl mx-auto space-y-4 animate-scale-in">
               <div className="inline-flex rounded-full bg-accent/10 p-4 text-accent mb-2">
@@ -245,27 +276,64 @@ function TrainingPage() {
               <p className="text-sm text-muted-foreground">
                 We've received your request for <strong>{bookPetName}</strong>'s training session.
               </p>
-              
+
               <div className="bg-background rounded-2xl p-4 border border-border/85 text-left text-xs space-y-2">
-                <div>Owner Name: <strong className="text-foreground">{bookOwnerName}</strong></div>
-                <div>Pet Details: <strong className="text-foreground">{bookPetName} ({bookBreed}, {bookAge})</strong></div>
-                <div>Program Type: <strong className="text-foreground">{trainingType} (₹{trainingType === "Basic" ? "2,500" : trainingType === "Moderate" ? "4,500" : "7,500"})</strong></div>
-                <div>Preferred Date: <strong className="text-foreground">{preferredDate}</strong></div>
-                <div>Medical Conditions: <strong className="text-foreground">{bookHasMedical ? (bookMedical || "Declared but not specified") : "N/A"}</strong></div>
+                <div>
+                  Owner Name: <strong className="text-foreground">{bookOwnerName}</strong>
+                </div>
+                <div>
+                  Pet Details:{" "}
+                  <strong className="text-foreground">
+                    {bookPetName} ({bookBreed}, {bookAge})
+                  </strong>
+                </div>
+                <div>
+                  Program Type:{" "}
+                  <strong className="text-foreground">
+                    {trainingType} (₹
+                    {trainingType === "Basic"
+                      ? "2,500"
+                      : trainingType === "Moderate"
+                        ? "4,500"
+                        : "7,500"}
+                    )
+                  </strong>
+                </div>
+                <div>
+                  Preferred Date: <strong className="text-foreground">{preferredDate}</strong>
+                </div>
+                <div>
+                  Medical Conditions:{" "}
+                  <strong className="text-foreground">
+                    {bookHasMedical ? bookMedical || "Declared but not specified" : "N/A"}
+                  </strong>
+                </div>
                 {selectedCommands.length > 0 && (
-                  <div>Custom Commands: <strong className="text-foreground">{selectedCommands.join(", ")}</strong></div>
+                  <div>
+                    Custom Commands:{" "}
+                    <strong className="text-foreground">{selectedCommands.join(", ")}</strong>
+                  </div>
                 )}
                 {signatureUrl && (
                   <div className="border-t border-border pt-4 mt-4">
-                    <h4 className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Liability Release & Digital Signature</h4>
-                    <div className="text-[10px] text-muted-foreground mb-2">Agreement Status: <strong className="text-emerald-600">Consent Verified</strong></div>
+                    <h4 className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground mb-2">
+                      Liability Release & Digital Signature
+                    </h4>
+                    <div className="text-[10px] text-muted-foreground mb-2">
+                      Agreement Status:{" "}
+                      <strong className="text-emerald-600">Consent Verified</strong>
+                    </div>
                     <div className="border border-border/80 rounded-xl bg-card p-2 h-20 flex justify-center items-center max-w-xs">
-                      <img src={signatureUrl} alt="Signature Representation" className="max-h-full max-w-full object-contain" />
+                      <img
+                        src={signatureUrl}
+                        alt="Signature Representation"
+                        className="max-h-full max-w-full object-contain"
+                      />
                     </div>
                   </div>
                 )}
               </div>
-              
+
               <button
                 onClick={() => {
                   setBookSuccess(false);
@@ -317,7 +385,9 @@ function TrainingPage() {
 
               <div className="grid md:grid-cols-3 gap-6">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Breed Name *</label>
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    Breed Name *
+                  </label>
                   <input
                     type="text"
                     required
@@ -341,7 +411,9 @@ function TrainingPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Preferred Start Date *</label>
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    Preferred Start Date *
+                  </label>
                   <input
                     type="date"
                     required
@@ -366,12 +438,16 @@ function TrainingPage() {
                     }}
                     className="h-4 w-4 rounded border-border text-primary focus:ring-primary bg-background"
                   />
-                  <span className="text-xs font-semibold text-foreground">My pet has existing medical conditions</span>
+                  <span className="text-xs font-semibold text-foreground">
+                    My pet has existing medical conditions
+                  </span>
                 </label>
 
                 {bookHasMedical ? (
                   <div className="flex flex-col gap-1.5 animate-slide-down">
-                    <label className="text-xs font-semibold text-muted-foreground">Describe Medical Conditions *</label>
+                    <label className="text-xs font-semibold text-muted-foreground">
+                      Describe Medical Conditions *
+                    </label>
                     <textarea
                       required={bookHasMedical}
                       value={bookMedical}
@@ -390,7 +466,9 @@ function TrainingPage() {
 
               {/* Training Type & Package Price */}
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-muted-foreground">Training Type & Package Price *</label>
+                <label className="text-xs font-semibold text-muted-foreground">
+                  Training Type & Package Price *
+                </label>
                 <div className="flex flex-wrap gap-3">
                   {(["Basic", "Moderate", "Advance"] as const).map((type) => (
                     <button
@@ -412,8 +490,12 @@ function TrainingPage() {
               {/* Customization of Training Program — Premium Command Selection */}
               <div className="flex flex-col gap-3 pt-2">
                 <div>
-                  <label className="text-sm font-semibold text-foreground">Customize Training Program</label>
-                  <p className="text-xs text-muted-foreground mt-0.5">Select the commands you want your pet to learn. Choose as many as needed.</p>
+                  <label className="text-sm font-semibold text-foreground">
+                    Customize Training Program
+                  </label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Select the commands you want your pet to learn. Choose as many as needed.
+                  </p>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                   {commandsList.map((command) => {
@@ -448,16 +530,22 @@ function TrainingPage() {
                 {selectedCommands.length > 0 && (
                   <div className="flex items-center gap-2 text-xs text-primary font-semibold mt-1">
                     <FiCheckSquare size={14} />
-                    {selectedCommands.length} command{selectedCommands.length > 1 ? "s" : ""} selected: {selectedCommands.join(", ")}
+                    {selectedCommands.length} command{selectedCommands.length > 1 ? "s" : ""}{" "}
+                    selected: {selectedCommands.join(", ")}
                   </div>
                 )}
               </div>
 
               {/* Liability Release & Consent */}
               <div className="bg-card border-l-8 border-primary border-y border-r border-border rounded-[1.5rem] p-6 shadow-sm space-y-4">
-                <h4 className="font-display text-2xl text-foreground pb-2 border-b border-border">Liability Release & Consent <span className="text-red-500">*</span></h4>
+                <h4 className="font-display text-2xl text-foreground pb-2 border-b border-border">
+                  Liability Release & Consent <span className="text-red-500">*</span>
+                </h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  By checking the authorization agreement below, you release WOOLF.INDIA, its certified trainer staff, and training facilities from any and all liability for injury, illness, or behavioral developments. You confirm that your pet is fully vaccinated and fit for conditioning exercises.
+                  By checking the authorization agreement below, you release WOOLF.INDIA, its
+                  certified trainer staff, and training facilities from any and all liability for
+                  injury, illness, or behavioral developments. You confirm that your pet is fully
+                  vaccinated and fit for conditioning exercises.
                 </p>
                 <label className="flex items-start gap-3 cursor-pointer mt-3 select-none">
                   <input
@@ -467,7 +555,8 @@ function TrainingPage() {
                     className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary bg-background"
                   />
                   <span className="text-xs text-foreground/80 font-semibold">
-                    I agree and authorize professional training programs for my pet companion under the terms described. <span className="text-red-500">(Compulsory)</span>
+                    I agree and authorize professional training programs for my pet companion under
+                    the terms described. <span className="text-red-500">(Compulsory)</span>
                   </span>
                 </label>
               </div>
@@ -475,10 +564,14 @@ function TrainingPage() {
               {/* Virtual Signature Panel */}
               <div className="bg-card rounded-[1.5rem] border border-border p-6 shadow-sm space-y-4">
                 <div className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                  <FiPenTool className="text-primary" /> Draw Virtual Signature <span className="text-red-500">*</span>
+                  <FiPenTool className="text-primary" /> Draw Virtual Signature{" "}
+                  <span className="text-red-500">*</span>
                 </div>
-                <p className="text-xs text-muted-foreground">Sign inside the panel below using your cursor or touchscreen device. This is required.</p>
-                
+                <p className="text-xs text-muted-foreground">
+                  Sign inside the panel below using your cursor or touchscreen device. This is
+                  required.
+                </p>
+
                 <div className="relative border border-border/80 rounded-2xl bg-secondary overflow-hidden h-40 w-full cursor-crosshair">
                   <canvas
                     ref={canvasRef}

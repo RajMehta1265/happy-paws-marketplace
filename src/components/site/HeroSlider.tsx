@@ -17,7 +17,7 @@ export function HeroSlider() {
   });
 
   // Filter pets that have images
-  const sliderPets = pets?.filter(p => p.image_url) || [];
+  const sliderPets = pets?.filter((p) => p.image_url) || [];
 
   const handleNext = () => {
     setDirection(1);
