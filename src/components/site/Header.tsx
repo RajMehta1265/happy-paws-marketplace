@@ -1,9 +1,10 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { FiMenu, FiX, FiShoppingBag, FiUser, FiLogOut } from "react-icons/fi";
+import { useState, useEffect } from "react";
+import { FiMenu, FiX, FiShoppingBag, FiUser, FiLogOut, FiSun, FiMoon } from "react-icons/fi";
 import { useAuth } from "@/hooks/use-auth";
 import { useCart } from "@/hooks/use-cart";
 import { WolfLogo } from "@/components/ui/WolfLogo";
+import { toast } from "sonner";
 
 const nav = [
   { to: "/", label: "Home" },
@@ -22,6 +23,32 @@ export function Header() {
   const { count } = useCart();
   const navigate = useNavigate();
 
+  const [isDark, setIsDark] = useState(true);
+
+  useEffect(() => {
+    const checkTheme = () => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    };
+    checkTheme();
+    window.addEventListener("woolf_theme_changed", checkTheme);
+    return () => window.removeEventListener("woolf_theme_changed", checkTheme);
+  }, []);
+
+  const toggleTheme = () => {
+    const nextDark = !isDark;
+    setIsDark(nextDark);
+    if (nextDark) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("woolf_theme", "dark");
+      toast.success("Switched to Luxury Dark Mode");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("woolf_theme", "light");
+      toast.success("Switched to Classic Light Mode");
+    }
+    window.dispatchEvent(new Event("woolf_theme_changed"));
+  };
+
   const handleSignOut = async () => {
     await signOut();
     navigate({ to: "/" });
@@ -31,7 +58,19 @@ export function Header() {
     <header className="sticky top-0 z-50 glass">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <Link to="/" className="flex items-center gap-2 sm:gap-3 group">
-          <WolfLogo className="h-10 w-10 sm:h-12 sm:w-12 text-accent group-hover:scale-105 transition-transform duration-300 shrink-0" />
+          {isDark ? (
+            <img
+              src="/woolfindia.jpg"
+              alt="WOOLF.INDIA"
+              className="h-16 w-auto sm:h-20 object-contain group-hover:scale-105 transition-transform duration-300 shrink-0"
+              style={{
+                filter: "invert(1) sepia(1) saturate(5) hue-rotate(15deg) brightness(0.9) contrast(1.2)",
+                mixBlendMode: "screen",
+              }}
+            />
+          ) : (
+            <WolfLogo className="h-10 w-10 sm:h-12 sm:w-12 text-primary group-hover:scale-105 transition-transform duration-300 shrink-0" />
+          )}
           <span className="font-display font-extrabold text-lg sm:text-2xl lg:text-3xl tracking-[0.1em] sm:tracking-[0.2em] text-foreground group-hover:text-accent transition-colors duration-300 select-none">
             WOOLF.INDIA
           </span>
@@ -57,44 +96,60 @@ export function Header() {
             </Link>
           )}
         </nav>
-        <div className="hidden lg:flex items-center gap-3">
-          <Link to="/cart" aria-label="Cart" className="relative rounded-full p-2 hover:bg-muted">
-            <FiShoppingBag />
+        <div className="flex items-center gap-1.5 sm:gap-3">
+          {/* Theme Toggle - visible everywhere */}
+          <button
+            onClick={toggleTheme}
+            className="rounded-full p-2 hover:bg-muted text-foreground cursor-pointer transition-colors duration-205 flex items-center justify-center"
+            title={isDark ? "Classic Light Mode" : "Luxury Dark Mode"}
+          >
+            {isDark ? <FiSun size={18} className="text-primary" /> : <FiMoon size={18} />}
+          </button>
+
+          {/* Cart Icon - visible everywhere */}
+          <Link to="/cart" aria-label="Cart" className="relative rounded-full p-2 hover:bg-muted flex items-center justify-center">
+            <FiShoppingBag size={18} />
             {count > 0 && (
-              <span className="absolute -top-1 -right-1 grid h-5 w-5 place-items-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">
+              <span className="absolute -top-1 -right-1 grid h-4 w-4 sm:h-5 sm:w-5 place-items-center rounded-full bg-accent text-[9px] sm:text-[10px] font-bold text-accent-foreground">
                 {count}
               </span>
             )}
           </Link>
-          {user ? (
-            <>
+
+          {/* Auth & Account Buttons - desktop/tablet only */}
+          <div className="hidden sm:flex items-center gap-1.5 sm:gap-3">
+            {user ? (
+              <>
+                <Link
+                  to="/dashboard"
+                  className="rounded-full p-2 hover:bg-muted"
+                  aria-label="Account"
+                >
+                  <FiUser />
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="rounded-full p-2 hover:bg-muted"
+                  aria-label="Sign out"
+                >
+                  <FiLogOut />
+                </button>
+              </>
+            ) : (
               <Link
-                to="/dashboard"
-                className="rounded-full p-2 hover:bg-muted"
-                aria-label="Account"
+                to="/login"
+                className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground hover:opacity-90 transition"
               >
-                <FiUser />
+                <FiUser /> Sign in
               </Link>
-              <button
-                onClick={handleSignOut}
-                className="rounded-full p-2 hover:bg-muted"
-                aria-label="Sign out"
-              >
-                <FiLogOut />
-              </button>
-            </>
-          ) : (
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground hover:opacity-90 transition"
-            >
-              <FiUser /> Sign in
-            </Link>
-          )}
+            )}
+          </div>
+
+          {/* Mobile hamburger menu - below lg */}
+          <button className="lg:hidden p-2 hover:bg-muted rounded-full" onClick={() => setOpen((v) => !v)} aria-label="Menu">
+            {open ? <FiX size={22} /> : <FiMenu size={22} />}
+          </button>
         </div>
-        <button className="lg:hidden p-2" onClick={() => setOpen((v) => !v)} aria-label="Menu">
-          {open ? <FiX size={22} /> : <FiMenu size={22} />}
-        </button>
       </div>
       {open && (
         <div className="lg:hidden border-t border-border bg-background">
@@ -125,6 +180,19 @@ export function Header() {
                 Admin
               </Link>
             )}
+
+            {/* Mobile Theme Toggle */}
+            <button
+              onClick={() => {
+                toggleTheme();
+                setOpen(false);
+              }}
+              className="rounded-lg px-3 py-2 hover:bg-muted text-left flex items-center justify-between cursor-pointer"
+            >
+              <span>Theme Mode</span>
+              {isDark ? <FiSun className="text-primary" /> : <FiMoon />}
+            </button>
+
             {user ? (
               <>
                 <Link

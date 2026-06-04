@@ -2,8 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { dbService, Pet, Consultation, parseImages } from "@/services/db-service";
-import { FiCheck, FiFilter, FiArrowRight, FiInfo } from "react-icons/fi";
+import { dbService, Pet, parseImages } from "@/services/db-service";
+import { FiCheck, FiFilter, FiArrowRight, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
@@ -17,14 +17,15 @@ export const Route = createFileRoute("/pets/")({
   component: PetsPage,
 });
 
-const TYPES = ["All", "Dog", "Cat", "Rabbit", "Bird", "Hamster"] as const;
-const DOG_BREEDS = ["All Breeds", "Labrador", "Golden Retriever", "Beagle", "German Shepherd", "Poodle", "Other"] as const;
+// Base types always shown even if no pets exist for them yet
+const BASE_TYPES = ["Dog", "Cat", "Rabbit", "Bird", "Hamster"];
+const PETS_PER_PAGE = 6;
 
 function PetsPage() {
   const queryClient = useQueryClient();
-  const [type, setType] = useState<(typeof TYPES)[number]>("All");
+  const [type, setType] = useState<string>("All");
   const [breed, setBreed] = useState<string>("All Breeds");
-  const [saleType, setSaleType] = useState<"all" | "sale">("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch pets
   const { data: pets, isLoading: petsLoading } = useQuery({
@@ -45,24 +46,60 @@ function PetsPage() {
   const [max, setMax] = useState<number | null>(null);
   const currentMaxPrice = max ?? maxSliderValue;
 
+  // Dynamically compute available types from pet data
+  const availableTypes = useMemo(() => {
+    const nonExotic = (pets ?? []).filter(p => p.type.toLowerCase() !== "exotic" && !p.adoption);
+    const dataTypes = [...new Set(nonExotic.map(p => p.type))];
+    // Merge base types with any new types from data, preserving order
+    const merged = [...BASE_TYPES];
+    dataTypes.forEach(t => {
+      if (!merged.includes(t)) merged.push(t);
+    });
+    return ["All", ...merged];
+  }, [pets]);
+
+  // Dynamically compute companion types for the consultation form
+  const consultationTypes = useMemo(() => {
+    const types = availableTypes.filter(t => t !== "All" && t.toLowerCase() !== "exotic");
+    return [...types, "Exotic"];
+  }, [availableTypes]);
+
+  // Dynamically compute available breeds for the selected type
+  const availableBreeds = useMemo(() => {
+    if (type === "All") return [];
+    const petsOfType = (pets ?? []).filter(p => p.type === type && p.type.toLowerCase() !== "exotic" && !p.adoption);
+    const breeds = [...new Set(petsOfType.map(p => p.breed).filter(Boolean))] as string[];
+    breeds.sort((a, b) => a.localeCompare(b));
+    return breeds.length > 0 ? ["All Breeds", ...breeds] : [];
+  }, [pets, type]);
+
   // Consultation form state
   const [consultName, setConsultName] = useState("");
   const [consultEmail, setConsultEmail] = useState("");
   const [consultPetType, setConsultPetType] = useState("Dog");
+  const [consultBreed, setConsultBreed] = useState("");
   const [consultPriceMin, setConsultPriceMin] = useState(100);
   const [consultPriceMax, setConsultPriceMax] = useState(1000);
   const [isSubmittingConsult, setIsSubmittingConsult] = useState(false);
 
-  // Fetch consultations
-  const { data: consultations, isLoading: consultsLoading } = useQuery({
-    queryKey: ["consultations"],
-    queryFn: () => dbService.getConsultations(),
-  });
+  // Dynamically compute available breeds for the chosen consultation type
+  const consultAvailableBreeds = useMemo(() => {
+    if (!consultPetType) return [];
+    const petsOfType = (pets ?? []).filter(
+      (p) => p.type.toLowerCase() === consultPetType.toLowerCase()
+    );
+    const breeds = [...new Set(petsOfType.map((p) => p.breed).filter(Boolean))] as string[];
+    breeds.sort((a, b) => a.localeCompare(b));
+    return breeds;
+  }, [pets, consultPetType]);
+
+
 
   // Reset breed filter if animal type changes
-  const handleTypeChange = (newType: (typeof TYPES)[number]) => {
+  const handleTypeChange = (newType: string) => {
     setType(newType);
     setBreed("All Breeds");
+    setCurrentPage(1);
   };
 
   const filtered = useMemo(() => {
@@ -73,14 +110,10 @@ function PetsPage() {
         // Animal Type Filter
         const matchType = type === "All" || p.type === type;
 
-        // Breed Filter (Only active if Dog is selected)
+        // Breed Filter
         let matchBreed = true;
-        if (type === "Dog" && breed !== "All Breeds") {
-          if (breed === "Other") {
-            matchBreed = !["labrador", "golden retriever", "beagle", "german shepherd", "poodle"].includes((p.breed || "").toLowerCase());
-          } else {
-            matchBreed = (p.breed || "").toLowerCase() === breed.toLowerCase();
-          }
+        if (type !== "All" && breed !== "All Breeds") {
+          matchBreed = (p.breed || "").toLowerCase() === breed.toLowerCase();
         }
 
         // Price filter: Only applies to pets that are for purchase.
@@ -89,6 +122,23 @@ function PetsPage() {
         return matchType && matchBreed && matchPrice;
       });
   }, [pets, type, breed, currentMaxPrice]);
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PETS_PER_PAGE));
+  const paginatedPets = useMemo(() => {
+    const start = (currentPage - 1) * PETS_PER_PAGE;
+    return filtered.slice(start, start + PETS_PER_PAGE);
+  }, [filtered, currentPage]);
+
+  // Reset page when filters change
+  useMemo(() => {
+    setCurrentPage(1);
+  }, [type, breed, currentMaxPrice]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   // Submit consultation
   const handleConsultSubmit = async (e: React.FormEvent) => {
@@ -103,12 +153,14 @@ function PetsPage() {
         name: consultName,
         email: consultEmail,
         pet_type: consultPetType,
+        breed: consultBreed || null,
         price_min: Number(consultPriceMin),
         price_max: Number(consultPriceMax),
       });
       toast.success("Consultation request submitted successfully!");
       setConsultName("");
       setConsultEmail("");
+      setConsultBreed("");
       queryClient.invalidateQueries({ queryKey: ["consultations"] });
     } catch (err) {
       toast.error("Failed to submit consultation");
@@ -138,7 +190,7 @@ function PetsPage() {
           <div className="space-y-4 bg-card/40 border border-border/80 rounded-3xl p-5 shadow-xs glass transition-all hover:border-border/100">
             {/* Animal Types Category Row */}
             <div className="flex flex-wrap items-center gap-2">
-              {TYPES.map((t) => (
+              {availableTypes.map((t) => (
                 <button
                   key={t}
                   onClick={() => handleTypeChange(t)}
@@ -153,17 +205,17 @@ function PetsPage() {
               ))}
             </div>
 
-            {/* Dog Breeds - Only shown when Dog type is selected */}
-            {type === "Dog" && (
+            {/* Breed Filter - dynamically generated from pet data */}
+            {type !== "All" && availableBreeds.length > 1 && (
               <div className="rounded-2xl bg-card border border-border p-4 flex flex-col gap-2.5">
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 font-bold">
-                  <FiFilter className="text-accent" /> Dog Breed Filter
+                  <FiFilter className="text-accent" /> {type} Breed Filter
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {DOG_BREEDS.map((b) => (
+                  {availableBreeds.map((b) => (
                     <button
                       key={b}
-                      onClick={() => setBreed(b)}
+                      onClick={() => { setBreed(b); setCurrentPage(1); }}
                       className={`rounded-full px-3 py-1 text-[11px] font-medium transition cursor-pointer ${
                         breed === b
                           ? "bg-accent text-accent-foreground font-semibold"
@@ -177,47 +229,26 @@ function PetsPage() {
               </div>
             )}
 
-            {/* Price slider and Purchase Filters */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-border/40">
-              
-              {/* Show All / For Purchase buttons */}
-              <div className="flex rounded-full bg-muted p-1 border border-border max-w-fit">
-                {(["all", "sale"] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setSaleType(mode)}
-                    className={`rounded-full px-4 py-1.5 text-xs font-semibold capitalize transition cursor-pointer ${
-                      saleType === mode
-                        ? "bg-background text-foreground font-semibold shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {mode === "all" ? "Show All" : "For Purchase"}
-                  </button>
-                ))}
-              </div>
-
-              {/* Price Range Slider */}
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span>Max Price: <strong className="text-foreground">₹{currentMaxPrice}</strong></span>
-                <input
-                  type="range"
-                  min={50}
-                  max={maxSliderValue}
-                  step={50}
-                  value={currentMaxPrice}
-                  onChange={(e) => setMax(+e.target.value)}
-                  className="accent-primary cursor-pointer w-32 sm:w-40 h-1.5 bg-muted rounded-lg appearance-none"
-                />
-              </div>
+            {/* Price Filter */}
+            <div className="flex items-center justify-end gap-4 pt-4 border-t border-border/40">
+              <span className="text-xs text-muted-foreground">Max Price: <strong className="text-foreground">₹{currentMaxPrice}</strong></span>
+              <input
+                type="range"
+                min={50}
+                max={maxSliderValue}
+                step={50}
+                value={currentMaxPrice}
+                onChange={(e) => setMax(+e.target.value)}
+                className="accent-primary cursor-pointer w-32 sm:w-40 h-1.5 bg-muted rounded-lg appearance-none"
+              />
             </div>
           </div>
 
           {/* Pets Grid */}
           <div className="grid sm:grid-cols-2 gap-6">
             {petsLoading ? (
-              Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="aspect-[4/3] rounded-3xl" />)
-            ) : filtered.map((p) => (
+              Array.from({ length: PETS_PER_PAGE }).map((_, i) => <Skeleton key={i} className="aspect-[4/3] rounded-3xl" />)
+            ) : paginatedPets.map((p) => (
               <Link
                 key={p.id}
                 to="/pets/$petId"
@@ -263,6 +294,68 @@ function PetsPage() {
               <p className="text-muted-foreground col-span-2 py-12 text-center border border-dashed border-border rounded-3xl bg-muted/10">No companions match your active filter settings.</p>
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {!petsLoading && totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-4">
+              {/* Previous Button */}
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1 rounded-full border border-border px-4 py-2 text-xs font-semibold transition cursor-pointer hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <FiChevronLeft size={14} /> Prev
+              </button>
+
+              {/* Page Numbers */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                  // Show first, last, current, and neighbors; ellipsis for gaps
+                  const showPage = page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
+                  const showEllipsisBefore = page === currentPage - 2 && currentPage > 3;
+                  const showEllipsisAfter = page === currentPage + 2 && currentPage < totalPages - 2;
+
+                  if (showEllipsisBefore || showEllipsisAfter) {
+                    return (
+                      <span key={page} className="px-1 text-xs text-muted-foreground select-none">…</span>
+                    );
+                  }
+
+                  if (!showPage) return null;
+
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`min-w-[36px] h-9 rounded-full text-xs font-bold transition cursor-pointer ${
+                        currentPage === page
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "border border-border hover:bg-muted text-foreground/80"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Next Button */}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1 rounded-full border border-border px-4 py-2 text-xs font-semibold transition cursor-pointer hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next <FiChevronRight size={14} />
+              </button>
+            </div>
+          )}
+
+          {/* Results Summary */}
+          {!petsLoading && filtered.length > 0 && (
+            <div className="text-center text-xs text-muted-foreground">
+              Showing {((currentPage - 1) * PETS_PER_PAGE) + 1}–{Math.min(currentPage * PETS_PER_PAGE, filtered.length)} of {filtered.length} companions
+            </div>
+          )}
         </div>
 
         {/* Right Column: Consultation Form & Recent Requests */}
@@ -300,18 +393,39 @@ function PetsPage() {
 
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Type of Pet Wanted</label>
-                <select
+                <input
+                  type="text"
+                  required
+                  list="consult-pet-types"
                   value={consultPetType}
                   onChange={(e) => setConsultPetType(e.target.value)}
-                  className="w-full rounded-full border border-border bg-background px-4 py-2.5 text-xs outline-none focus:border-accent cursor-pointer"
-                >
-                  <option value="Dog">Dog</option>
-                  <option value="Cat">Cat</option>
-                  <option value="Rabbit">Rabbit</option>
-                  <option value="Bird">Bird</option>
-                  <option value="Hamster">Hamster</option>
-                  <option value="Exotic">Exotic Pet</option>
-                </select>
+                  placeholder="e.g. Dog, Cat, Parrot..."
+                  className="w-full rounded-full border border-border bg-background px-4 py-2.5 text-xs outline-none focus:border-accent"
+                />
+                <datalist id="consult-pet-types">
+                  {consultationTypes.map((t) => (
+                    <option key={t} value={t === "Exotic" ? "Exotic" : t}>
+                      {t === "Exotic" ? "Exotic Pet" : t}
+                    </option>
+                  ))}
+                </datalist>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Breed Wanted (Optional)</label>
+                <input
+                  type="text"
+                  list="consult-pet-breeds"
+                  value={consultBreed}
+                  onChange={(e) => setConsultBreed(e.target.value)}
+                  placeholder="e.g. Golden Retriever, Beagle..."
+                  className="w-full rounded-full border border-border bg-background px-4 py-2.5 text-xs outline-none focus:border-accent"
+                />
+                <datalist id="consult-pet-breeds">
+                  {consultAvailableBreeds.map((b) => (
+                    <option key={b} value={b} />
+                  ))}
+                </datalist>
               </div>
 
               <div>
@@ -344,40 +458,6 @@ function PetsPage() {
                 {isSubmittingConsult ? "Submitting..." : "Submit Consultation"}
               </button>
             </form>
-          </div>
-
-          {/* Recent Requests Table */}
-          <div className="rounded-3xl border border-border bg-card p-6 shadow-xs overflow-hidden glass transition-all hover:border-border/100">
-            <h3 className="font-display text-xl mb-3 flex items-center gap-1.5 text-foreground"><FiInfo size={16} className="text-accent" /> Recent Requests</h3>
-            {consultsLoading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-              </div>
-            ) : consultations && consultations.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-[11px]">
-                  <thead>
-                    <tr className="border-b border-border text-muted-foreground">
-                      <th className="py-2 font-semibold">Name</th>
-                      <th className="py-2 font-semibold">Pet Type</th>
-                      <th className="py-2 font-semibold">Budget</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {consultations.slice(0, 5).map((c) => (
-                      <tr key={c.id} className="border-b border-border/40 last:border-0 hover:bg-muted/40 transition">
-                        <td className="py-2 font-medium">{c.name}</td>
-                        <td className="py-2">{c.pet_type}</td>
-                        <td className="py-2 text-accent font-semibold">₹{c.price_min} - ₹{c.price_max}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-[11px] text-muted-foreground py-2 italic">No consultation requests submitted yet.</p>
-            )}
           </div>
         </div>
       </section>

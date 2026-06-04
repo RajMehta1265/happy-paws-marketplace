@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { dbService, Pet, parseImages, type TrainingBooking } from "@/services/db-service";
+import { dbService, Pet, parseImages, type TrainingBooking, type HostellingBooking, type ContactSubmission } from "@/services/db-service";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +21,10 @@ import {
   FiX,
   FiUploadCloud,
   FiFileText,
-  FiPhoneCall
+  FiPhoneCall,
+  FiMail,
+  FiEye,
+  FiEyeOff
 } from "react-icons/fi";
 import { BookingCalendar } from "@/components/BookingCalendar";
 
@@ -52,19 +55,35 @@ function AdminPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<"overview" | "pets" | "exotics" | "products" | "consent" | "consultations" | "bookings">("pets");
+  const [activeTab, setActiveTab] = useState<"overview" | "pets" | "exotics" | "products" | "consent" | "consultations" | "bookings" | "contacts">("pets");
   const [selectedConsent, setSelectedConsent] = useState<any | null>(null);
 
-  // Training Bookings state
-  const [trainingBookings, setTrainingBookings] = useState<TrainingBooking[]>([]);
-  useEffect(() => {
-    setTrainingBookings(dbService.getTrainingBookings());
-  }, []);
+  const [bookingSubTab, setBookingSubTab] = useState<"training" | "hostelling">("training");
+  const [editingTraining, setEditingTraining] = useState<TrainingBooking | null>(null);
+  const [editingHostelling, setEditingHostelling] = useState<HostellingBooking | null>(null);
 
-  const handleDeleteBooking = (id: string) => {
-    dbService.deleteTrainingBooking(id);
-    setTrainingBookings(dbService.getTrainingBookings());
+  // Training Bookings query
+  const { data: trainingBookings = [], refetch: refetchTraining } = useQuery({
+    queryKey: ["trainingBookings"],
+    queryFn: () => dbService.getTrainingBookings(),
+  });
+
+  // Hostelling Bookings query
+  const { data: hostellingBookings = [], refetch: refetchHostelling } = useQuery({
+    queryKey: ["hostellingBookings"],
+    queryFn: () => dbService.getHostellingBookings(),
+  });
+
+  const handleDeleteBooking = async (id: string) => {
+    await dbService.deleteTrainingBooking(id);
+    qc.invalidateQueries({ queryKey: ["trainingBookings"] });
     toast.success("Booking cancelled and slot freed.");
+  };
+
+  const handleDeleteHostelling = async (id: string) => {
+    await dbService.deleteHostellingBooking(id);
+    qc.invalidateQueries({ queryKey: ["hostellingBookings"] });
+    toast.success("Hostelling stay record removed.");
   };
   
   // Companion CRUD states
@@ -112,6 +131,18 @@ function AdminPage() {
       }
     }
   }, [user, isAdmin, authLoading, navigate]);
+
+  // Automatically sync any local-only pets when admin portal mounts
+  useEffect(() => {
+    if (user && isAdmin) {
+      dbService.syncLocalOnlyPets().then(() => {
+        qc.invalidateQueries({ queryKey: ["pets"] });
+        qc.invalidateQueries({ queryKey: ["adminStats"] });
+      }).catch((err) => {
+        console.warn("Failed to automatically sync local-only pets:", err);
+      });
+    }
+  }, [user, isAdmin, qc]);
 
   // Handle local file uploads and convert to Base64 data URLs
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, formType: "pet" | "product") => {
@@ -240,6 +271,42 @@ function AdminPage() {
     initialData: () => dbService.initLocalData(),
   });
 
+  // Dynamically compute companion pet types from data (excluding "Exotic")
+  const dynamicCompanionTypes = useMemo(() => {
+    const defaultTypes = ["Dog", "Cat", "Rabbit", "Bird", "Hamster"];
+    if (!pets) return defaultTypes;
+    const typesFromData = pets
+      .filter((p) => p.type && p.type.toLowerCase() !== "exotic")
+      .map((p) => p.type);
+    const merged = [...defaultTypes];
+    typesFromData.forEach((t) => {
+      // Clean type casing (e.g. capitalize first letter)
+      const formatted = t.trim().charAt(0).toUpperCase() + t.trim().slice(1).toLowerCase();
+      if (!merged.includes(formatted)) {
+        merged.push(formatted);
+      }
+    });
+    return merged;
+  }, [pets]);
+
+  // Dynamically compute breeds for the currently selected type in the form
+  const breedSuggestionsForType = useMemo(() => {
+    const selectedType = formData.type;
+    const presets = BREED_PRESETS[selectedType] || [];
+    if (!pets) return presets;
+    const dataBreeds = pets
+      .filter((p) => p.type?.toLowerCase() === selectedType.toLowerCase() && p.breed)
+      .map((p) => p.breed);
+    const merged = [...presets];
+    dataBreeds.forEach((b) => {
+      if (!merged.some((m) => m.toLowerCase() === b.toLowerCase())) {
+        merged.push(b);
+      }
+    });
+    merged.sort((a, b) => a.localeCompare(b));
+    return merged;
+  }, [pets, formData.type]);
+
   // Fetch liability consents
   const { data: consents, isLoading: consentsLoading } = useQuery({
     queryKey: ["consents"],
@@ -250,6 +317,12 @@ function AdminPage() {
   const { data: consultations, isLoading: consultationsLoading } = useQuery({
     queryKey: ["consultations"],
     queryFn: () => dbService.getConsultations(),
+  });
+
+  // Fetch contact submissions
+  const { data: contactSubmissions = [], isLoading: contactsLoading, refetch: refetchContacts } = useQuery({
+    queryKey: ["contactSubmissions"],
+    queryFn: () => dbService.getContactSubmissions(),
   });
 
   // Fetch orders for monthly chart analytics
@@ -642,6 +715,16 @@ function AdminPage() {
           >
             Training Bookings
           </button>
+          <button
+            onClick={() => { setActiveTab("contacts"); setIsAdding(false); setEditingPet(null); }}
+            className={`pb-3 text-sm font-semibold transition cursor-pointer border-b-2 whitespace-nowrap ${
+              activeTab === "contacts"
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Contact Messages
+          </button>
         </div>
 
         {activeTab === "overview" && (
@@ -763,17 +846,20 @@ function AdminPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs font-semibold text-muted-foreground">Pet Type</label>
-                        <select
-                          className="rounded-full border border-input bg-background px-4 py-3 text-sm focus:outline-primary"
+                        <input
+                          required
+                          type="text"
+                          placeholder="e.g. Dog, Cat, Rabbit"
+                          className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={formData.type}
                           onChange={(e) => setFormData({ ...formData, type: e.target.value, breed: "" })}
-                        >
-                          <option value="Dog">Dog</option>
-                          <option value="Cat">Cat</option>
-                          <option value="Rabbit">Rabbit</option>
-                          <option value="Bird">Bird</option>
-                          <option value="Hamster">Hamster</option>
-                        </select>
+                          list="pet-type-options"
+                        />
+                        <datalist id="pet-type-options">
+                          {dynamicCompanionTypes.map((t) => (
+                            <option key={t} value={t} />
+                          ))}
+                        </datalist>
                       </div>
 
                       <div className="flex flex-col gap-1.5">
@@ -787,7 +873,7 @@ function AdminPage() {
                           list="breed-options"
                         />
                         <datalist id="breed-options">
-                          {(BREED_PRESETS[formData.type] || []).map((b) => (
+                          {breedSuggestionsForType.map((b) => (
                             <option key={b} value={b} />
                           ))}
                         </datalist>
@@ -938,6 +1024,18 @@ function AdminPage() {
                         >
                           <FiPlay size={10} /> Use preset video stream
                         </button>
+                        {formData.video_url && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({ ...prev, video_url: "" }));
+                              toast.info("Video reference removed");
+                            }}
+                            className="text-[10px] bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition flex items-center gap-1 cursor-pointer font-semibold"
+                          >
+                            <FiTrash2 size={10} /> Remove video
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -1256,6 +1354,20 @@ function AdminPage() {
                           />
                         </label>
                       </div>
+                      {formData.video_url && (
+                        <div className="flex gap-2 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({ ...prev, video_url: "" }));
+                              toast.info("Video reference removed");
+                            }}
+                            className="text-[10px] bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition flex items-center gap-1 cursor-pointer font-semibold w-fit"
+                          >
+                            <FiTrash2 size={10} /> Remove video
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
@@ -1786,6 +1898,7 @@ function AdminPage() {
                       <th className="px-6 py-4">Client Name</th>
                       <th className="px-6 py-4">Email Address</th>
                       <th className="px-6 py-4">Requested Pet Type</th>
+                      <th className="px-6 py-4">Requested Breed</th>
                       <th className="px-6 py-4">Min Price</th>
                       <th className="px-6 py-4">Max Price</th>
                       <th className="px-6 py-4">Requested At</th>
@@ -1794,13 +1907,13 @@ function AdminPage() {
                   <tbody className="divide-y divide-border">
                     {consultationsLoading ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-10 text-center text-muted-foreground animate-pulse">
+                        <td colSpan={7} className="px-6 py-10 text-center text-muted-foreground animate-pulse">
                           Loading consultation requests...
                         </td>
                       </tr>
                     ) : consultations?.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-10 text-center text-muted-foreground">
+                        <td colSpan={7} className="px-6 py-10 text-center text-muted-foreground">
                           No consultation requests have been submitted yet.
                         </td>
                       </tr>
@@ -1810,6 +1923,7 @@ function AdminPage() {
                           <td className="px-6 py-4 font-semibold text-foreground">{c.name}</td>
                           <td className="px-6 py-4 text-muted-foreground">{c.email}</td>
                           <td className="px-6 py-4 font-medium text-foreground">{c.pet_type}</td>
+                          <td className="px-6 py-4 text-muted-foreground font-medium">{c.breed || "Any"}</td>
                           <td className="px-6 py-4 font-semibold text-accent-foreground">₹{Number(c.price_min).toLocaleString()}</td>
                           <td className="px-6 py-4 font-semibold text-accent-foreground">₹{Number(c.price_max).toLocaleString()}</td>
                           <td className="px-6 py-4 text-muted-foreground">
@@ -1826,96 +1940,803 @@ function AdminPage() {
         )}
 
         {activeTab === "bookings" && (
-          <div className="mt-8 space-y-8 animate-fade-in">
-            {/* Stats Row */}
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
-                <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Total Bookings</div>
-                <div className="mt-2 font-display text-4xl text-foreground">{trainingBookings.length}</div>
-              </div>
-              <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
-                <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Upcoming</div>
-                <div className="mt-2 font-display text-4xl text-emerald-600">
-                  {trainingBookings.filter((b) => b.preferredDate >= new Date().toISOString().split("T")[0]).length}
-                </div>
-              </div>
-              <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
-                <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Most Popular Program</div>
-                <div className="mt-2 font-display text-2xl text-[#673ab7]">
-                  {(() => {
-                    const counts: Record<string, number> = {};
-                    trainingBookings.forEach((b) => { counts[b.trainingType] = (counts[b.trainingType] || 0) + 1; });
-                    const sorted = Object.entries(counts).sort(([, a], [, b]) => b - a);
-                    return sorted.length > 0 ? `${sorted[0][0]} (${sorted[0][1]})` : "N/A";
-                  })()}
-                </div>
-              </div>
+          <div className="mt-8 space-y-8 animate-fade-in text-foreground">
+            {/* Sub-tabs header */}
+            <div className="flex gap-4 border-b border-border/50 pb-3">
+              <button
+                type="button"
+                onClick={() => setBookingSubTab("training")}
+                className={`px-6 py-2.5 text-sm font-semibold rounded-full transition cursor-pointer ${
+                  bookingSubTab === "training"
+                    ? "bg-primary text-primary-foreground shadow-sm font-bold"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Training Sessions
+              </button>
+              <button
+                type="button"
+                onClick={() => setBookingSubTab("hostelling")}
+                className={`px-6 py-2.5 text-sm font-semibold rounded-full transition cursor-pointer ${
+                  bookingSubTab === "hostelling"
+                    ? "bg-primary text-primary-foreground shadow-sm font-bold"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Hostelling Stays
+              </button>
             </div>
 
-            {/* Calendar */}
-            <div>
-              <h2 className="font-display text-3xl mb-4 text-foreground">Booking Calendar</h2>
-              <p className="text-sm text-muted-foreground mb-6">Click on any date to view booking details. You can cancel individual bookings to free up slots.</p>
-              <div className="max-w-2xl">
-                <BookingCalendar
-                  mode="admin"
-                  bookings={trainingBookings}
-                  maxPerDay={3}
-                  onDeleteBooking={handleDeleteBooking}
-                />
-              </div>
-            </div>
+            {bookingSubTab === "training" ? (
+              <div className="space-y-8 animate-fade-in">
+                {/* Stats Row */}
+                <div className="grid md:grid-cols-3 gap-6">
+                  <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Total Training Bookings</div>
+                    <div className="mt-2 font-display text-4xl text-foreground">{trainingBookings.length}</div>
+                  </div>
+                  <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Completed Training</div>
+                    <div className="mt-2 font-display text-4xl text-emerald-600">
+                      {trainingBookings.filter((b) => b.completed).length}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Most Popular Program</div>
+                    <div className="mt-2 font-display text-2xl text-[#673ab7]">
+                      {(() => {
+                        const counts: Record<string, number> = {};
+                        trainingBookings.forEach((b) => { counts[b.trainingType] = (counts[b.trainingType] || 0) + 1; });
+                        const sorted = Object.entries(counts).sort(([, a], [, b]) => b - a);
+                        return sorted.length > 0 ? `${sorted[0][0]} (${sorted[0][1]})` : "N/A";
+                      })()}
+                    </div>
+                  </div>
+                </div>
 
-            {/* All Bookings Table */}
-            <div>
-              <h3 className="font-display text-2xl mb-4 text-foreground">All Booking Records</h3>
-              <div className="overflow-x-auto rounded-2xl border border-border shadow-sm">
-                <table className="min-w-full bg-card text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/30">
-                      <th className="text-left px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Owner</th>
-                      <th className="text-left px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Pet</th>
-                      <th className="text-left px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Program</th>
-                      <th className="text-left px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Date</th>
-                      <th className="text-left px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Commands</th>
-                      <th className="text-left px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Medical</th>
-                      <th className="text-left px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {trainingBookings.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="text-center py-10 text-muted-foreground italic">No training bookings yet.</td>
-                      </tr>
-                    ) : (
-                      trainingBookings.map((b) => (
-                        <tr key={b.id} className="hover:bg-muted/20 transition">
-                          <td className="px-5 py-3 font-semibold text-foreground">{b.ownerName}</td>
-                          <td className="px-5 py-3 text-foreground">{b.petName} <span className="text-muted-foreground">({b.breed}, {b.age})</span></td>
-                          <td className="px-5 py-3">
-                            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                              b.trainingType === "Basic" ? "bg-emerald-500/10 text-emerald-600"
-                                : b.trainingType === "Moderate" ? "bg-amber-500/10 text-amber-600"
-                                  : "bg-[#673ab7]/10 text-[#673ab7]"
-                            }`}>{b.trainingType}</span>
-                          </td>
-                          <td className="px-5 py-3 text-foreground">{b.preferredDate}</td>
-                          <td className="px-5 py-3 text-muted-foreground text-xs">{b.selectedCommands.length > 0 ? b.selectedCommands.join(", ") : "—"}</td>
-                          <td className="px-5 py-3 text-muted-foreground text-xs">{b.medicalConditions}</td>
-                          <td className="px-5 py-3">
-                            <button
-                              onClick={() => handleDeleteBooking(b.id)}
-                              className="text-red-500 hover:bg-red-500/10 rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer"
-                            >
-                              Cancel
-                            </button>
-                          </td>
+                {/* Calendar */}
+                <div>
+                  <h2 className="font-display text-3xl mb-4 text-foreground">Booking Calendar</h2>
+                  <p className="text-sm text-muted-foreground mb-6">Click on any date to view booking details. You can cancel individual bookings to free up slots.</p>
+                  <div className="max-w-2xl">
+                    <BookingCalendar
+                      mode="admin"
+                      bookings={trainingBookings}
+                      maxPerDay={3}
+                      onDeleteBooking={handleDeleteBooking}
+                    />
+                  </div>
+                </div>
+
+                {/* All Bookings Table */}
+                <div>
+                  <h3 className="font-display text-2xl mb-4 text-foreground">All Booking Records</h3>
+                  <div className="overflow-x-auto rounded-2xl border border-border shadow-sm">
+                    <table className="min-w-full bg-card text-sm text-left">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/30">
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground text-center">Completed</th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Owner</th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Pet</th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Program</th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Date</th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Commands</th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Medical</th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Signature</th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground text-right">Actions</th>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {trainingBookings.length === 0 ? (
+                          <tr>
+                            <td colSpan={9} className="text-center py-10 text-muted-foreground italic">No training bookings yet.</td>
+                          </tr>
+                        ) : (
+                          trainingBookings.map((b) => (
+                            <tr key={b.id} className={`hover:bg-muted/20 transition ${b.completed ? "opacity-60 bg-muted/5" : ""}`}>
+                              <td className="px-5 py-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={b.completed || false}
+                                  onChange={async (e) => {
+                                    try {
+                                      await dbService.updateTrainingBooking(b.id, { completed: e.target.checked });
+                                      refetchTraining();
+                                      toast.success(`Session marked as ${e.target.checked ? 'completed' : 'pending'}`);
+                                    } catch {
+                                      toast.error("Failed to update status");
+                                    }
+                                  }}
+                                  className="rounded text-primary h-5 w-5 border-input focus:ring-primary cursor-pointer accent-primary"
+                                />
+                              </td>
+                              <td className="px-5 py-3 font-semibold text-foreground">{b.ownerName}</td>
+                              <td className="px-5 py-3 text-foreground">{b.petName} <span className="text-muted-foreground">({b.breed}, {b.age})</span></td>
+                              <td className="px-5 py-3">
+                                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                                  b.trainingType === "Basic" ? "bg-emerald-500/10 text-emerald-600"
+                                    : b.trainingType === "Moderate" ? "bg-amber-500/10 text-amber-600"
+                                      : "bg-primary/10 text-primary"
+                                }`}>{b.trainingType}</span>
+                              </td>
+                              <td className="px-5 py-3 text-foreground">{b.preferredDate}</td>
+                              <td className="px-5 py-3 text-muted-foreground text-xs">{b.selectedCommands && b.selectedCommands.length > 0 ? b.selectedCommands.join(", ") : "—"}</td>
+                              <td className="px-5 py-3 text-muted-foreground text-xs">{b.medicalConditions}</td>
+                              <td className="px-5 py-3">
+                                {b.signatureDataUrl ? (
+                                  <div className="flex flex-col gap-1">
+                                    <img
+                                      src={b.signatureDataUrl}
+                                      alt="Signature"
+                                      className="h-8 max-w-[100px] object-contain bg-white border border-border rounded p-0.5"
+                                    />
+                                    <span className="text-[9px] font-semibold text-emerald-600">✓ Consent Granted</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground italic">—</span>
+                                )}
+                              </td>
+                              <td className="px-5 py-3 text-right">
+                                <div className="flex justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingTraining(b)}
+                                    className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition cursor-pointer"
+                                    title="Edit session details"
+                                  >
+                                    <FiEdit2 size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteBooking(b.id)}
+                                    className="p-2 rounded-full hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition cursor-pointer"
+                                    title="Cancel session"
+                                  >
+                                    <FiTrash2 size={14} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
+            ) : (
+              <div className="space-y-8 animate-fade-in">
+                {/* Hostelling Stats Row */}
+                <div className="grid md:grid-cols-3 gap-6">
+                  <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Total Stays Registered</div>
+                    <div className="mt-2 font-display text-4xl text-foreground">{hostellingBookings.length}</div>
+                  </div>
+                  <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Completed Stays</div>
+                    <div className="mt-2 font-display text-4xl text-emerald-600">
+                      {hostellingBookings.filter((b) => b.completed).length}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Active / Pending Stays</div>
+                    <div className="mt-2 font-display text-4xl text-amber-600">
+                      {hostellingBookings.filter((b) => !b.completed).length}
+                    </div>
+                  </div>
+                </div>
+
+                {/* All Hostelling Table */}
+                <div>
+                  <h3 className="font-display text-2xl mb-4 text-foreground">All Boarding Stays Records</h3>
+                  <div className="overflow-x-auto rounded-2xl border border-border shadow-sm">
+                    <table className="min-w-full bg-card text-sm text-left">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/30">
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground text-center">Completed</th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Parent Details</th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Pet Details</th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Duration</th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Behavior & Health</th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">Signature</th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {hostellingBookings.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="text-center py-10 text-muted-foreground italic">No hostelling stays yet.</td>
+                          </tr>
+                        ) : (
+                          hostellingBookings.map((b) => (
+                            <tr key={b.id} className={`hover:bg-muted/20 transition ${b.completed ? "opacity-60 bg-muted/5" : ""}`}>
+                              <td className="px-5 py-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={b.completed || false}
+                                  onChange={async (e) => {
+                                    try {
+                                      await dbService.updateHostellingBooking(b.id, { completed: e.target.checked });
+                                      refetchHostelling();
+                                      toast.success(`Stay marked as ${e.target.checked ? 'completed' : 'pending'}`);
+                                    } catch {
+                                      toast.error("Failed to update status");
+                                    }
+                                  }}
+                                  className="rounded text-primary h-5 w-5 border-input focus:ring-primary cursor-pointer accent-primary"
+                                />
+                              </td>
+                              <td className="px-5 py-3">
+                                <div className="font-semibold text-foreground">{b.parentName}</div>
+                                <div className="text-xs text-muted-foreground">{b.parentEmail}</div>
+                                <div className="text-xs text-muted-foreground">{b.parentPhone}</div>
+                              </td>
+                              <td className="px-5 py-3">
+                                <div className="font-semibold text-foreground">{b.petName}</div>
+                                <div className="text-xs text-muted-foreground">{b.petBreed} ({b.petGender}, {b.petAge})</div>
+                              </td>
+                              <td className="px-5 py-3">
+                                <div className="font-semibold text-primary">{b.numDays} Days</div>
+                                <div className="text-[10px] text-muted-foreground whitespace-nowrap">{b.checkInDate} to {b.checkOutDate}</div>
+                              </td>
+                              <td className="px-5 py-3">
+                                <div className="text-xs text-foreground">
+                                  Temperament: <span className={`font-semibold ${b.temperament === "Friendly" ? "text-emerald-600" : "text-amber-600"}`}>{b.temperament}</span>
+                                </div>
+                                <div className="text-[10px] text-muted-foreground mt-0.5">
+                                  Trained: {b.urineTrained && b.pottyTrained ? "Urine & Potty" : b.urineTrained ? "Urine Only" : b.pottyTrained ? "Potty Only" : "No"}
+                                </div>
+                                {b.medicalConditions && b.medicalConditions !== "N/A" && (
+                                  <div className="text-[10px] text-red-500 font-medium truncate max-w-[150px]" title={b.medicalConditions}>
+                                    Med: {b.medicalConditions}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-5 py-3">
+                                {b.signatureDataUrl ? (
+                                  <img
+                                    src={b.signatureDataUrl}
+                                    alt="Signature"
+                                    className="h-8 max-w-[100px] object-contain bg-white border border-border rounded p-0.5"
+                                  />
+                                ) : (
+                                  <span className="text-xs text-muted-foreground italic">—</span>
+                                )}
+                              </td>
+                              <td className="px-5 py-3 text-right">
+                                <div className="flex justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingHostelling(b)}
+                                    className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition cursor-pointer"
+                                    title="Edit stay details"
+                                  >
+                                    <FiEdit2 size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteHostelling(b.id)}
+                                    className="p-2 rounded-full hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition cursor-pointer"
+                                    title="Remove record"
+                                  >
+                                    <FiTrash2 size={14} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Modal: Edit Training Booking */}
+            {editingTraining && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in text-foreground">
+                <div className="relative w-full max-w-lg bg-card border border-border rounded-[2rem] p-8 shadow-2xl animate-scale-in">
+                  <button
+                    type="button"
+                    onClick={() => setEditingTraining(null)}
+                    className="absolute top-6 right-6 p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition cursor-pointer"
+                  >
+                    <FiX size={20} />
+                  </button>
+
+                  <h3 className="font-display text-2xl font-bold border-b border-border pb-4 mb-6">
+                    Edit Training Session
+                  </h3>
+
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      try {
+                        await dbService.updateTrainingBooking(editingTraining.id, {
+                          ownerName: editingTraining.ownerName,
+                          petName: editingTraining.petName,
+                          breed: editingTraining.breed,
+                          age: editingTraining.age,
+                          trainingType: editingTraining.trainingType,
+                          preferredDate: editingTraining.preferredDate,
+                          medicalConditions: editingTraining.medicalConditions,
+                        });
+                        setEditingTraining(null);
+                        refetchTraining();
+                        toast.success("Training booking successfully updated.");
+                      } catch {
+                        toast.error("Failed to update training booking.");
+                      }
+                    }}
+                    className="space-y-4 text-sm"
+                  >
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground">Owner Name</label>
+                      <input
+                        required
+                        type="text"
+                        className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
+                        value={editingTraining.ownerName}
+                        onChange={(e) => setEditingTraining({ ...editingTraining, ownerName: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground">Pet Name</label>
+                        <input
+                          required
+                          type="text"
+                          className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
+                          value={editingTraining.petName}
+                          onChange={(e) => setEditingTraining({ ...editingTraining, petName: e.target.value })}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground">Pet Breed</label>
+                        <input
+                          required
+                          type="text"
+                          className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
+                          value={editingTraining.breed}
+                          onChange={(e) => setEditingTraining({ ...editingTraining, breed: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground">Age</label>
+                        <input
+                          required
+                          type="text"
+                          className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
+                          value={editingTraining.age}
+                          onChange={(e) => setEditingTraining({ ...editingTraining, age: e.target.value })}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground">Training Type</label>
+                        <select
+                          className="rounded-full border border-input bg-background px-4 py-3 text-sm focus:outline-primary"
+                          value={editingTraining.trainingType}
+                          onChange={(e) => setEditingTraining({ ...editingTraining, trainingType: e.target.value as any })}
+                        >
+                          <option value="Basic">Basic</option>
+                          <option value="Moderate">Moderate</option>
+                          <option value="Advance">Advance</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground">Preferred Date</label>
+                      <input
+                        required
+                        type="date"
+                        className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
+                        value={editingTraining.preferredDate}
+                        onChange={(e) => setEditingTraining({ ...editingTraining, preferredDate: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground">Medical Conditions</label>
+                      <textarea
+                        rows={3}
+                        className="rounded-2xl border border-input bg-background px-5 py-3 text-sm focus:outline-primary resize-none"
+                        value={editingTraining.medicalConditions}
+                        onChange={(e) => setEditingTraining({ ...editingTraining, medicalConditions: e.target.value })}
+                      />
+                    </div>
+
+                    {editingTraining.signatureDataUrl && (
+                      <div className="border border-border/80 rounded-2xl bg-white p-4">
+                        <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-2">Virtual Signature Representation</div>
+                        <div className="border border-border/50 rounded-xl bg-card p-2 h-20 flex justify-center items-center">
+                          <img
+                            src={editingTraining.signatureDataUrl}
+                            alt="Signature"
+                            className="max-h-full max-w-full object-contain"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="pt-4 border-t border-border flex justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setEditingTraining(null)}
+                        className="rounded-full border border-border px-6 py-2.5 hover:bg-muted transition cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="rounded-full bg-primary text-primary-foreground font-semibold px-7 py-2.5 hover:opacity-90 transition cursor-pointer"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Modal: Edit Hostelling Stay */}
+            {editingHostelling && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in text-foreground">
+                <div className="relative w-full max-w-lg bg-card border border-border rounded-[2rem] p-8 shadow-2xl animate-scale-in">
+                  <button
+                    type="button"
+                    onClick={() => setEditingHostelling(null)}
+                    className="absolute top-6 right-6 p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition cursor-pointer"
+                  >
+                    <FiX size={20} />
+                  </button>
+
+                  <h3 className="font-display text-2xl font-bold border-b border-border pb-4 mb-6">
+                    Edit Boarding Stay
+                  </h3>
+
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const start = new Date(editingHostelling.checkInDate);
+                      const end = new Date(editingHostelling.checkOutDate);
+                      const diffTime = end.getTime() - start.getTime();
+                      const calculatedDays = Math.max(Math.ceil(diffTime / (1000 * 60 * 60 * 24)), 1);
+
+                      try {
+                        await dbService.updateHostellingBooking(editingHostelling.id, {
+                          parentName: editingHostelling.parentName,
+                          parentEmail: editingHostelling.parentEmail,
+                          parentPhone: editingHostelling.parentPhone,
+                          petName: editingHostelling.petName,
+                          petBreed: editingHostelling.petBreed,
+                          petGender: editingHostelling.petGender,
+                          petAge: editingHostelling.petAge,
+                          checkInDate: editingHostelling.checkInDate,
+                          checkOutDate: editingHostelling.checkOutDate,
+                          numDays: calculatedDays,
+                          temperament: editingHostelling.temperament,
+                          aggressionDetails: editingHostelling.aggressionDetails,
+                          urineTrained: editingHostelling.urineTrained,
+                          pottyTrained: editingHostelling.pottyTrained,
+                          medicalConditions: editingHostelling.medicalConditions,
+                        });
+                        setEditingHostelling(null);
+                        refetchHostelling();
+                        toast.success("Hostelling booking successfully updated.");
+                      } catch {
+                        toast.error("Failed to update hostelling booking.");
+                      }
+                    }}
+                    className="space-y-4 text-sm overflow-y-auto max-h-[80vh] pr-2"
+                  >
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground">Parent / Owner Name</label>
+                      <input
+                        required
+                        type="text"
+                        className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
+                        value={editingHostelling.parentName}
+                        onChange={(e) => setEditingHostelling({ ...editingHostelling, parentName: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground">Parent Email</label>
+                        <input
+                          required
+                          type="email"
+                          className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
+                          value={editingHostelling.parentEmail}
+                          onChange={(e) => setEditingHostelling({ ...editingHostelling, parentEmail: e.target.value })}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground">Parent Phone</label>
+                        <input
+                          required
+                          type="text"
+                          className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
+                          value={editingHostelling.parentPhone}
+                          onChange={(e) => setEditingHostelling({ ...editingHostelling, parentPhone: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground">Pet Name</label>
+                        <input
+                          required
+                          type="text"
+                          className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
+                          value={editingHostelling.petName}
+                          onChange={(e) => setEditingHostelling({ ...editingHostelling, petName: e.target.value })}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground">Breed</label>
+                        <input
+                          required
+                          type="text"
+                          className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
+                          value={editingHostelling.petBreed}
+                          onChange={(e) => setEditingHostelling({ ...editingHostelling, petBreed: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground">Gender</label>
+                        <select
+                          className="rounded-full border border-input bg-background px-4 py-3 text-sm focus:outline-primary"
+                          value={editingHostelling.petGender}
+                          onChange={(e) => setEditingHostelling({ ...editingHostelling, petGender: e.target.value as any })}
+                        >
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground">Age</label>
+                        <input
+                          required
+                          type="text"
+                          className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
+                          value={editingHostelling.petAge}
+                          onChange={(e) => setEditingHostelling({ ...editingHostelling, petAge: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground">Check-in Date</label>
+                        <input
+                          required
+                          type="date"
+                          className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
+                          value={editingHostelling.checkInDate}
+                          onChange={(e) => setEditingHostelling({ ...editingHostelling, checkInDate: e.target.value })}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground">Check-out Date</label>
+                        <input
+                          required
+                          type="date"
+                          className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
+                          value={editingHostelling.checkOutDate}
+                          onChange={(e) => setEditingHostelling({ ...editingHostelling, checkOutDate: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground">Temperament</label>
+                        <select
+                          className="rounded-full border border-input bg-background px-4 py-3 text-sm focus:outline-primary"
+                          value={editingHostelling.temperament}
+                          onChange={(e) => setEditingHostelling({ ...editingHostelling, temperament: e.target.value as any })}
+                        >
+                          <option value="Friendly">Friendly</option>
+                          <option value="Aggressive">Aggressive</option>
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-1.5 pt-5">
+                        <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            className="rounded text-primary h-4 w-4 border-input focus:ring-primary accent-primary"
+                            checked={editingHostelling.urineTrained}
+                            onChange={(e) => setEditingHostelling({ ...editingHostelling, urineTrained: e.target.checked })}
+                          />
+                          <span>Urine Trained</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-xs cursor-pointer select-none mt-2">
+                          <input
+                            type="checkbox"
+                            className="rounded text-primary h-4 w-4 border-input focus:ring-primary accent-primary"
+                            checked={editingHostelling.pottyTrained}
+                            onChange={(e) => setEditingHostelling({ ...editingHostelling, pottyTrained: e.target.checked })}
+                          />
+                          <span>Potty Trained</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {editingHostelling.temperament === "Aggressive" && (
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground">Aggression Details / Triggers</label>
+                        <input
+                          required
+                          type="text"
+                          className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
+                          value={editingHostelling.aggressionDetails || ""}
+                          onChange={(e) => setEditingHostelling({ ...editingHostelling, aggressionDetails: e.target.value })}
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground">Medical Conditions</label>
+                      <textarea
+                        rows={3}
+                        className="rounded-2xl border border-input bg-background px-5 py-3 text-sm focus:outline-primary resize-none"
+                        value={editingHostelling.medicalConditions}
+                        onChange={(e) => setEditingHostelling({ ...editingHostelling, medicalConditions: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="pt-4 border-t border-border flex justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setEditingHostelling(null)}
+                        className="rounded-full border border-border px-6 py-2.5 hover:bg-muted transition cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="rounded-full bg-primary text-primary-foreground font-semibold px-7 py-2.5 hover:opacity-90 transition cursor-pointer"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "contacts" && (
+          <div className="mt-8 space-y-8 animate-fade-in">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h2 className="font-display text-3xl">Contact Messages</h2>
+                <p className="text-sm text-muted-foreground">View and manage messages submitted through the contact form by website visitors.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl bg-card border border-border px-5 py-3 shadow-sm">
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Total Messages</span>
+                  <span className="ml-2 font-display text-2xl text-foreground">{contactSubmissions.length}</span>
+                </div>
+                <div className="rounded-2xl bg-card border border-border px-5 py-3 shadow-sm">
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Unread</span>
+                  <span className="ml-2 font-display text-2xl text-amber-500">{contactSubmissions.filter(c => !c.read).length}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-3xl bg-card border border-border shadow-sm">
+              <table className="min-w-full text-sm text-left">
+                <thead className="bg-muted/50 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <tr>
+                    <th className="px-6 py-4 text-center">Status</th>
+                    <th className="px-6 py-4">Name</th>
+                    <th className="px-6 py-4">Email</th>
+                    <th className="px-6 py-4">Subject</th>
+                    <th className="px-6 py-4">Message</th>
+                    <th className="px-6 py-4">Received At</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {contactsLoading ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-10 text-center text-muted-foreground animate-pulse">
+                        Loading contact messages...
+                      </td>
+                    </tr>
+                  ) : contactSubmissions.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-10 text-center text-muted-foreground">
+                        No contact messages have been received yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    contactSubmissions.map((c) => (
+                      <tr key={c.id} className={`hover:bg-muted/20 transition ${c.read ? "opacity-60" : ""}`}>
+                        <td className="px-6 py-4 text-center">
+                          {c.read ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                              <FiEye size={12} /> Read
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600">
+                              <FiMail size={12} /> New
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 font-semibold text-foreground">{c.name}</td>
+                        <td className="px-6 py-4 text-muted-foreground">
+                          <a href={`mailto:${c.email}`} className="hover:underline hover:text-accent transition">{c.email}</a>
+                        </td>
+                        <td className="px-6 py-4 font-medium text-foreground">{c.subject}</td>
+                        <td className="px-6 py-4 text-muted-foreground max-w-[250px]">
+                          <div className="line-clamp-2" title={c.message}>{c.message}</div>
+                        </td>
+                        <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
+                          {c.created_at ? new Date(c.created_at).toLocaleString() : "Recently"}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  await dbService.markContactSubmissionRead(c.id, !c.read);
+                                  refetchContacts();
+                                  toast.success(c.read ? "Marked as unread" : "Marked as read");
+                                } catch {
+                                  toast.error("Failed to update status");
+                                }
+                              }}
+                              className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition cursor-pointer"
+                              title={c.read ? "Mark as unread" : "Mark as read"}
+                            >
+                              {c.read ? <FiEyeOff size={14} /> : <FiEye size={14} />}
+                            </button>
+                            <a
+                              href={`mailto:${c.email}?subject=Re: ${encodeURIComponent(c.subject)}`}
+                              className="p-2 rounded-full hover:bg-accent/10 text-muted-foreground hover:text-accent transition"
+                              title="Reply via email"
+                            >
+                              <FiMail size={14} />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (!confirm(`Delete message from ${c.name}?`)) return;
+                                try {
+                                  await dbService.deleteContactSubmission(c.id);
+                                  refetchContacts();
+                                  toast.success("Message deleted.");
+                                } catch {
+                                  toast.error("Failed to delete message.");
+                                }
+                              }}
+                              className="p-2 rounded-full hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition cursor-pointer"
+                              title="Delete message"
+                            >
+                              <FiTrash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

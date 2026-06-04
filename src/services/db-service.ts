@@ -38,6 +38,18 @@ const openIndexedDB = (): Promise<IDBDatabase> => {
 
 const mediaCache: Record<string, string> = {};
 
+const base64ToBlob = (base64: string): Blob => {
+  const parts = base64.split(";base64,");
+  const contentType = parts[0].split(":")[1] || "image/jpeg";
+  const raw = window.atob(parts[1]);
+  const rawLength = raw.length;
+  const uInt8Array = new Uint8Array(rawLength);
+  for (let i = 0; i < rawLength; ++i) {
+    uInt8Array[i] = raw.charCodeAt(i);
+  }
+  return new Blob([uInt8Array], { type: contentType });
+};
+
 const DELETED_IDS_KEY = "pawhaven_deleted_pet_ids";
 
 const getDeletedPetIds = (): string[] => {
@@ -59,9 +71,9 @@ const addDeletedPetId = (id: string) => {
   }
 };
 
-// Preload all media from IndexedDB into mediaCache on app startup
+// Preload all media from IndexedDB into mediaCache as Blob URLs on app startup
 if (typeof window !== "undefined") {
-  setTimeout(async () => {
+  (async () => {
     try {
       const db = await openIndexedDB();
       const tx = db.transaction("media", "readonly");
@@ -70,44 +82,59 @@ if (typeof window !== "undefined") {
       req.onsuccess = (e: any) => {
         const cursor = e.target.result;
         if (cursor) {
-          mediaCache[cursor.key] = cursor.value;
+          const val = cursor.value;
+          if (typeof val === "string" && val.startsWith("data:")) {
+            try {
+              const blob = base64ToBlob(val);
+              mediaCache[cursor.key] = URL.createObjectURL(blob);
+            } catch {
+              mediaCache[cursor.key] = val;
+            }
+          } else {
+            mediaCache[cursor.key] = val;
+          }
           cursor.continue();
         }
       };
     } catch (e) {
       console.warn("Failed to preload media cache:", e);
     }
-  }, 100);
+  })();
 }
 
-// Background media pruner to remove heavy local base64 images/videos that stall the browser thread
-if (typeof window !== "undefined") {
-  setTimeout(async () => {
-    try {
-      const db = await openIndexedDB();
-      const tx = db.transaction("media", "readwrite");
-      const store = tx.objectStore("media");
-      const req = store.openCursor();
-      req.onsuccess = (e: any) => {
-        const cursor = e.target.result;
-        if (cursor) {
-          const value = cursor.value;
-          if (typeof value === "string" && value.length > 2 * 1024 * 1024) {
-            console.log(`Pruning large IndexedDB media key: ${cursor.key} (size: ${value.length})`);
-            cursor.delete();
-          }
-          cursor.continue();
-        }
-      };
-    } catch (e) {
-      console.warn("IndexedDB background pruning failed:", e);
-    }
-  }, 2000);
-}
+// Background media pruner disabled to prevent user-uploaded images and videos from being deleted from IndexedDB cache
+// if (typeof window !== "undefined") {
+//   setTimeout(async () => {
+//     try {
+//       const db = await openIndexedDB();
+//       const tx = db.transaction("media", "readwrite");
+//       const store = tx.objectStore("media");
+//       const req = store.openCursor();
+//       req.onsuccess = (e: any) => {
+//         const cursor = e.target.result;
+//         if (cursor) {
+//           const value = cursor.value;
+//           if (typeof value === "string" && value.length > 2 * 1024 * 1024) {
+//             console.log(`Pruning large IndexedDB media key: ${cursor.key} (size: ${value.length})`);
+//             cursor.delete();
+//           }
+//           cursor.continue();
+//         }
+//       };
+//     } catch (e) {
+//       console.warn("IndexedDB background pruning failed:", e);
+//     }
+//   }, 2000);
+// }
 
 const storeMedia = async (key: string, value: string): Promise<string> => {
   if (typeof window === "undefined" || !value || !value.startsWith("data:")) return value;
-  mediaCache[key] = value; // Update cache instantly
+  try {
+    const blob = base64ToBlob(value);
+    mediaCache[key] = URL.createObjectURL(blob);
+  } catch {
+    mediaCache[key] = value;
+  }
   try {
     const db = await openIndexedDB();
     await new Promise<void>((resolve, reject) => {
@@ -125,7 +152,18 @@ const storeMedia = async (key: string, value: string): Promise<string> => {
 };
 
 const loadMedia = async (value: string | null | undefined): Promise<string | null> => {
-  if (!value || !value.startsWith("indexeddb://")) return value || null;
+  if (!value) return null;
+  if (value.startsWith("blob:") || (!value.startsWith("indexeddb://") && !value.startsWith("data:"))) {
+    return value;
+  }
+  if (value.startsWith("data:")) {
+    try {
+      const blob = base64ToBlob(value);
+      return URL.createObjectURL(blob);
+    } catch {
+      return value;
+    }
+  }
   const key = value.replace("indexeddb://", "");
   if (mediaCache[key]) return mediaCache[key];
   try {
@@ -137,8 +175,16 @@ const loadMedia = async (value: string | null | undefined): Promise<string | nul
       req.onsuccess = () => resolve(req.result || null);
       req.onerror = () => reject(req.error);
     });
-    if (result) {
-      mediaCache[key] = result;
+    if (result && result.startsWith("data:")) {
+      try {
+        const blob = base64ToBlob(result);
+        const blobUrl = URL.createObjectURL(blob);
+        mediaCache[key] = blobUrl;
+        return blobUrl;
+      } catch {
+        mediaCache[key] = result;
+        return result;
+      }
     }
     return result;
   } catch (err) {
@@ -174,7 +220,7 @@ const withTimeout = <T>(promise: PromiseLike<T>, ms = 10000): Promise<T> => {
 };
 
 export const parseImages = (imageUrlString: string | null | undefined): string[] => {
-  if (!imageUrlString) return [];
+  if (!imageUrlString) return ["/pet-1.jpg"];
   const trimmed = imageUrlString.trim();
   if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
     try {
@@ -183,7 +229,7 @@ export const parseImages = (imageUrlString: string | null | undefined): string[]
         return parsed.map((item) => {
           if (typeof item === "string" && item.startsWith("indexeddb://")) {
             const key = item.replace("indexeddb://", "");
-            return mediaCache[key] || item;
+            return mediaCache[key] || "/pet-1.jpg";
           }
           return item;
         });
@@ -194,7 +240,7 @@ export const parseImages = (imageUrlString: string | null | undefined): string[]
   }
   if (trimmed.startsWith("indexeddb://")) {
     const key = trimmed.replace("indexeddb://", "");
-    return [mediaCache[key] || trimmed];
+    return [mediaCache[key] || "/pet-1.jpg"];
   }
   return [imageUrlString];
 };
@@ -263,6 +309,7 @@ export interface Consultation {
   name: string;
   email: string;
   pet_type: string;
+  breed?: string | null;
   price_min: number;
   price_max: number;
   created_at?: string;
@@ -302,6 +349,35 @@ export interface TrainingBooking {
   selectedCommands: string[];
   medicalConditions: string;
   createdAt: string;
+  completed?: boolean;
+  liabilityAccepted?: boolean;
+  consentGiven?: boolean;
+  signatureDataUrl?: string | null;
+}
+
+export interface HostellingBooking {
+  id: string;
+  user_id: string | null;
+  parentName: string;
+  parentEmail: string;
+  parentPhone: string;
+  petName: string;
+  petBreed: string;
+  petGender: "Male" | "Female";
+  petAge: string;
+  medicalConditions: string;
+  medicalImage: string;
+  temperament: "Friendly" | "Aggressive";
+  aggressionDetails?: string;
+  urineTrained: boolean;
+  pottyTrained: boolean;
+  checkInDate: string;
+  checkOutDate: string;
+  numDays: number;
+  signatureDataUrl: string;
+  completed: boolean;
+  createdAt: string;
+  submittedAt?: string;
 }
 
 const LOCAL_STORAGE_KEY = "pawhaven_pets";
@@ -309,6 +385,7 @@ const CONSULTATIONS_LOCAL_KEY = "pawhaven_consultations";
 const CONSENTS_LOCAL_KEY = "pawhaven_liability_consent";
 const REVIEWS_LOCAL_KEY = "pawhaven_pet_reviews";
 const TRAINING_BOOKINGS_LOCAL_KEY = "pawhaven_training_bookings";
+const HOSTELLING_BOOKINGS_LOCAL_KEY = "pawhaven_hostelling_bookings_list";
 
 const DEFAULT_REVIEWS: Review[] = [
   { id: "1", petId: "d1111111-1111-1111-1111-111111111111", author: "Sarah M.", rating: 5, text: "Milo is a bundle of joy! Very healthy and well-behaved.", date: "2026-05-15" },
@@ -473,7 +550,11 @@ export const dbService = {
         return DEFAULT_PETS;
       }
       let changed = false;
-      const cleaned = parsed.map(pet => {
+      const filtered = parsed.filter(pet => pet.name.toLowerCase() !== "bella");
+      if (filtered.length !== parsed.length) {
+        changed = true;
+      }
+      const cleaned = filtered.map(pet => {
         let cleanImg = pet.image_url;
         let cleanVid = pet.video_url;
         // If it's a huge base64 in local storage
@@ -685,7 +766,7 @@ export const dbService = {
       const activeData = combinedRemoteData.filter((sp: any) => !deletedIds.includes(sp.id));
 
       // Merge Supabase data with local videos/details (keeping light indexeddb:// references)
-      const merged = activeData.map((sp: any) => {
+      const mergedRaw = activeData.map((sp: any) => {
         const lp = localPets.find((l) => l.name.toLowerCase() === sp.name.toLowerCase() || l.id === sp.id);
         const rawImg = sp.image_url || lp?.image_url || pet1;
         const rawVid = sp.video_url || lp?.video_url || null;
@@ -705,6 +786,9 @@ export const dbService = {
           created_at: sp.created_at,
         };
       });
+
+      // Cache base64 media from Supabase into IndexedDB and convert to indexeddb:// references
+      const merged = await Promise.all(mergedRaw.map((p) => this.cacheRemoteMedia(p)));
 
       // Find local pets that are NOT in the Supabase data (i.e. newly created locally, or pending remote sync)
       const localOnly = localPets.filter(
@@ -738,6 +822,101 @@ export const dbService = {
         };
       })
     );
+  },
+
+  // Helper to cache remote base64 media into IndexedDB
+  async cacheRemoteMedia(pet: any): Promise<any> {
+    let image_url = pet.image_url;
+    let video_url = pet.video_url;
+
+    if (image_url && (image_url.startsWith("data:") || (image_url.startsWith("[") && image_url.includes("data:")))) {
+      image_url = await storeMediaArrayOrSingle(`pet_img_${pet.id}`, image_url);
+    }
+    if (video_url && video_url.startsWith("data:")) {
+      video_url = await storeMedia(`pet_vid_${pet.id}`, video_url);
+    }
+
+    return {
+      ...pet,
+      image_url,
+      video_url,
+    };
+  },
+
+  // Helper to sync any local-only pets to Supabase
+  async syncLocalOnlyPets(): Promise<void> {
+    if (typeof window === "undefined") return;
+    const localPets = this.initLocalData();
+    const deletedIds = getDeletedPetIds();
+
+    try {
+      const { data: standardData, error: standardError } = await supabase.from("pets").select("id, name");
+      const { data: exoticData, error: exoticError } = await supabase.from("exotic_pets").select("id, name");
+
+      if (standardError || exoticError) {
+        console.warn("Failed to fetch remote pets for sync check:", standardError || exoticError);
+        return;
+      }
+
+      const remoteIds = new Set([
+        ...(standardData || []).map((p: any) => p.id),
+        ...(exoticData || []).map((p: any) => p.id)
+      ]);
+      const remoteNames = new Set([
+        ...(standardData || []).map((p: any) => p.name.toLowerCase()),
+        ...(exoticData || []).map((p: any) => p.name.toLowerCase())
+      ]);
+
+      const localOnly = localPets.filter(
+        (lp) => !deletedIds.includes(lp.id) && !remoteIds.has(lp.id) && !remoteNames.has(lp.name.toLowerCase())
+      );
+
+      if (localOnly.length === 0) {
+        console.log("No local-only pets to sync.");
+        return;
+      }
+
+      console.log(`Syncing ${localOnly.length} local-only pets to Supabase:`, localOnly.map(p => p.name));
+
+      for (const pet of localOnly) {
+        const resolvedImg = await loadMediaArrayOrSingle(pet.image_url);
+        const resolvedVid = await loadMedia(pet.video_url);
+
+        const isExotic = pet.type.toLowerCase() === "exotic";
+        const payload = {
+          id: pet.id,
+          name: pet.name,
+          type: pet.type,
+          breed: pet.breed,
+          age: pet.age,
+          price: pet.price,
+          image_url: resolvedImg || pet.image_url,
+          video_url: resolvedVid || pet.video_url || null,
+          description: pet.description,
+          vaccinated: pet.vaccinated,
+          adoption: pet.adoption,
+          status: pet.status,
+        };
+
+        if (isExotic) {
+          const { error } = await supabase.from("exotic_pets").insert([payload]);
+          if (error) {
+            console.warn(`Sync failed for exotic pet "${pet.name}":`, error.message);
+          } else {
+            console.log(`Successfully synced exotic pet "${pet.name}" to Supabase.`);
+          }
+        } else {
+          const { error } = await (supabase.from("pets") as any).insert([payload]);
+          if (error) {
+            console.warn(`Sync failed for pet "${pet.name}":`, error.message);
+          } else {
+            console.log(`Successfully synced pet "${pet.name}" to Supabase.`);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to check/sync local-only pets:", err);
+    }
   },
 
   // GET SINGLE PET BY ID
@@ -911,8 +1090,8 @@ export const dbService = {
       breed: petInput.breed,
       age: petInput.age,
       price: petInput.price,
-      image_url: storedImageUrl,
-      video_url: storedVideoUrl,
+      image_url: petInput.image_url,
+      video_url: petInput.video_url,
       description: petInput.description,
       vaccinated: petInput.vaccinated,
       adoption: petInput.adoption,
@@ -920,26 +1099,15 @@ export const dbService = {
     };
 
     if (isExotic) {
-      Promise.resolve(
-        supabase.from("exotic_pets").insert([payload])
-      ).then(({ error }) => {
-        if (error) {
-          console.warn("Could not save pet to Supabase exotic_pets table:", error.message);
-        }
-      }).catch((err: any) => {
-        console.warn("Supabase insert failed, pet saved to local storage only:", err);
-      });
+      const { error } = await supabase.from("exotic_pets").insert([payload]);
+      if (error) {
+        throw new Error(`Failed to save exotic pet to database: ${error.message}`);
+      }
     } else {
-      const { video_url, ...standardPayload } = payload;
-      Promise.resolve(
-        supabase.from("pets").insert([standardPayload])
-      ).then(({ error }) => {
-        if (error) {
-          console.warn("Could not save pet to Supabase pets table:", error.message);
-        }
-      }).catch((err: any) => {
-        console.warn("Supabase insert failed, pet saved to local storage only:", err);
-      });
+      const { error } = await (supabase.from("pets") as any).insert([payload]);
+      if (error) {
+        throw new Error(`Failed to save pet to database: ${error.message}`);
+      }
     }
 
     // Return the resolved pet so client gets actual values
@@ -956,13 +1124,19 @@ export const dbService = {
     const index = localPets.findIndex((p) => p.id === id);
     let updatedPet = localPets[index];
 
+    const currentBase64Img = updatedPet ? await loadMediaArrayOrSingle(updatedPet.image_url) : null;
+    const currentBase64Vid = updatedPet ? await loadMedia(updatedPet.video_url) : null;
+
+    const hasImageChanged = petInput.image_url !== undefined && petInput.image_url !== currentBase64Img && petInput.image_url !== updatedPet?.image_url;
+    const hasVideoChanged = petInput.video_url !== undefined && petInput.video_url !== currentBase64Vid && petInput.video_url !== updatedPet?.video_url;
+
     let storedImageUrl = updatedPet ? updatedPet.image_url : petInput.image_url;
-    if (petInput.image_url && (!updatedPet || petInput.image_url !== updatedPet.image_url)) {
+    if (hasImageChanged && petInput.image_url) {
       storedImageUrl = await storeMediaArrayOrSingle(`pet_img_${id}`, petInput.image_url);
     }
 
     let storedVideoUrl = updatedPet ? updatedPet.video_url : petInput.video_url;
-    if (petInput.video_url !== undefined && (!updatedPet || petInput.video_url !== updatedPet.video_url)) {
+    if (hasVideoChanged) {
       storedVideoUrl = petInput.video_url
         ? await storeMedia(`pet_vid_${id}`, petInput.video_url)
         : null;
@@ -985,57 +1159,58 @@ export const dbService = {
     const isExoticNew = newType.toLowerCase() === "exotic";
     const isExoticOld = updatedPet ? updatedPet.type.toLowerCase() === "exotic" : false;
 
-    // Construct the fully merged payload (to support table transfers if classification changes)
-    const fullPayload = {
-      id,
-      name: petInput.name !== undefined ? petInput.name : (updatedPet?.name || ""),
-      type: newType,
-      breed: petInput.breed !== undefined ? petInput.breed : (updatedPet?.breed || ""),
-      age: petInput.age !== undefined ? petInput.age : (updatedPet?.age || ""),
-      price: petInput.price !== undefined ? petInput.price : (updatedPet?.price || 0),
-      image_url: storedImageUrl || updatedPet?.image_url || "",
-      video_url: storedVideoUrl !== undefined ? storedVideoUrl : (updatedPet?.video_url || null),
-      description: petInput.description !== undefined ? petInput.description : (updatedPet?.description || ""),
-      vaccinated: petInput.vaccinated !== undefined ? petInput.vaccinated : (updatedPet?.vaccinated || false),
-      adoption: petInput.adoption !== undefined ? petInput.adoption : (updatedPet?.adoption || false),
-      status: petInput.status !== undefined ? petInput.status : (updatedPet?.status || "available"),
-    };
-
     if (isExoticNew !== isExoticOld) {
       // Classification changed: delete from old table, insert/upsert into new table
+      // Construct the fully merged payload (to support table transfers if classification changes)
+      const fullPayload = {
+        id,
+        name: petInput.name !== undefined ? petInput.name : (updatedPet?.name || ""),
+        type: newType,
+        breed: petInput.breed !== undefined ? petInput.breed : (updatedPet?.breed || ""),
+        age: petInput.age !== undefined ? petInput.age : (updatedPet?.age || ""),
+        price: petInput.price !== undefined ? petInput.price : (updatedPet?.price || 0),
+        image_url: petInput.image_url !== undefined ? petInput.image_url : (currentBase64Img || updatedPet?.image_url || ""),
+        video_url: petInput.video_url !== undefined ? petInput.video_url : (currentBase64Vid || updatedPet?.video_url || null),
+        description: petInput.description !== undefined ? petInput.description : (updatedPet?.description || ""),
+        vaccinated: petInput.vaccinated !== undefined ? petInput.vaccinated : (updatedPet?.vaccinated || false),
+        adoption: petInput.adoption !== undefined ? petInput.adoption : (updatedPet?.adoption || false),
+        status: petInput.status !== undefined ? petInput.status : (updatedPet?.status || "available"),
+      };
+
       if (isExoticNew) {
         // Standard -> Exotic
-        Promise.resolve(supabase.from("pets").delete().eq("id", id)).catch(() => {});
-        Promise.resolve(
-          supabase.from("exotic_pets").upsert([fullPayload])
-        ).then(({ error }) => {
-          if (error) console.warn("Could not insert exotic pet during transition:", error.message);
-        }).catch((err) => console.warn("Supabase transition failed:", err));
+        await supabase.from("pets").delete().eq("id", id);
+        const { error } = await supabase.from("exotic_pets").upsert([fullPayload]);
+        if (error) throw new Error(`Failed to save exotic pet: ${error.message}`);
       } else {
         // Exotic -> Standard
-        Promise.resolve(supabase.from("exotic_pets").delete().eq("id", id)).catch(() => {});
-        const { video_url, ...standardPayload } = fullPayload;
-        Promise.resolve(
-          supabase.from("pets").upsert([standardPayload])
-        ).then(({ error }) => {
-          if (error) console.warn("Could not insert standard pet during transition:", error.message);
-        }).catch((err) => console.warn("Supabase transition failed:", err));
+        await supabase.from("exotic_pets").delete().eq("id", id);
+        const { error } = await (supabase.from("pets") as any).upsert([fullPayload]);
+        if (error) throw new Error(`Failed to save pet: ${error.message}`);
       }
     } else {
-      // Classification didn't change: just update the matching table
-      if (isExoticNew) {
-        Promise.resolve(
-          supabase.from("exotic_pets").update(fullPayload).eq("id", id)
-        ).then(({ error }) => {
-          if (error) console.warn("Could not update pet in Supabase exotic_pets table:", error.message);
-        }).catch((err: any) => console.warn("Supabase update failed:", err));
-      } else {
-        const { video_url, ...standardPayload } = fullPayload;
-        Promise.resolve(
-          supabase.from("pets").update(standardPayload).eq("id", id)
-        ).then(({ error }) => {
-          if (error) console.warn("Could not update pet in Supabase pets table:", error.message);
-        }).catch((err: any) => console.warn("Supabase update failed:", err));
+      // Classification didn't change: just update the matching table using partial payload (extremely fast!)
+      const partialPayload: any = {};
+      if (petInput.name !== undefined) partialPayload.name = petInput.name;
+      if (petInput.type !== undefined) partialPayload.type = petInput.type;
+      if (petInput.breed !== undefined) partialPayload.breed = petInput.breed;
+      if (petInput.age !== undefined) partialPayload.age = petInput.age;
+      if (petInput.price !== undefined) partialPayload.price = petInput.price;
+      if (hasImageChanged) partialPayload.image_url = petInput.image_url;
+      if (hasVideoChanged) partialPayload.video_url = petInput.video_url;
+      if (petInput.description !== undefined) partialPayload.description = petInput.description;
+      if (petInput.vaccinated !== undefined) partialPayload.vaccinated = petInput.vaccinated;
+      if (petInput.adoption !== undefined) partialPayload.adoption = petInput.adoption;
+      if (petInput.status !== undefined) partialPayload.status = petInput.status;
+
+      if (Object.keys(partialPayload).length > 0) {
+        if (isExoticNew) {
+          const { error } = await supabase.from("exotic_pets").update(partialPayload).eq("id", id);
+          if (error) throw new Error(`Failed to update exotic pet: ${error.message}`);
+        } else {
+          const { error } = await (supabase.from("pets") as any).update(partialPayload).eq("id", id);
+          if (error) throw new Error(`Failed to update pet: ${error.message}`);
+        }
       }
     }
 
@@ -1100,8 +1275,8 @@ export const dbService = {
       }
     }
     try {
-      const { data, error } = await withTimeout(
-        supabase
+      const { data, error } = await withTimeout<any>(
+        (supabase as any)
           .from("consultations")
           .select("*")
           .order("created_at", { ascending: false })
@@ -1141,23 +1316,23 @@ export const dbService = {
       localStorage.setItem(CONSULTATIONS_LOCAL_KEY, JSON.stringify(list));
     }
 
-    Promise.resolve(
-      supabase.from("consultations").insert([
+    try {
+      const { error } = await (supabase as any).from("consultations").insert([
         {
           name: newConsultation.name,
           email: newConsultation.email,
           pet_type: newConsultation.pet_type,
+          breed: newConsultation.breed,
           price_min: Number(newConsultation.price_min),
           price_max: Number(newConsultation.price_max),
         }
-      ])
-    ).then(({ error }) => {
+      ]);
       if (error) {
         console.warn("Could not save consultation to Supabase (saved locally instead):", error.message);
       }
-    }).catch((err: any) => {
+    } catch (err: any) {
       console.warn("Supabase consultation insert failed, saved locally:", err);
-    });
+    }
 
     return newConsultation;
   },
@@ -1315,8 +1490,8 @@ export const dbService = {
       localStorage.setItem(REVIEWS_LOCAL_KEY, JSON.stringify(updated));
     }
 
-    Promise.resolve(
-      (supabase as any).from("pet_reviews").insert([
+    try {
+      const { error } = await (supabase as any).from("pet_reviews").insert([
         {
           id: newReview.id,
           pet_id: newReview.petId,
@@ -1324,14 +1499,13 @@ export const dbService = {
           rating: newReview.rating,
           text: newReview.text,
         }
-      ])
-    ).then(({ error }) => {
+      ]);
       if (error) {
         console.warn("Could not save review to Supabase (saved locally instead):", error.message);
       }
-    }).catch((err: any) => {
+    } catch (err: any) {
       console.warn("Supabase review insert failed, saved locally:", err);
-    });
+    }
 
     return newReview;
   },
@@ -1349,18 +1523,17 @@ export const dbService = {
       localStorage.setItem(REVIEWS_LOCAL_KEY, JSON.stringify(updated));
     }
 
-    Promise.resolve(
-      (supabase as any)
+    try {
+      const { error } = await (supabase as any)
         .from("pet_reviews")
         .update({ rating, text })
-        .eq("id", id)
-    ).then(({ error }) => {
+        .eq("id", id);
       if (error) {
         console.warn("Could not update review in Supabase (updated locally instead):", error.message);
       }
-    }).catch((err: any) => {
+    } catch (err: any) {
       console.warn("Supabase review update failed, updated locally:", err);
-    });
+    }
 
     const allLocal = this.initLocalReviews();
     const updatedReview = allLocal.find((r) => r.id === id);
@@ -1378,54 +1551,122 @@ export const dbService = {
       localStorage.setItem(REVIEWS_LOCAL_KEY, JSON.stringify(updated));
     }
 
-    Promise.resolve(
-      (supabase as any)
+    try {
+      const { error } = await (supabase as any)
         .from("pet_reviews")
         .delete()
-        .eq("id", id)
-    ).then(({ error }) => {
+        .eq("id", id);
       if (error) {
         console.warn("Could not delete review from Supabase (deleted locally instead):", error.message);
       }
-    }).catch((err: any) => {
+    } catch (err: any) {
       console.warn("Supabase review delete failed, deleted locally:", err);
-    });
+    }
   },
 
   // ─── TRAINING BOOKINGS ───────────────────────────────────────────
 
   // GET ALL TRAINING BOOKINGS (admin view — returns full details)
-  getTrainingBookings(): TrainingBooking[] {
+  async getTrainingBookings(): Promise<TrainingBooking[]> {
     if (typeof window === "undefined") return [];
-    const stored = localStorage.getItem(TRAINING_BOOKINGS_LOCAL_KEY);
-    if (!stored) return [];
+    const localVal = localStorage.getItem(TRAINING_BOOKINGS_LOCAL_KEY);
+    let fallback: TrainingBooking[] = [];
+    if (localVal) {
+      try {
+        fallback = JSON.parse(localVal);
+      } catch {
+        fallback = [];
+      }
+    }
     try {
-      return JSON.parse(stored) as TrainingBooking[];
-    } catch {
-      return [];
+      const { data, error } = await withTimeout<any>(
+        (supabase as any)
+          .from("training_bookings")
+          .select("*")
+          .order("created_at", { ascending: false })
+      );
+
+      if (error) {
+        console.warn("Supabase training_bookings fetch failed, using local fallback:", error.message);
+        return fallback;
+      }
+
+      const remoteBookings: TrainingBooking[] = (data || []).map((row: any) => ({
+        id: row.id,
+        user_id: row.user_id,
+        ownerName: row.owner_name,
+        petName: row.pet_name,
+        breed: row.breed || "",
+        age: row.age || "",
+        trainingType: row.training_type as "Basic" | "Moderate" | "Advance",
+        preferredDate: row.preferred_date,
+        selectedCommands: row.selected_commands || [],
+        medicalConditions: row.medical_conditions || "",
+        createdAt: row.created_at,
+        completed: !!row.completed,
+        liabilityAccepted: row.liability_accepted,
+        consentGiven: row.consent_given,
+        signatureDataUrl: row.signature_data_url,
+      }));
+
+      localStorage.setItem(TRAINING_BOOKINGS_LOCAL_KEY, JSON.stringify(remoteBookings));
+      return remoteBookings;
+    } catch (err) {
+      console.warn("Error in getTrainingBookings, returning local fallback:", err);
+      return fallback;
     }
   },
 
-  // GET BOOKED DATES ONLY (user view — no personal data exposed)
-  getBookedDates(maxPerDay: number = 3): { bookedDates: string[]; dateCounts: Record<string, number> } {
-    const bookings = this.getTrainingBookings();
-    const counts: Record<string, number> = {};
-    for (const b of bookings) {
-      counts[b.preferredDate] = (counts[b.preferredDate] || 0) + 1;
+  // GET BOOKED DATES ONLY (user view — no personal data exposed, uses RPC)
+  async getBookedDates(maxPerDay: number = 3): Promise<{ bookedDates: string[]; dateCounts: Record<string, number> }> {
+    try {
+      const { data, error } = await withTimeout<any>(
+        (supabase as any).rpc("get_training_date_counts")
+      );
+
+      if (error) {
+        console.warn("Supabase RPC failed, calculating from local cache:", error.message);
+        const bookings = await this.getTrainingBookings();
+        const counts: Record<string, number> = {};
+        for (const b of bookings) {
+          counts[b.preferredDate] = (counts[b.preferredDate] || 0) + 1;
+        }
+        const bookedDates = Object.entries(counts)
+          .filter(([, count]) => count >= maxPerDay)
+          .map(([date]) => date);
+        return { bookedDates, dateCounts: counts };
+      }
+
+      const counts: Record<string, number> = {};
+      (data || []).forEach((row: any) => {
+        counts[row.preferred_date] = Number(row.booking_count);
+      });
+      const bookedDates = Object.entries(counts)
+        .filter(([, count]) => count >= maxPerDay)
+        .map(([date]) => date);
+      return { bookedDates, dateCounts: counts };
+    } catch (err) {
+      console.warn("Error in getBookedDates, using local fallback:", err);
+      const bookings = await this.getTrainingBookings();
+      const counts: Record<string, number> = {};
+      for (const b of bookings) {
+        counts[b.preferredDate] = (counts[b.preferredDate] || 0) + 1;
+      }
+      const bookedDates = Object.entries(counts)
+        .filter(([, count]) => count >= maxPerDay)
+        .map(([date]) => date);
+      return { bookedDates, dateCounts: counts };
     }
-    const bookedDates = Object.entries(counts)
-      .filter(([, count]) => count >= maxPerDay)
-      .map(([date]) => date);
-    return { bookedDates, dateCounts: counts };
   },
 
   // CREATE TRAINING BOOKING
-  createTrainingBooking(input: Omit<TrainingBooking, "id" | "createdAt">): TrainingBooking {
+  async createTrainingBooking(input: Omit<TrainingBooking, "id" | "createdAt" | "completed">): Promise<TrainingBooking> {
     const newId = safeUUID();
     const newBooking: TrainingBooking = {
       ...input,
       id: newId,
       createdAt: new Date().toISOString(),
+      completed: false,
     };
 
     if (typeof window !== "undefined") {
@@ -1442,15 +1683,381 @@ export const dbService = {
       localStorage.setItem(TRAINING_BOOKINGS_LOCAL_KEY, JSON.stringify(list));
     }
 
+    Promise.resolve(
+      (supabase as any).from("training_bookings").insert([
+        {
+          id: newBooking.id,
+          user_id: newBooking.user_id || null,
+          owner_name: newBooking.ownerName,
+          pet_name: newBooking.petName,
+          breed: newBooking.breed,
+          age: newBooking.age,
+          training_type: newBooking.trainingType,
+          preferred_date: newBooking.preferredDate,
+          selected_commands: newBooking.selectedCommands,
+          medical_conditions: newBooking.medicalConditions,
+          completed: false,
+          liability_accepted: newBooking.liabilityAccepted || false,
+          consent_given: newBooking.consentGiven || false,
+          signature_data_url: newBooking.signatureDataUrl || null,
+        }
+      ])
+    ).then(({ error }) => {
+      if (error) {
+        console.warn("Could not save training booking to Supabase (saved locally):", error.message);
+      }
+    }).catch((err: any) => {
+      console.warn("Supabase training insert failed, saved locally:", err);
+    });
+
     return newBooking;
   },
 
+  // UPDATE TRAINING BOOKING
+  async updateTrainingBooking(id: string, updates: Partial<TrainingBooking>): Promise<TrainingBooking> {
+    if (typeof window !== "undefined") {
+      const current = localStorage.getItem(TRAINING_BOOKINGS_LOCAL_KEY);
+      if (current) {
+        try {
+          const list = JSON.parse(current) as TrainingBooking[];
+          const index = list.findIndex(b => b.id === id);
+          if (index !== -1) {
+            list[index] = { ...list[index], ...updates };
+            localStorage.setItem(TRAINING_BOOKINGS_LOCAL_KEY, JSON.stringify(list));
+          }
+        } catch {}
+      }
+    }
+
+    const dbPayload: any = {};
+    if (updates.ownerName !== undefined) dbPayload.owner_name = updates.ownerName;
+    if (updates.petName !== undefined) dbPayload.pet_name = updates.petName;
+    if (updates.breed !== undefined) dbPayload.breed = updates.breed;
+    if (updates.age !== undefined) dbPayload.age = updates.age;
+    if (updates.trainingType !== undefined) dbPayload.training_type = updates.trainingType;
+    if (updates.preferredDate !== undefined) dbPayload.preferred_date = updates.preferredDate;
+    if (updates.selectedCommands !== undefined) dbPayload.selected_commands = updates.selectedCommands;
+    if (updates.medicalConditions !== undefined) dbPayload.medical_conditions = updates.medicalConditions;
+    if (updates.completed !== undefined) dbPayload.completed = updates.completed;
+    if (updates.liabilityAccepted !== undefined) dbPayload.liability_accepted = updates.liabilityAccepted;
+    if (updates.consentGiven !== undefined) dbPayload.consent_given = updates.consentGiven;
+    if (updates.signatureDataUrl !== undefined) dbPayload.signature_data_url = updates.signatureDataUrl;
+
+    const { error } = await (supabase as any)
+      .from("training_bookings")
+      .update(dbPayload)
+      .eq("id", id);
+
+    if (error) {
+      console.warn("Could not update training booking in Supabase:", error.message);
+    }
+
+    const updatedList = await this.getTrainingBookings();
+    const updated = updatedList.find(b => b.id === id);
+    if (!updated) throw new Error("Booking not found after update");
+    return updated;
+  },
+
   // DELETE TRAINING BOOKING (admin action)
-  deleteTrainingBooking(id: string): boolean {
+  async deleteTrainingBooking(id: string): Promise<boolean> {
     if (typeof window === "undefined") return false;
-    const bookings = this.getTrainingBookings();
+    const bookings = await this.getTrainingBookings();
     const filtered = bookings.filter((b) => b.id !== id);
     localStorage.setItem(TRAINING_BOOKINGS_LOCAL_KEY, JSON.stringify(filtered));
+
+    const { error } = await (supabase as any)
+      .from("training_bookings")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.warn("Could not delete training booking from Supabase:", error.message);
+    }
     return true;
   },
+
+  // ─── HOSTELLING BOOKINGS ───────────────────────────────────────────
+
+  // GET ALL HOSTELLING BOOKINGS
+  async getHostellingBookings(): Promise<HostellingBooking[]> {
+    if (typeof window === "undefined") return [];
+    const localVal = localStorage.getItem(HOSTELLING_BOOKINGS_LOCAL_KEY);
+    let fallback: HostellingBooking[] = [];
+    if (localVal) {
+      try {
+        fallback = JSON.parse(localVal);
+      } catch {
+        fallback = [];
+      }
+    }
+    try {
+      const { data, error } = await withTimeout<any>(
+        (supabase as any)
+          .from("hostelling_bookings")
+          .select("*")
+          .order("created_at", { ascending: false })
+      );
+
+      if (error) {
+        console.warn("Supabase hostelling_bookings fetch failed, using local fallback:", error.message);
+        return fallback;
+      }
+
+      const remoteBookings: HostellingBooking[] = (data || []).map((row: any) => ({
+        id: row.id,
+        user_id: row.user_id,
+        parentName: row.parent_name,
+        parentEmail: row.parent_email,
+        parentPhone: row.parent_phone,
+        petName: row.pet_name,
+        petBreed: row.pet_breed,
+        petGender: row.pet_gender as "Male" | "Female",
+        petAge: row.pet_age,
+        medicalConditions: row.medical_conditions || "",
+        medicalImage: row.medical_image || "",
+        temperament: row.temperament as "Friendly" | "Aggressive",
+        aggressionDetails: row.aggression_details,
+        urineTrained: !!row.urine_trained,
+        pottyTrained: !!row.potty_trained,
+        checkInDate: row.check_in_date,
+        checkOutDate: row.check_out_date,
+        numDays: Number(row.num_days),
+        signatureDataUrl: row.signature_data_url,
+        completed: !!row.completed,
+        createdAt: row.created_at,
+        submittedAt: new Date(row.created_at).toLocaleString(),
+      }));
+
+      localStorage.setItem(HOSTELLING_BOOKINGS_LOCAL_KEY, JSON.stringify(remoteBookings));
+      return remoteBookings;
+    } catch (err) {
+      console.warn("Error in getHostellingBookings, returning local fallback:", err);
+      return fallback;
+    }
+  },
+
+  // CREATE HOSTELLING BOOKING
+  async createHostellingBooking(input: Omit<HostellingBooking, "id" | "createdAt" | "completed" | "submittedAt">): Promise<HostellingBooking> {
+    const newId = safeUUID();
+    const newBooking: HostellingBooking = {
+      ...input,
+      id: newId,
+      createdAt: new Date().toISOString(),
+      submittedAt: new Date().toLocaleString(),
+      completed: false,
+    };
+
+    if (typeof window !== "undefined") {
+      const current = localStorage.getItem(HOSTELLING_BOOKINGS_LOCAL_KEY);
+      let list: HostellingBooking[] = [];
+      if (current) {
+        try {
+          list = JSON.parse(current);
+        } catch {
+          list = [];
+        }
+      }
+      list.unshift(newBooking);
+      localStorage.setItem(HOSTELLING_BOOKINGS_LOCAL_KEY, JSON.stringify(list));
+    }
+
+    Promise.resolve(
+      (supabase as any).from("hostelling_bookings").insert([
+        {
+          id: newBooking.id,
+          user_id: newBooking.user_id || null,
+          parent_name: newBooking.parentName,
+          parent_email: newBooking.parentEmail,
+          parent_phone: newBooking.parentPhone,
+          pet_name: newBooking.petName,
+          pet_breed: newBooking.petBreed,
+          pet_gender: newBooking.petGender,
+          pet_age: newBooking.petAge,
+          medical_conditions: newBooking.medicalConditions,
+          medical_image: newBooking.medicalImage,
+          temperament: newBooking.temperament,
+          aggression_details: newBooking.aggressionDetails,
+          urine_trained: newBooking.urineTrained,
+          potty_trained: newBooking.pottyTrained,
+          check_in_date: newBooking.checkInDate,
+          check_out_date: newBooking.checkOutDate,
+          num_days: newBooking.numDays,
+          signature_data_url: newBooking.signatureDataUrl,
+          completed: false,
+        }
+      ])
+    ).then(({ error }) => {
+      if (error) {
+        console.warn("Could not save hostelling booking to Supabase (saved locally):", error.message);
+      }
+    }).catch((err: any) => {
+      console.warn("Supabase hostelling insert failed, saved locally:", err);
+    });
+
+    return newBooking;
+  },
+
+  // UPDATE HOSTELLING BOOKING
+  async updateHostellingBooking(id: string, updates: Partial<HostellingBooking>): Promise<HostellingBooking> {
+    if (typeof window !== "undefined") {
+      const current = localStorage.getItem(HOSTELLING_BOOKINGS_LOCAL_KEY);
+      if (current) {
+        try {
+          const list = JSON.parse(current) as HostellingBooking[];
+          const index = list.findIndex(b => b.id === id);
+          if (index !== -1) {
+            list[index] = { ...list[index], ...updates };
+            localStorage.setItem(HOSTELLING_BOOKINGS_LOCAL_KEY, JSON.stringify(list));
+          }
+        } catch {}
+      }
+    }
+
+    const dbPayload: any = {};
+    if (updates.parentName !== undefined) dbPayload.parent_name = updates.parentName;
+    if (updates.parentEmail !== undefined) dbPayload.parent_email = updates.parentEmail;
+    if (updates.parentPhone !== undefined) dbPayload.parent_phone = updates.parentPhone;
+    if (updates.petName !== undefined) dbPayload.pet_name = updates.petName;
+    if (updates.petBreed !== undefined) dbPayload.pet_breed = updates.petBreed;
+    if (updates.petGender !== undefined) dbPayload.pet_gender = updates.petGender;
+    if (updates.petAge !== undefined) dbPayload.pet_age = updates.petAge;
+    if (updates.medicalConditions !== undefined) dbPayload.medical_conditions = updates.medicalConditions;
+    if (updates.medicalImage !== undefined) dbPayload.medical_image = updates.medicalImage;
+    if (updates.temperament !== undefined) dbPayload.temperament = updates.temperament;
+    if (updates.aggressionDetails !== undefined) dbPayload.aggression_details = updates.aggressionDetails;
+    if (updates.urineTrained !== undefined) dbPayload.urine_trained = updates.urineTrained;
+    if (updates.pottyTrained !== undefined) dbPayload.potty_trained = updates.pottyTrained;
+    if (updates.checkInDate !== undefined) dbPayload.check_in_date = updates.checkInDate;
+    if (updates.checkOutDate !== undefined) dbPayload.check_out_date = updates.checkOutDate;
+    if (updates.numDays !== undefined) dbPayload.num_days = updates.numDays;
+    if (updates.signatureDataUrl !== undefined) dbPayload.signature_data_url = updates.signatureDataUrl;
+    if (updates.completed !== undefined) dbPayload.completed = updates.completed;
+
+    const { error } = await (supabase as any)
+      .from("hostelling_bookings")
+      .update(dbPayload)
+      .eq("id", id);
+
+    if (error) {
+      console.warn("Could not update hostelling booking in Supabase:", error.message);
+    }
+
+    const updatedList = await this.getHostellingBookings();
+    const updated = updatedList.find(b => b.id === id);
+    if (!updated) throw new Error("Booking not found after update");
+    return updated;
+  },
+
+  // DELETE HOSTELLING BOOKING
+  async deleteHostellingBooking(id: string): Promise<boolean> {
+    if (typeof window === "undefined") return false;
+    const bookings = await this.getHostellingBookings();
+    const filtered = bookings.filter((b) => b.id !== id);
+    localStorage.setItem(HOSTELLING_BOOKINGS_LOCAL_KEY, JSON.stringify(filtered));
+
+    const { error } = await (supabase as any)
+      .from("hostelling_bookings")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.warn("Could not delete hostelling booking from Supabase:", error.message);
+    }
+    return true;
+  },
+
+  // ───────────────────── CONTACT SUBMISSIONS ─────────────────────
+
+  async getContactSubmissions(): Promise<ContactSubmission[]> {
+    if (typeof window === "undefined") return [];
+
+    // Local fallback
+    let local: ContactSubmission[] = [];
+    try {
+      const stored = localStorage.getItem("pawhaven_contact_submissions");
+      if (stored) local = JSON.parse(stored);
+    } catch {}
+
+    const isMock = !!localStorage.getItem("pawhaven_mock_session");
+    if (isMock) return local;
+
+    try {
+      const { data, error } = await (supabase as any)
+        .from("contact_submissions")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const remote: ContactSubmission[] = (data || []).map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        subject: row.subject,
+        message: row.message,
+        created_at: row.created_at,
+        read: row.read ?? false,
+      }));
+
+      // Merge remote + local (deduplicate by id)
+      const ids = new Set(remote.map(r => r.id));
+      const merged = [...remote, ...local.filter(l => !ids.has(l.id))];
+      return merged;
+    } catch (err) {
+      console.warn("Error fetching contact submissions, returning local:", err);
+      return local;
+    }
+  },
+
+  async deleteContactSubmission(id: string): Promise<boolean> {
+    if (typeof window === "undefined") return false;
+
+    // Remove from localStorage
+    try {
+      const stored = localStorage.getItem("pawhaven_contact_submissions") || "[]";
+      let list: ContactSubmission[] = JSON.parse(stored);
+      list = list.filter(s => s.id !== id);
+      localStorage.setItem("pawhaven_contact_submissions", JSON.stringify(list));
+    } catch {}
+
+    // Remove from Supabase
+    const { error } = await (supabase as any)
+      .from("contact_submissions")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.warn("Could not delete contact submission from Supabase:", error.message);
+    }
+    return true;
+  },
+
+  async markContactSubmissionRead(id: string, read: boolean): Promise<void> {
+    // Update local
+    try {
+      const stored = localStorage.getItem("pawhaven_contact_submissions") || "[]";
+      let list: ContactSubmission[] = JSON.parse(stored);
+      const idx = list.findIndex(s => s.id === id);
+      if (idx !== -1) {
+        list[idx].read = read;
+        localStorage.setItem("pawhaven_contact_submissions", JSON.stringify(list));
+      }
+    } catch {}
+
+    // Update Supabase
+    await (supabase as any)
+      .from("contact_submissions")
+      .update({ read })
+      .eq("id", id);
+  },
 };
+
+export interface ContactSubmission {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  created_at: string;
+  read?: boolean;
+}

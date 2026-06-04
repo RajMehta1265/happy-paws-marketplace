@@ -1,14 +1,38 @@
 import { Link } from "@tanstack/react-router";
 import { FiInstagram, FiTwitter, FiFacebook } from "react-icons/fi";
+import { useState, useEffect } from "react";
 import { WolfLogo } from "@/components/ui/WolfLogo";
 
 export function Footer() {
+  const [isDark, setIsDark] = useState(true);
+
+  useEffect(() => {
+    const checkTheme = () => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    };
+    checkTheme();
+    window.addEventListener("woolf_theme_changed", checkTheme);
+    return () => window.removeEventListener("woolf_theme_changed", checkTheme);
+  }, []);
+
   return (
     <footer className="mt-24 border-t border-border bg-secondary/50">
       <div className="mx-auto max-w-7xl px-6 py-16 grid gap-10 md:grid-cols-4">
         <div>
           <div className="flex items-center gap-3">
-            <WolfLogo className="h-10 w-10 text-accent" />
+            {isDark ? (
+              <img
+                src="/woolfindia.jpg"
+                alt="WOOLF.INDIA"
+                className="h-16 w-auto sm:h-20 object-contain"
+                style={{
+                  filter: "invert(1) sepia(1) saturate(5) hue-rotate(15deg) brightness(0.9) contrast(1.2)",
+                  mixBlendMode: "screen",
+                }}
+              />
+            ) : (
+              <WolfLogo className="h-10 w-10 text-primary" />
+            )}
             <span className="font-display font-extrabold text-xl tracking-[0.15em] text-foreground">
               WOOLF.INDIA
             </span>

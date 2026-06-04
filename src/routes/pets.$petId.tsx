@@ -143,10 +143,7 @@ function PetDetail() {
     setActiveImageIndex(0);
 
     if (pet?.video_url) {
-      const timer = setTimeout(() => {
-        setShowVideo(true);
-      }, 5000);
-      return () => clearTimeout(timer);
+      setShowVideo(true);
     }
   }, [pet?.id, pet?.video_url]);
 

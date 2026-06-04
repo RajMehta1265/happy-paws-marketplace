@@ -93,6 +93,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const checkAndClaimAdmin = async (userId: string) => {
+    try {
+      // Backup check: if user email is woolf.indiaa@gmail.com or woolf.india@gmail.com, force isAdmin to true
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser?.email && ["woolf.indiaa@gmail.com", "woolf.india@gmail.com"].includes(authUser.email)) {
+        setIsAdmin(true);
+        return;
+      }
+
+      const { data: r } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      if (r) {
+        setIsAdmin(true);
+      } else {
+        // Try to claim the first admin role if no admin exists
+        const { data: claimed } = await supabase.rpc("claim_first_admin");
+        setIsAdmin(!!claimed);
+      }
+    } catch (e) {
+      console.warn("Failed to check or claim admin role:", e);
+      setIsAdmin(false);
+    }
+  };
+
   useEffect(() => {
     const checkMockAuth = () => {
       if (typeof window === "undefined") return false;
@@ -101,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const parsed = JSON.parse(stored);
           setSession({ user: parsed.user } as any);
-          setIsAdmin(parsed.isAdmin);
+          setIsAdmin(parsed.isAdmin || (parsed.user?.email && ["woolf.indiaa@gmail.com", "woolf.india@gmail.com"].includes(parsed.user.email)));
           fetchProfileAndCheckComplete(parsed.user.id);
           setLoading(false);
           return true;
@@ -119,8 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(false);
           if (data.session?.user) {
             fetchProfileAndCheckComplete(data.session.user.id);
-            supabase.from("user_roles").select("role").eq("user_id", data.session.user.id).eq("role", "admin").maybeSingle()
-              .then(({ data: r }) => setIsAdmin(!!r));
+            checkAndClaimAdmin(data.session.user.id);
           } else {
             setIsAdmin(false);
             setIsProfileComplete(true);
@@ -140,8 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (s?.user) {
             fetchProfileAndCheckComplete(s.user.id);
             setTimeout(() => {
-              supabase.from("user_roles").select("role").eq("user_id", s.user.id).eq("role", "admin").maybeSingle()
-                .then(({ data }) => setIsAdmin(!!data));
+              checkAndClaimAdmin(s.user.id);
             }, 0);
           } else {
             setIsAdmin(false);
@@ -156,8 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(false);
           if (data.session?.user) {
             fetchProfileAndCheckComplete(data.session.user.id);
-            supabase.from("user_roles").select("role").eq("user_id", data.session.user.id).eq("role", "admin").maybeSingle()
-              .then(({ data: r }) => setIsAdmin(!!r));
+            checkAndClaimAdmin(data.session.user.id);
           }
         }
       });

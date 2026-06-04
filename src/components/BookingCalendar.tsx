@@ -105,7 +105,7 @@ export function BookingCalendar({
     if (isPast) {
       cellClass += "text-muted-foreground/40 bg-muted/20 cursor-not-allowed";
     } else if (isSelected) {
-      cellClass += "bg-[#673ab7] text-white shadow-lg shadow-[#673ab7]/30 scale-105";
+      cellClass += "bg-primary text-primary-foreground shadow-lg shadow-primary/30 scale-105";
     } else if (isFull) {
       cellClass += "bg-red-500/10 text-red-500 border border-red-500/30 hover:bg-red-500/20";
     } else if (count > 0) {
@@ -115,7 +115,7 @@ export function BookingCalendar({
     }
 
     if (isToday && !isSelected) {
-      cellClass += " ring-2 ring-[#673ab7]/50 ring-offset-1 ring-offset-background";
+      cellClass += " ring-2 ring-primary/50 ring-offset-1 ring-offset-background";
     }
 
     const handleClick = () => {
@@ -160,7 +160,7 @@ export function BookingCalendar({
       {/* Calendar Header */}
       <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
         {/* Month Navigation */}
-        <div className="flex items-center justify-between px-5 py-4 bg-[#673ab7] text-white">
+        <div className="flex items-center justify-between px-5 py-4 bg-primary text-primary-foreground">
           <button
             type="button"
             onClick={prevMonth}
@@ -260,7 +260,7 @@ export function BookingCalendar({
                           ? "bg-emerald-500/10 text-emerald-600"
                           : booking.trainingType === "Moderate"
                             ? "bg-amber-500/10 text-amber-600"
-                            : "bg-[#673ab7]/10 text-[#673ab7]"
+                            : "bg-primary/10 text-primary"
                       }`}>
                         {booking.trainingType}
                       </span>

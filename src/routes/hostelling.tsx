@@ -4,7 +4,7 @@ import { FiCalendar, FiShield, FiHeart, FiActivity, FiPenTool, FiRefreshCw, FiFi
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { dbService } from "@/services/db-service";
+import { dbService, type HostellingBooking } from "@/services/db-service";
 
 export const Route = createFileRoute("/hostelling")({
   head: () => ({
@@ -15,28 +15,6 @@ export const Route = createFileRoute("/hostelling")({
   }),
   component: HostellingPage,
 });
-
-interface HostellingBooking {
-  id: string;
-  parentName: string;
-  parentEmail: string;
-  parentPhone: string;
-  petName: string;
-  petBreed: string;
-  petGender: "Male" | "Female";
-  petAge: string;
-  medicalConditions: string;
-  medicalImage: string; // Base64 data URL
-  temperament: "Friendly" | "Aggressive";
-  aggressionDetails?: string;
-  urineTrained: boolean;
-  pottyTrained: boolean;
-  checkInDate: string;
-  checkOutDate: string;
-  numDays: number;
-  signatureDataUrl: string;
-  submittedAt: string;
-}
 
 function HostellingPage() {
   const { user } = useAuth();
@@ -136,7 +114,7 @@ function HostellingPage() {
 
     const coords = getCoords(e);
     ctx.beginPath();
-    ctx.strokeStyle = "#111827"; // Dark color
+    ctx.strokeStyle = "#D8B273"; // Woolf Champagne Gold
     ctx.lineWidth = 2.5;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -157,9 +135,14 @@ function HostellingPage() {
     const rect = canvas.getBoundingClientRect();
     const clientX = "touches" in e && e.touches[0] ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     const clientY = "touches" in e && e.touches[0] ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    
+    // Scale coords to account for differences between the canvas's internal resolution and visual CSS dimensions
+    const scaleX = canvas.width / (rect.width || 1);
+    const scaleY = canvas.height / (rect.height || 1);
+    
     return {
-      x: clientX - rect.left,
-      y: clientY - rect.top,
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
     };
   };
 
@@ -173,7 +156,7 @@ function HostellingPage() {
   };
 
   // Submit Hostelling Form
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!parentName || !parentPhone || !petName || !petBreed || !petAge || !checkInDate || !checkOutDate) {
@@ -198,48 +181,53 @@ function HostellingPage() {
 
     const signatureDataUrl = canvasRef.current.toDataURL("image/png");
     const finalMedicalConditions = hasMedical ? medicalConditions : "N/A";
-    const nextBooking: HostellingBooking = {
-      id: Math.random().toString(36).substr(2, 9),
-      parentName,
-      parentEmail,
-      parentPhone,
-      petName,
-      petBreed,
-      petGender,
-      petAge,
-      medicalConditions: finalMedicalConditions,
-      medicalImage,
-      temperament,
-      aggressionDetails: temperament === "Aggressive" ? aggressionDetails : undefined,
-      urineTrained,
-      pottyTrained,
-      checkInDate,
-      checkOutDate,
-      numDays,
-      signatureDataUrl,
-      submittedAt: new Date().toLocaleString(),
-    };
 
-    setBooking(nextBooking);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("pawhaven_hostelling_booking", JSON.stringify(nextBooking));
+    try {
+      const createdBooking = await dbService.createHostellingBooking({
+        user_id: user?.id || null,
+        parentName,
+        parentEmail: parentEmail || "hostelling_guest@example.com",
+        parentPhone,
+        petName,
+        petBreed,
+        petGender,
+        petAge,
+        medicalConditions: finalMedicalConditions,
+        medicalImage,
+        temperament,
+        aggressionDetails: temperament === "Aggressive" ? aggressionDetails : undefined,
+        urineTrained,
+        pottyTrained,
+        checkInDate,
+        checkOutDate,
+        numDays,
+        signatureDataUrl,
+      });
+
+      setBooking(createdBooking);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("pawhaven_hostelling_booking", JSON.stringify(createdBooking));
+      }
+
+      // Submit liability release record to Supabase
+      dbService.submitConsent({
+        user_id: user?.id || null,
+        full_name: parentName,
+        email: parentEmail || "hostelling_guest@example.com",
+        pet_id: null,
+        pet_name: petName,
+        liability_accepted: consentTerms,
+        consent_given: consentTerms,
+        signature_data_url: signatureDataUrl,
+      }).catch((err) => {
+        console.warn("Failed to record liability consent to DB:", err);
+      });
+
+      toast.success("Hostelling request and signed consent submitted successfully!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to submit hostelling request. Please try again.");
     }
-
-    // Submit liability release record to Supabase
-    dbService.submitConsent({
-      user_id: user?.id || null,
-      full_name: parentName,
-      email: parentEmail || "hostelling_guest@example.com",
-      pet_id: null,
-      pet_name: petName,
-      liability_accepted: consentTerms,
-      consent_given: consentTerms,
-      signature_data_url: signatureDataUrl,
-    }).catch((err) => {
-      console.warn("Failed to record liability consent to DB:", err);
-    });
-
-    toast.success("Hostelling request and signed consent submitted successfully!");
   };
 
   const handleClearBooking = () => {
@@ -357,42 +345,42 @@ function HostellingPage() {
           /* Google-Form-Style Booking & Consent Intake */
           <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in">
             {/* Styled header resemblance of Google Form style */}
-            <div className="bg-[#673ab7] rounded-t-3xl h-4 w-full shadow-sm" />
+            <div className="bg-primary rounded-t-3xl h-4 w-full shadow-sm" />
             
             {/* Title Card */}
             <div className="bg-card rounded-b-3xl border border-t-0 border-border p-8 shadow-sm">
-              <h2 className="font-display text-4xl text-[#202124] dark:text-foreground">Hostelling Intake & Consent Agreement</h2>
+              <h2 className="font-display text-4xl text-foreground">Hostelling Intake & Consent Agreement</h2>
               <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
                 Please complete this comprehensive application and sign the mandatory liability consent at the bottom before checking in your pet for boarding. All questions marked with <span className="text-red-500">*</span> are compulsory.
               </p>
             </div>
 
             {/* 1. Parent & Pet Info Card */}
-            <div className="bg-card border-l-8 border-[#673ab7] border-y border-r border-border rounded-2xl p-6 shadow-sm space-y-6">
+            <div className="bg-card border-l-8 border-primary border-y border-r border-border rounded-2xl p-6 shadow-sm space-y-6">
               <h3 className="font-display text-2xl text-foreground pb-2 border-b border-border">1. Parent & Pet Basics</h3>
               
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-[#202124] dark:text-foreground">Parent Full Name <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-semibold text-foreground">Parent Full Name <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     required
                     value={parentName}
                     onChange={(e) => setParentName(e.target.value)}
                     placeholder="Enter your full name"
-                    className="border-b border-border/80 focus:border-[#673ab7] bg-transparent outline-none py-2 text-sm"
+                    className="border-b border-border/80 focus:border-primary bg-transparent outline-none py-2 text-sm"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-[#202124] dark:text-foreground">Parent Phone Number <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-semibold text-foreground">Parent Phone Number <span className="text-red-500">*</span></label>
                   <input
                     type="tel"
                     required
                     value={parentPhone}
                     onChange={(e) => setParentPhone(e.target.value)}
                     placeholder="Enter 10-digit mobile number"
-                    className="border-b border-border/80 focus:border-[#673ab7] bg-transparent outline-none py-2 text-sm"
+                    className="border-b border-border/80 focus:border-primary bg-transparent outline-none py-2 text-sm"
                   />
                 </div>
               </div>
@@ -404,50 +392,50 @@ function HostellingPage() {
                   value={parentEmail}
                   onChange={(e) => setParentEmail(e.target.value)}
                   placeholder="Enter email address"
-                  className="w-full sm:w-1/2 border-b border-border/80 focus:border-[#673ab7] bg-transparent outline-none py-2 text-sm"
+                  className="w-full sm:w-1/2 border-b border-border/80 focus:border-primary bg-transparent outline-none py-2 text-sm"
                 />
               </div>
 
               <div className="grid md:grid-cols-3 gap-6 pt-2">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-[#202124] dark:text-foreground">Pet Name <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-semibold text-foreground">Pet Name <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     required
                     value={petName}
                     onChange={(e) => setPetName(e.target.value)}
                     placeholder="e.g. Milo"
-                    className="border-b border-border/80 focus:border-[#673ab7] bg-transparent outline-none py-2 text-sm"
+                    className="border-b border-border/80 focus:border-primary bg-transparent outline-none py-2 text-sm"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-[#202124] dark:text-foreground">Pet Breed <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-semibold text-foreground">Pet Breed <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     required
                     value={petBreed}
                     onChange={(e) => setPetBreed(e.target.value)}
                     placeholder="e.g. Labrador / Persian"
-                    className="border-b border-border/80 focus:border-[#673ab7] bg-transparent outline-none py-2 text-sm"
+                    className="border-b border-border/80 focus:border-primary bg-transparent outline-none py-2 text-sm"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-[#202124] dark:text-foreground">Pet Age <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-semibold text-foreground">Pet Age <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     required
                     value={petAge}
                     onChange={(e) => setPetAge(e.target.value)}
                     placeholder="e.g. 2 years / 6 months"
-                    className="border-b border-border/80 focus:border-[#673ab7] bg-transparent outline-none py-2 text-sm"
+                    className="border-b border-border/80 focus:border-primary bg-transparent outline-none py-2 text-sm"
                   />
                 </div>
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-[#202124] dark:text-foreground">Pet Gender <span className="text-red-500">*</span></label>
+                <label className="text-sm font-semibold text-foreground">Pet Gender <span className="text-red-500">*</span></label>
                 <div className="flex gap-4">
                   {(["Male", "Female"] as const).map((g) => (
                     <button
@@ -456,7 +444,7 @@ function HostellingPage() {
                       onClick={() => setPetGender(g)}
                       className={`px-6 py-2 rounded-full border text-xs font-semibold transition cursor-pointer ${
                         petGender === g
-                          ? "bg-[#673ab7] text-white border-[#673ab7]"
+                          ? "bg-primary text-primary-foreground border-primary"
                           : "border-border hover:bg-muted text-muted-foreground"
                       }`}
                     >
@@ -468,7 +456,7 @@ function HostellingPage() {
             </div>
 
             {/* 2. Pet Detailed Info Card */}
-            <div className="bg-card border-l-8 border-[#673ab7] border-y border-r border-border rounded-2xl p-6 shadow-sm space-y-6">
+            <div className="bg-card border-l-8 border-primary border-y border-r border-border rounded-2xl p-6 shadow-sm space-y-6">
               <h3 className="font-display text-2xl text-foreground pb-2 border-b border-border">2. Detailed Behavioral & Medical Intake</h3>
               
               <div className="flex flex-col gap-3">
@@ -482,9 +470,9 @@ function HostellingPage() {
                         setMedicalConditions("");
                       }
                     }}
-                    className="h-4 w-4 rounded border-border text-[#673ab7] focus:ring-[#673ab7]"
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary bg-background"
                   />
-                  <span className="text-sm font-semibold text-[#202124] dark:text-foreground">My pet has existing medical conditions</span>
+                  <span className="text-sm font-semibold text-foreground">My pet has existing medical conditions</span>
                 </label>
                 
                 {hasMedical ? (
@@ -496,7 +484,7 @@ function HostellingPage() {
                       onChange={(e) => setMedicalConditions(e.target.value)}
                       placeholder="List any chronic illness, allergies, daily medications, or routines..."
                       rows={3}
-                      className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:border-[#673ab7] focus:outline-none"
+                      className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:border-primary focus:outline-none"
                     />
                   </div>
                 ) : (
@@ -516,7 +504,7 @@ function HostellingPage() {
                     onChange={handleImageChange}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
-                  <FiUploadCloud size={36} className="text-[#673ab7] mb-2 group-hover:scale-110 transition-transform duration-300" />
+                  <FiUploadCloud size={36} className="text-primary mb-2 group-hover:scale-110 transition-transform duration-300" />
                   <span className="text-xs font-semibold text-foreground">Click to upload prescription or vet record</span>
                   <span className="text-[10px] text-muted-foreground mt-1">PNG, JPG or JPEG up to 2MB</span>
                 </div>
@@ -538,7 +526,7 @@ function HostellingPage() {
               </div>
 
               <div className="flex flex-col gap-2 pt-2">
-                <label className="text-sm font-semibold text-[#202124] dark:text-foreground">Behavioral Temperament <span className="text-red-500">*</span></label>
+                <label className="text-sm font-semibold text-foreground">Behavioral Temperament <span className="text-red-500">*</span></label>
                 <div className="flex gap-4">
                   {(["Friendly", "Aggressive"] as const).map((temp) => (
                     <button
@@ -550,7 +538,7 @@ function HostellingPage() {
                       }}
                       className={`px-6 py-2 rounded-full border text-xs font-semibold transition cursor-pointer ${
                         temperament === temp
-                          ? "bg-[#673ab7] text-white border-[#673ab7]"
+                          ? "bg-primary text-primary-foreground border-primary"
                           : "border-border hover:bg-muted text-muted-foreground"
                       }`}
                     >
@@ -562,14 +550,14 @@ function HostellingPage() {
 
               {temperament === "Aggressive" && (
                 <div className="flex flex-col gap-1.5 pt-2 animate-slide-down">
-                  <label className="text-sm font-semibold text-[#202124] dark:text-foreground">Aggression Details & Triggers <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-semibold text-foreground">Aggression Details & Triggers <span className="text-red-500">*</span></label>
                   <textarea
                     required={temperament === "Aggressive"}
                     value={aggressionDetails}
                     onChange={(e) => setAggressionDetails(e.target.value)}
                     placeholder="Describe aggression triggers (e.g. food, leash, other dogs) or safety details..."
                     rows={3}
-                    className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:border-[#673ab7] focus:outline-none"
+                    className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:border-primary focus:outline-none"
                   />
                 </div>
               )}
@@ -582,7 +570,7 @@ function HostellingPage() {
                       type="checkbox"
                       checked={urineTrained}
                       onChange={(e) => setUrineTrained(e.target.checked)}
-                      className="h-4 w-4 rounded border-border text-[#673ab7] focus:ring-[#673ab7]"
+                      className="h-4 w-4 rounded border-border text-primary focus:ring-primary bg-background"
                     />
                     <span className="text-xs font-semibold text-foreground/80">Urine Trained</span>
                   </label>
@@ -592,38 +580,36 @@ function HostellingPage() {
                       type="checkbox"
                       checked={pottyTrained}
                       onChange={(e) => setPottyTrained(e.target.checked)}
-                      className="h-4 w-4 rounded border-border text-[#673ab7] focus:ring-[#673ab7]"
+                      className="h-4 w-4 rounded border-border text-primary focus:ring-primary bg-background"
                     />
                     <span className="text-xs font-semibold text-foreground/80">Potty Trained</span>
                   </label>
                 </div>
               </div>
-            </div>
-
-            {/* 3. Stay Details Card */}
-            <div className="bg-card border-l-8 border-[#673ab7] border-y border-r border-border rounded-2xl p-6 shadow-sm space-y-6">
+            </div>            {/* 3. Stay Details Card */}
+            <div className="bg-card border-l-8 border-primary border-y border-r border-border rounded-2xl p-6 shadow-sm space-y-6">
               <h3 className="font-display text-2xl text-foreground pb-2 border-b border-border">3. Stay Requirements</h3>
               
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-[#202124] dark:text-foreground">Check-in Date <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-semibold text-foreground">Check-in Date <span className="text-red-500">*</span></label>
                   <input
                     type="date"
                     required
                     value={checkInDate}
                     onChange={(e) => setCheckInDate(e.target.value)}
-                    className="border-b border-border/80 focus:border-[#673ab7] bg-transparent outline-none py-2 text-sm"
+                    className="border-b border-border/80 focus:border-primary bg-transparent outline-none py-2 text-sm"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-[#202124] dark:text-foreground">Check-out Date <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-semibold text-foreground">Check-out Date <span className="text-red-500">*</span></label>
                   <input
                     type="date"
                     required
                     value={checkOutDate}
                     onChange={(e) => setCheckOutDate(e.target.value)}
-                    className="border-b border-border/80 focus:border-[#673ab7] bg-transparent outline-none py-2 text-sm"
+                    className="border-b border-border/80 focus:border-primary bg-transparent outline-none py-2 text-sm"
                   />
                 </div>
               </div>
@@ -636,7 +622,7 @@ function HostellingPage() {
                     min={1}
                     value={numDays}
                     onChange={(e) => setNumDays(Number(e.target.value))}
-                    className="w-24 rounded-xl border border-border bg-background px-4 py-2 text-sm focus:border-[#673ab7] focus:outline-none"
+                    className="w-24 rounded-xl border border-border bg-background px-4 py-2 text-sm focus:border-primary focus:outline-none"
                   />
                   <span className="text-xs text-muted-foreground">calculated automatically from dates</span>
                 </div>
@@ -644,7 +630,7 @@ function HostellingPage() {
             </div>
 
             {/* 4. Compulsory Liability Consent Card */}
-            <div className="bg-card border-l-8 border-[#673ab7] border-y border-r border-border rounded-2xl p-6 shadow-sm space-y-4">
+            <div className="bg-card border-l-8 border-primary border-y border-r border-border rounded-2xl p-6 shadow-sm space-y-4">
               <h3 className="font-display text-2xl text-foreground pb-2 border-b border-border">4. Liability Release & Consent <span className="text-red-500">*</span></h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 By checking the authorization agreement below, you authorize WOOLF.INDIA, its hostellers, and caretaking assistants to perform boarding services for your pet companion. You release WOOLF.INDIA from liability for any unexpected health developments, illness, injury, or behavioral shifts. You confirm that all medical declarations above are accurate.
@@ -654,7 +640,7 @@ function HostellingPage() {
                   type="checkbox"
                   checked={consentTerms}
                   onChange={(e) => setConsentTerms(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-border text-[#673ab7] focus:ring-[#673ab7]"
+                  className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary bg-background"
                 />
                 <span className="text-xs text-foreground/80 font-semibold">
                   I agree and authorize professional hostelling and boarding services for my pet companion under the terms described. <span className="text-red-500">(Compulsory)</span>
@@ -665,11 +651,11 @@ function HostellingPage() {
             {/* Virtual Sign Canvas Card */}
             <div className="bg-card rounded-2xl border border-border p-6 shadow-sm space-y-4">
               <div className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                <FiPenTool className="text-[#673ab7]" /> Draw Virtual Signature <span className="text-red-500">*</span>
+                <FiPenTool className="text-primary" /> Draw Virtual Signature <span className="text-red-500">*</span>
               </div>
               <p className="text-xs text-muted-foreground">Please sign within the box below using your mouse or touch screen. This is required.</p>
               
-              <div className="relative border border-border/80 rounded-2xl bg-white overflow-hidden h-40 w-full cursor-crosshair">
+              <div className="relative border border-border/80 rounded-2xl bg-secondary overflow-hidden h-40 w-full cursor-crosshair">
                 <canvas
                   ref={canvasRef}
                   width={800}
@@ -696,7 +682,7 @@ function HostellingPage() {
                 
                 <button
                   type="submit"
-                  className="rounded-full bg-[#673ab7] text-white hover:opacity-90 transition px-8 py-3 text-sm font-bold shadow-md cursor-pointer"
+                  className="rounded-full bg-primary text-primary-foreground hover:opacity-90 transition px-8 py-3 text-sm font-bold shadow-md cursor-pointer"
                 >
                   Sign & Submit Hostelling Request
                 </button>
