@@ -81,12 +81,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Nourishing bonds, naturally. Buy, adopt, and care for companions with WOOLF.INDIA. Premium catalog, training, and care.",
+          "Nourishing bonds, naturally. Discover, adopt, and buy verified healthy companions with WOOLF.INDIA. India's premium pet marketplace offering elite catalog, certified trainers, and world-class care.",
       },
-      { property: "og:title", content: "WOOLF.INDIA" },
-      { property: "og:description", content: "Premium companions, adoption and care." },
+      // Open Graph Tags
+      { property: "og:title", content: "WOOLF.INDIA — Premium Companions, Adoption & Care" },
+      { property: "og:description", content: "Discover, adopt, and buy verified healthy companions with WOOLF.INDIA. India's premium pet marketplace, certified training, and care." },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://woolfindia.com" },
+      { property: "og:image", content: "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?auto=format&fit=crop&q=80&w=1200" },
+      { property: "og:site_name", content: "WOOLF.INDIA" },
+      // Twitter Card Tags
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "WOOLF.INDIA — Premium Companions, Adoption & Care" },
+      { name: "twitter:description", content: "Discover, adopt, and buy verified healthy companions with WOOLF.INDIA." },
+      { name: "twitter:image", content: "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?auto=format&fit=crop&q=80&w=1200" },
+      // Indexing
+      { name: "robots", content: "index, follow" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

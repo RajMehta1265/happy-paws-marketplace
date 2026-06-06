@@ -15,6 +15,23 @@ export function CinematicHero() {
   const [images, setImages] = useState<HTMLImageElement[]>([]);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [showSkip, setShowSkip] = useState(true);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // Fade out the skip button when entering the shutter sequence (at scroll position > 5.0 viewports)
+      setShowSkip(window.scrollY < window.innerHeight * 5.0);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const handleSkip = () => {
+    window.scrollTo({
+      top: window.innerHeight * 5.3,
+      behavior: "smooth",
+    });
+  };
 
   // Preload all 144 images
   useEffect(() => {
@@ -58,7 +75,6 @@ export function CinematicHero() {
 
       context.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Fit image to canvas maintaining cover aspect ratio
       const canvasRatio = canvas.width / canvas.height;
       const imgRatio = img.width / img.height;
       let drawWidth = canvas.width;
@@ -66,12 +82,26 @@ export function CinematicHero() {
       let offsetX = 0;
       let offsetY = 0;
 
-      if (canvasRatio > imgRatio) {
-        drawHeight = canvas.width / imgRatio;
-        offsetY = (canvas.height - drawHeight) / 2;
+      const isMobile = window.innerWidth < 768;
+
+      if (isMobile) {
+        // Contain logic to prevent cropping on portrait mobile viewports
+        if (canvasRatio > imgRatio) {
+          drawWidth = canvas.height * imgRatio;
+          offsetX = (canvas.width - drawWidth) / 2;
+        } else {
+          drawHeight = canvas.width / imgRatio;
+          offsetY = (canvas.height - drawHeight) / 2;
+        }
       } else {
-        drawWidth = canvas.height * imgRatio;
-        offsetX = (canvas.width - drawWidth) / 2;
+        // Cover logic for immersive desktop displays
+        if (canvasRatio > imgRatio) {
+          drawHeight = canvas.width / imgRatio;
+          offsetY = (canvas.height - drawHeight) / 2;
+        } else {
+          drawWidth = canvas.height * imgRatio;
+          offsetX = (canvas.width - drawWidth) / 2;
+        }
       }
 
       context.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
@@ -206,8 +236,8 @@ export function CinematicHero() {
       {!isLoaded && (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background transition-opacity duration-500">
           <div className="flex flex-col items-center max-w-md w-full px-8 text-center">
-            <WolfLogo className="h-32 w-32 text-primary shrink-0 animate-pulse mb-8 drop-shadow-[0_0_30px_rgba(244,162,97,0.35)]" />
-            <span className="text-xl sm:text-2xl font-display font-extrabold tracking-[0.4em] uppercase mb-4 text-foreground">
+            <WolfLogo className="h-44 w-44 sm:h-48 sm:w-48 text-primary shrink-0 animate-pulse mb-8 drop-shadow-[0_0_35px_rgba(244,162,97,0.4)]" />
+            <span className="text-2xl sm:text-3xl lg:text-4xl font-display font-extrabold tracking-[0.4em] uppercase mb-4 text-foreground">
               WOOLF.INDIA
             </span>
             <div className="w-full bg-primary/15 h-[3px] rounded-full overflow-hidden mb-4">
@@ -233,10 +263,10 @@ export function CinematicHero() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_30%,rgba(0,0,0,0.85)_100%)] pointer-events-none z-10" />
 
         {/* Scroll cues & Branding */}
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3">
-          <WolfLogo className="h-8 w-8 text-primary shrink-0" />
-          <span className="text-sm font-semibold tracking-[0.25em] uppercase">
-            WOOLF.INDIA<sup className="text-[8px] font-normal ml-0.5">TM</sup>
+        <div className="absolute top-12 left-1/2 -translate-x-1/2 z-20 flex items-center gap-4">
+          <WolfLogo className="h-14 w-14 sm:h-16 sm:w-16 text-primary shrink-0" />
+          <span className="text-lg sm:text-2xl lg:text-3xl font-extrabold tracking-[0.3em] uppercase">
+            WOOLF.INDIA<sup className="text-[10px] font-normal ml-0.5">TM</sup>
           </span>
         </div>
 
@@ -249,49 +279,49 @@ export function CinematicHero() {
           
           <div id="sequence-text-1" className="absolute opacity-0 max-w-3xl">
             <span className="text-[10px] font-mono tracking-[0.3em] text-[var(--color-accent)] uppercase mb-3 block">
-              Chapter I — Deconstruction
+              Chapter I — Companionship
             </span>
             <h2 className="font-display font-light text-foreground tracking-tight leading-[1.05] text-[clamp(36px,5vw,72px)]">
-              Re-engineering <span className="italic font-normal">companionship</span>.
+              Every paw has <span className="italic font-normal">a story</span>.
             </h2>
             <p className="text-foreground/60 text-sm md:text-base mt-6 font-medium max-w-lg mx-auto">
-              We disassemble the boundaries of traditional pet care, engineering spaces with absolute aesthetic harmony.
+              We redefine pet companionship, bringing healthy, verified, and loving friends to homes across India.
             </p>
           </div>
 
           <div id="sequence-text-2" className="absolute opacity-0 max-w-3xl">
             <span className="text-[10px] font-mono tracking-[0.3em] text-[var(--color-accent)] uppercase mb-3 block">
-              Chapter II — Precision
+              Chapter II — Trust & Care
             </span>
             <h2 className="font-display font-light text-foreground tracking-tight leading-[1.05] text-[clamp(36px,5vw,72px)]">
-              Uncompromising <span className="italic font-normal">precision</span>.
+              Uncompromising <span className="italic font-normal">standards</span>.
             </h2>
             <p className="text-foreground/60 text-sm md:text-base mt-6 font-medium max-w-lg mx-auto">
-              Every detail is calibrated to align with the luxury estate environment. Calibrated inputs, silent mechanics.
+              Every companion is health-checked, fully vaccinated, and hand-raised to ensure absolute peace of mind.
             </p>
           </div>
 
           <div id="sequence-text-3" className="absolute opacity-0 max-w-3xl">
             <span className="text-[10px] font-mono tracking-[0.3em] text-[var(--color-accent)] uppercase mb-3 block">
-              Chapter III — Harmony
+              Chapter III — Nurturing Bonds
             </span>
             <h2 className="font-display font-light text-foreground tracking-tight leading-[1.05] text-[clamp(36px,5vw,72px)]">
-              Beautiful to <span className="italic font-normal">the core</span>.
+              Beautiful <span className="italic font-normal">connections</span>.
             </h2>
             <p className="text-foreground/60 text-sm md:text-base mt-6 font-medium max-w-lg mx-auto">
-              Exploring the internal architecture of luxury living spaces, where design and function meet effortlessly.
+              Nurturing deeper bonds through gentle, positive training designed to integrate pets and families effortlessly.
             </p>
           </div>
 
           <div id="sequence-text-4" className="absolute opacity-0 max-w-3xl">
             <span className="text-[10px] font-mono tracking-[0.3em] text-[var(--color-accent)] uppercase mb-3 block">
-              Chapter IV — The Horizon
+              Chapter IV — The Journey
             </span>
             <h2 className="font-display font-light text-foreground tracking-tight leading-[1.05] text-[clamp(36px,5vw,72px)]">
-              Venture <span className="italic font-normal">without edges</span>.
+              Meet your <span className="italic font-normal">next best friend</span>.
             </h2>
             <p className="text-foreground/60 text-sm md:text-base mt-6 font-medium max-w-lg mx-auto">
-              Welcome to the new era of companionship. Scroll further to explore our physical collection.
+              Welcome to India's premium pet marketplace. Scroll down to explore available pets and start your journey.
             </p>
           </div>
 
@@ -418,6 +448,16 @@ export function CinematicHero() {
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 h-1 w-48 rounded-full bg-primary/10 overflow-hidden z-40">
         <div className="progress-fill h-full w-full origin-left scale-x-0 bg-primary" />
       </div>
+
+      {/* Skip Intro Button */}
+      <button
+        onClick={handleSkip}
+        className={`fixed bottom-10 right-6 md:right-10 z-[60] px-6 py-3 rounded-full glass text-xs sm:text-sm font-bold tracking-wider text-foreground hover:bg-primary hover:text-primary-foreground hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg cursor-pointer ${
+          showSkip ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        Skip Intro
+      </button>
     </div>
   );
 }

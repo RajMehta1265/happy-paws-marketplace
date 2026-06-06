@@ -178,8 +178,26 @@ function Index() {
     };
   }, []);
 
+  const schemaMarkup = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "WOOLF.INDIA",
+    "url": "https://woolfindia.com",
+    "logo": "https://woolfindia.com/logo.png",
+    "description": "India's premium pet marketplace. Find healthy, verified, and loving companions across India with elite training and organic care.",
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "telephone": "+91-9999999999",
+      "contactType": "customer service"
+    }
+  };
+
   return (
     <SiteLayout>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaMarkup) }}
+      />
 
       {/* Cinematic Pinned Scrollytelling Hero Section */}
       <CinematicHero />
@@ -197,12 +215,13 @@ function Index() {
           {/* Black shade scrim overlay */}
           <div className="absolute inset-0 bg-black/45 z-10" />
 
-          {/* Luxury Real Estate style engaging background image */}
+          {/* Luxury Companion background image */}
           <div ref={expandImageRef} className="absolute inset-0 w-full h-full">
             <img
               src="https://images.unsplash.com/photo-1601758228041-f3b2795255f1?auto=format&fit=crop&q=80&w=1600"
               alt="Cinematic Companion Landscape"
               className="w-full h-full object-cover"
+              loading="lazy"
             />
           </div>
 
@@ -211,11 +230,10 @@ function Index() {
               WOOLF.INDIA Ethos
             </span>
             <h2 className="font-display text-4xl md:text-6xl font-bold tracking-tight text-white mb-4 drop-shadow-lg">
-              Cinematic Care & Living Spaces
+              A Legacy of Companionship & Care
             </h2>
             <p className="text-sm md:text-base text-white/80 font-medium max-w-lg mx-auto drop-shadow">
-              We design and construct modern conditioning spaces for companions, ensuring a peaceful
-              harmony inside your luxury estate.
+              We connect families with ethically raised, health-checked pets across India, providing premium training, organic food, and lifetime support for a happy life together.
             </p>
           </div>
         </div>
@@ -234,7 +252,7 @@ function Index() {
                 <Skeleton key={i} className="aspect-square rounded-3xl" />
               ))
             : featuredPets.map((p, i) => (
-                <div key={p.id} className="scroll-reveal-card">
+                <article key={p.id} className="scroll-reveal-card">
                   <Link
                     to="/pets/$petId"
                     params={{ petId: p.id }}
@@ -245,23 +263,23 @@ function Index() {
                       <div className="overflow-hidden aspect-square relative">
                         <img
                           src={parseImages(p.image_url)[0] || p.image_url || "/pet-1.jpg"}
-                          alt={p.name}
+                          alt={`Premium companion pet ${p.name} - ${p.breed}`}
                           width={800}
                           height={800}
                           loading="lazy"
                           className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-105"
                         />
                       </div>
-                      <div className="p-5">
+                      <div className="p-7">
                         <div className="flex justify-between items-center">
                           <div>
-                            <div className="font-display text-xl font-bold">{p.name}</div>
-                            <div className="text-xs text-muted-foreground font-medium mt-0.5">
+                            <h3 className="font-display text-2xl lg:text-3xl font-bold">{p.name}</h3>
+                            <p className="text-sm text-muted-foreground font-medium mt-1">
                               {p.breed} • {p.age}
-                            </div>
+                            </p>
                           </div>
                           <div className="shrink-0 ml-2">
-                            <span className="inline-flex rounded-full bg-accent/20 px-3 py-1.5 text-xs font-semibold text-accent-foreground font-display">
+                            <span className="inline-flex rounded-full bg-accent/20 px-4 py-2 text-sm font-semibold text-accent-foreground font-display">
                               ₹{Number(p.price).toFixed(0)}
                             </span>
                           </div>
@@ -269,7 +287,7 @@ function Index() {
                       </div>
                     </div>
                   </Link>
-                </div>
+                </article>
               ))}
         </div>
       </Section>
@@ -283,33 +301,34 @@ function Index() {
       >
         <div className="grid md:grid-cols-3 gap-6 scroll-reveal-section">
           {trainingPlans.map((t) => (
-            <div
+            <article
               key={t.id}
-              className="rounded-3xl border border-border bg-card p-7 hover-lift scroll-reveal-card"
+              className="rounded-3xl border border-border bg-card p-8 md:p-10 hover-lift scroll-reveal-card flex flex-col justify-between"
             >
-              <div className="text-xs uppercase tracking-wider text-primary font-bold">
-                {t.mode}
+              <div>
+                <div className="text-sm uppercase tracking-widest text-primary font-extrabold">
+                  {t.mode}
+                </div>
+                <h3 className="mt-3 font-display text-3xl md:text-4xl font-bold leading-tight">{t.title}</h3>
+                <div className="mt-2 text-sm md:text-base text-muted-foreground font-medium">{t.duration}</div>
+                <ul className="mt-6 space-y-3 text-sm md:text-base">
+                  {t.perks.map((p) => (
+                    <li key={p} className="flex gap-2 font-medium">
+                      <FiAward className="text-primary mt-0.5 shrink-0" /> {p}
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <h3 className="mt-2 font-display text-2xl font-bold">{t.title}</h3>
-              <div className="mt-1 text-sm text-muted-foreground font-medium">{t.duration}</div>
-              <ul className="mt-5 space-y-2 text-sm">
-                {t.perks.map((p) => (
-                  <li key={p} className="flex gap-2 font-medium">
-                    <FiAward className="text-primary mt-0.5 shrink-0" /> {p}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-6 flex items-center justify-between">
-                <span className="font-display text-2xl font-bold">₹{t.price}</span>
+              <div className="mt-8 pt-6 border-t border-border/40 flex items-center justify-between">
+                <span className="font-display text-3xl font-bold">₹{t.price}</span>
                 <Link
                   to="/training"
-                  data-hover-text="BOOK"
-                  className="text-sm text-primary hover:underline font-semibold flex items-center gap-0.5 interactive-hover cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground px-5 py-2.5 text-xs sm:text-sm font-bold text-primary transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
                 >
                   Book <FiChevronRight />
                 </Link>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       </Section>
@@ -322,9 +341,9 @@ function Index() {
       >
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 scroll-reveal-section">
           {products.slice(0, 3).map((p) => (
-            <div
+            <article
               key={p.id}
-              className="rounded-3xl bg-card overflow-hidden hover-lift border border-border scroll-reveal-card"
+              className="rounded-3xl bg-card overflow-hidden hover-lift border border-border scroll-reveal-card flex flex-col"
             >
               <Link
                 to="/products"
@@ -334,22 +353,22 @@ function Index() {
                 <div className="overflow-hidden aspect-[4/3] w-full">
                   <img
                     src={p.image}
-                    alt={p.name}
+                    alt={`Premium product ${p.name}`}
                     width={800}
                     height={800}
                     loading="lazy"
                     className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-105"
                   />
                 </div>
-                <div className="p-5 flex items-center justify-between">
+                <div className="p-6 md:p-7 flex items-center justify-between">
                   <div>
-                    <div className="text-xs text-muted-foreground font-semibold">{p.category}</div>
-                    <div className="font-display text-lg font-bold mt-0.5">{p.name}</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground font-semibold uppercase tracking-wider">{p.category}</div>
+                    <h3 className="font-display text-xl md:text-2xl font-bold mt-1">{p.name}</h3>
                   </div>
-                  <div className="font-display text-xl text-primary font-bold">₹{p.price}</div>
+                  <div className="font-display text-2xl text-primary font-bold">₹{p.price}</div>
                 </div>
               </Link>
-            </div>
+            </article>
           ))}
         </div>
       </Section>
@@ -383,16 +402,16 @@ function Index() {
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30rem] h-[30rem] rounded-full bg-accent/20 blur-[100px] pointer-events-none" />
 
           <div className="relative z-10">
-            <h2 className="font-display text-4xl lg:text-5xl text-balance font-bold">
+            <h2 className="font-display text-5xl md:text-6xl lg:text-7xl text-balance font-bold leading-tight">
               A pet is waiting to change your life.
             </h2>
-            <p className="mt-4 opacity-80 max-w-xl mx-auto font-medium text-sm md:text-base">
+            <p className="mt-6 opacity-90 max-w-2xl mx-auto font-medium text-base md:text-lg">
               Browse our curated, health-checked pets ready to join your family today.
             </p>
             <Link
               to="/pets"
               data-hover-text="VIEW ALL"
-              className="mt-8 inline-flex items-center gap-2 rounded-full bg-background text-foreground px-8 py-3.5 hover:opacity-95 transition font-bold shadow-md interactive-hover cursor-pointer"
+              className="mt-10 inline-flex items-center gap-2 rounded-full bg-background text-foreground px-10 py-4.5 hover:opacity-95 transition font-bold shadow-md interactive-hover cursor-pointer text-base"
             >
               Explore Marketplace <FiArrowRight />
             </Link>
@@ -417,23 +436,23 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mx-auto max-w-7xl px-6 py-20 relative z-20">
-      <div className="flex items-end justify-between mb-10 gap-6 flex-wrap border-b border-border/50 pb-6">
+    <section className="mx-auto max-w-7xl px-6 py-28 md:py-36 relative z-20">
+      <div className="flex items-end justify-between mb-16 gap-6 flex-wrap border-b border-border/50 pb-8">
         <div>
-          <div className="text-xs uppercase tracking-[0.25em] text-primary font-bold">
+          <div className="text-xs sm:text-sm uppercase tracking-[0.3em] text-primary font-bold">
             {eyebrow}
           </div>
-          <h2 className="mt-2 font-display text-4xl lg:text-5xl text-balance font-bold tracking-tight">
+          <h2 className="mt-3 font-display text-5xl md:text-6xl lg:text-7xl text-balance font-bold tracking-tight leading-tight">
             {title}
           </h2>
           {subtitle && (
-            <p className="mt-3 text-muted-foreground max-w-xl font-medium">{subtitle}</p>
+            <p className="mt-4 text-muted-foreground text-sm sm:text-base md:text-lg max-w-2xl font-medium">{subtitle}</p>
           )}
         </div>
         {cta && (
           <Link
             to={cta.to}
-            className="text-sm text-primary hover:underline whitespace-nowrap font-bold flex items-center gap-0.5"
+            className="text-base text-primary hover:underline whitespace-nowrap font-bold flex items-center gap-1 hover:translate-x-1 transition-transform"
           >
             {cta.label} <FiChevronRight />
           </Link>

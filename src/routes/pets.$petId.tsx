@@ -21,11 +21,41 @@ import { toast } from "sonner";
 import { dbService, parseImages, safeUUID, type Review } from "@/services/db-service";
 
 export const Route = createFileRoute("/pets/$petId")({
+  loader: async ({ params }) => {
+    return await dbService.getPet(params.petId);
+  },
+  head: ({ loaderData }) => {
+    const title = loaderData
+      ? `${loaderData.name} — Premium ${loaderData.breed} for Adoption & Sale | WOOLF.INDIA`
+      : "Pet Details — WOOLF.INDIA";
+    const description = loaderData
+      ? `Meet ${loaderData.name}, a beautiful ${loaderData.age} old ${loaderData.breed} available on WOOLF.INDIA. ${loaderData.description.slice(0, 150)}...`
+      : "View details of our premium companion pets available for adoption and sale across India.";
+    const imageUrl = loaderData
+      ? (parseImages(loaderData.image_url)[0] || loaderData.image_url)
+      : "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?auto=format&fit=crop&q=80&w=1200";
+
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:image", content: imageUrl },
+        { property: "og:type", content: "product" },
+        { property: "og:url", content: `https://woolfindia.com/pets/${loaderData?.id || ""}` },
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: description },
+        { name: "twitter:image", content: imageUrl },
+      ],
+    };
+  },
   component: PetDetail,
 });
 
 function PetDetail() {
   const { petId } = Route.useParams();
+  const loaderPet = Route.useLoaderData();
   const { add: addCartItem } = useCart();
   const queryClient = useQueryClient();
 
@@ -40,10 +70,10 @@ function PetDetail() {
   const { data: pet, isLoading } = useQuery({
     queryKey: ["pet", petId],
     queryFn: () => dbService.getPet(petId),
-    initialData: () => {
+    initialData: loaderPet || (() => {
       const localPets = dbService.initLocalData();
       return localPets.find((p) => p.id === petId) || undefined;
-    },
+    }),
     staleTime: 0,
   });
 
@@ -232,10 +262,29 @@ function PetDetail() {
     );
   }
 
+  const schemaMarkup = {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    "name": pet.name,
+    "image": parseImages(pet.image_url)[0] || pet.image_url || "",
+    "description": pet.description,
+    "offers": {
+      "@type": "Offer",
+      "price": pet.price,
+      "priceCurrency": "INR",
+      "availability": "https://schema.org/InStock",
+      "url": `https://woolfindia.com/pets/${pet.id}`,
+    },
+  };
+
   return (
     <SiteLayout>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaMarkup) }}
+      />
       {/* Top Detail Block with spacing and aligned tops */}
-      <section className="mx-auto max-w-7xl px-6 pt-32 pb-16 grid lg:grid-cols-2 gap-12 items-start">
+      <article className="mx-auto max-w-7xl px-6 pt-32 pb-16 grid lg:grid-cols-2 gap-12 items-start">
         {/* Media Block (Left Column) */}
         <div className="space-y-4 w-full">
           {showVideo && pet.video_url ? (
@@ -246,8 +295,9 @@ function PetDetail() {
             <div className="relative rounded-[2.5rem] w-full aspect-square overflow-hidden shadow-soft border border-border bg-card">
               <img
                 src={parseImages(pet.image_url)[activeImageIndex] || pet.image_url || "/pet-1.jpg"}
-                alt={pet.name}
+                alt={`Premium pet companion ${pet.name} - ${pet.breed} breed`}
                 className="w-full h-full object-cover"
+                loading="eager"
               />
               {pet.video_url && (
                 <button
@@ -280,6 +330,7 @@ function PetDetail() {
                     src={imgUrl}
                     alt={`${pet.name} thumbnail ${idx + 1}`}
                     className="w-full h-full object-cover"
+                    loading="lazy"
                   />
                 </button>
               ))}
@@ -327,9 +378,9 @@ function PetDetail() {
           </div>
 
           <div className="space-y-2">
-            <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground">
+            <h2 className="text-xs uppercase font-bold tracking-wider text-muted-foreground">
               About {pet.name}
-            </h4>
+            </h2>
             <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap break-words">
               {pet.description}
             </p>
@@ -369,7 +420,7 @@ function PetDetail() {
             </button>
           </div>
         </div>
-      </section>
+      </article>
 
       {/* Reviews Block */}
       <section className="mx-auto max-w-7xl px-6 py-16 border-t border-border/60">

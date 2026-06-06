@@ -261,7 +261,7 @@ function TrainingPage() {
       {/* Appointment Booking Form */}
       <section className="mx-auto max-w-7xl px-6 my-16">
         <div className="rounded-[2.5rem] bg-accent/40 p-8 md:p-12 lg:p-14 border border-accent/20">
-          <h3 className="font-display text-4xl mb-2 text-foreground">Book an Appointment</h3>
+          <h2 className="font-display text-4xl mb-2 text-foreground">Book an Appointment</h2>
           <p className="text-sm text-muted-foreground mb-8">
             Select your preferred conditioning level, customize commands, and provide health details
             below.
@@ -272,7 +272,7 @@ function TrainingPage() {
               <div className="inline-flex rounded-full bg-accent/10 p-4 text-accent mb-2">
                 <FiCheckSquare size={36} />
               </div>
-              <h4 className="font-display text-2xl text-foreground">Booking Request Sent!</h4>
+              <h3 className="font-display text-2xl text-foreground">Booking Request Sent!</h3>
               <p className="text-sm text-muted-foreground">
                 We've received your request for <strong>{bookPetName}</strong>'s training session.
               </p>
@@ -538,9 +538,9 @@ function TrainingPage() {
 
               {/* Liability Release & Consent */}
               <div className="bg-card border-l-8 border-primary border-y border-r border-border rounded-[1.5rem] p-6 shadow-sm space-y-4">
-                <h4 className="font-display text-2xl text-foreground pb-2 border-b border-border">
+                <h3 className="font-display text-2xl text-foreground pb-2 border-b border-border">
                   Liability Release & Consent <span className="text-red-500">*</span>
-                </h4>
+                </h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   By checking the authorization agreement below, you release WOOLF.INDIA, its
                   certified trainer staff, and training facilities from any and all liability for

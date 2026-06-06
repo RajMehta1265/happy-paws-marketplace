@@ -26,16 +26,16 @@ function AboutPage() {
         </p>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 grid md:grid-cols-3 gap-6">
+      <section className="mx-auto max-w-7xl px-6 grid md:grid-cols-3 gap-6 pb-20">
         {[
           { t: "Our mission", b: "To make ethical pet ownership warm, accessible and joyful." },
           { t: "Our values", b: "Kindness first. Transparency always. Animals are family." },
           { t: "Our standards", b: "Every pet vaccinated, health-checked and ethically raised." },
         ].map((c) => (
-          <div key={c.t} className="rounded-3xl bg-card p-7 border border-border">
-            <div className="font-display text-2xl">{c.t}</div>
+          <article key={c.t} className="rounded-3xl bg-card p-7 border border-border">
+            <h2 className="font-display text-2xl font-bold">{c.t}</h2>
             <p className="mt-2 text-sm text-muted-foreground">{c.b}</p>
-          </div>
+          </article>
         ))}
       </section>
     </SiteLayout>
