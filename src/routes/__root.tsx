@@ -13,6 +13,7 @@ import {
 import appCss from "../styles.css?url";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/sonner";
+import { CustomCursor } from "@/components/site/CustomCursor";
 
 function NotFoundComponent() {
   return (
@@ -113,13 +114,8 @@ function RootShell({ children }: { children: React.ReactNode }) {
             __html: `
               (function() {
                 try {
-                  const stored = localStorage.getItem("woolf_theme");
-                  const theme = stored ? stored : "dark";
-                  if (theme === "dark") {
-                    document.documentElement.classList.add("dark");
-                  } else {
-                    document.documentElement.classList.remove("dark");
-                  }
+                  document.documentElement.classList.add("dark");
+                  localStorage.setItem("woolf_theme", "dark");
                 } catch (e) {}
               })();
             `,
@@ -162,6 +158,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <OnboardingGuard>
+          <CustomCursor />
           <Outlet />
           <Toaster richColors position="top-right" />
         </OnboardingGuard>

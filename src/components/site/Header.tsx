@@ -1,10 +1,10 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { FiMenu, FiX, FiShoppingBag, FiUser, FiLogOut, FiSun, FiMoon } from "react-icons/fi";
 import { useAuth } from "@/hooks/use-auth";
 import { useCart } from "@/hooks/use-cart";
-import { WolfLogo } from "@/components/ui/WolfLogo";
 import { toast } from "sonner";
+import { WolfLogo } from "@/components/ui/WolfLogo";
 
 const nav = [
   { to: "/", label: "Home" },
@@ -22,6 +22,24 @@ export function Header() {
   const { user, isAdmin, signOut } = useAuth();
   const { count } = useCart();
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isHome = pathname === "/";
+  const [visible, setVisible] = useState(!isHome);
+
+  useEffect(() => {
+    if (!isHome) {
+      setVisible(true);
+      return;
+    }
+    setVisible(false);
+    const onScroll = () => {
+      // Reveal once user has scrolled past the pinned cinematic stage
+      setVisible(window.scrollY > window.innerHeight * 12.6);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isHome]);
 
   const [isDark, setIsDark] = useState(true);
 
@@ -55,23 +73,14 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 glass">
+    <header
+      className={`sticky top-0 z-50 glass transition-all duration-500 ${
+        visible ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-full pointer-events-none"
+      }`}
+    >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <Link to="/" className="flex items-center gap-2 sm:gap-3 group">
-          {isDark ? (
-            <img
-              src="/woolfindia.jpg"
-              alt="WOOLF.INDIA"
-              className="h-16 w-auto sm:h-20 object-contain group-hover:scale-105 transition-transform duration-300 shrink-0"
-              style={{
-                filter:
-                  "invert(1) sepia(1) saturate(5) hue-rotate(15deg) brightness(0.9) contrast(1.2)",
-                mixBlendMode: "screen",
-              }}
-            />
-          ) : (
-            <WolfLogo className="h-10 w-10 sm:h-12 sm:w-12 text-primary group-hover:scale-105 transition-transform duration-300 shrink-0" />
-          )}
+          <WolfLogo className="h-12 w-12 sm:h-15 sm:w-15 text-primary group-hover:scale-105 group-hover:text-accent transition-all duration-300 shrink-0" />
           <span className="font-display font-extrabold text-lg sm:text-2xl lg:text-3xl tracking-[0.1em] sm:tracking-[0.2em] text-foreground group-hover:text-accent transition-colors duration-300 select-none">
             WOOLF.INDIA
           </span>
@@ -98,16 +107,8 @@ export function Header() {
           )}
         </nav>
         <div className="flex items-center gap-1.5 sm:gap-3">
-          {/* Theme Toggle - visible everywhere */}
-          <button
-            onClick={toggleTheme}
-            className="rounded-full p-2 hover:bg-muted text-foreground cursor-pointer transition-colors duration-205 flex items-center justify-center"
-            title={isDark ? "Classic Light Mode" : "Luxury Dark Mode"}
-          >
-            {isDark ? <FiSun size={18} className="text-primary" /> : <FiMoon size={18} />}
-          </button>
 
-          {/* Cart Icon - visible everywhere */}
+          {/* Cart Icon */}
           <Link
             to="/cart"
             aria-label="Cart"
@@ -121,7 +122,7 @@ export function Header() {
             )}
           </Link>
 
-          {/* Auth & Account Buttons - desktop/tablet only */}
+          {/* Auth & Account Buttons */}
           <div className="hidden sm:flex items-center gap-1.5 sm:gap-3">
             {user ? (
               <>
@@ -150,7 +151,7 @@ export function Header() {
             )}
           </div>
 
-          {/* Mobile hamburger menu - below lg */}
+          {/* Mobile hamburger menu */}
           <button
             className="lg:hidden p-2 hover:bg-muted rounded-full"
             onClick={() => setOpen((v) => !v)}
@@ -190,17 +191,6 @@ export function Header() {
               </Link>
             )}
 
-            {/* Mobile Theme Toggle */}
-            <button
-              onClick={() => {
-                toggleTheme();
-                setOpen(false);
-              }}
-              className="rounded-lg px-3 py-2 hover:bg-muted text-left flex items-center justify-between cursor-pointer"
-            >
-              <span>Theme Mode</span>
-              {isDark ? <FiSun className="text-primary" /> : <FiMoon />}
-            </button>
 
             {user ? (
               <>

@@ -4,6 +4,7 @@ import { FiArrowRight, FiHeart, FiShield, FiAward, FiCheck, FiChevronRight } fro
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { products, testimonials, trainingPlans } from "@/data/sample";
 import { HeroSlider } from "@/components/site/HeroSlider";
+import { CinematicHero } from "@/components/site/CinematicHero";
 import { dbService, parseImages } from "@/services/db-service";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,10 +37,7 @@ function Index() {
   const expandImageRef = useRef<HTMLDivElement>(null);
   const expandWrapperRef = useRef<HTMLDivElement>(null);
 
-  const cursorRef = useRef<HTMLDivElement>(null);
-  const cursorTextRef = useRef<HTMLSpanElement>(null);
 
-  const [hoverText, setHoverText] = useState("");
 
   useEffect(() => {
     // 1. Lenis Smooth Scroll Initialisation
@@ -55,69 +53,6 @@ function Index() {
       lenis.raf(time * 1000);
     });
     gsap.ticker.lagSmoothing(0);
-
-    // 2. Custom Trailing Cursor Logic (GSAP)
-    const cursor = cursorRef.current;
-    if (cursor) {
-      gsap.set(cursor, { xPercent: -50, yPercent: -50 });
-
-      const onMouseMove = (e: MouseEvent) => {
-        gsap.to(cursor, {
-          x: e.clientX,
-          y: e.clientY,
-          duration: 0.35,
-          ease: "power2.out",
-        });
-      };
-
-      window.addEventListener("mousemove", onMouseMove);
-
-      // Bind interactive hovers dynamically
-      const handleHoverEnter = (e: MouseEvent) => {
-        const target = e.currentTarget as HTMLElement;
-        const text = target.getAttribute("data-hover-text") || "VIEW";
-        setHoverText(text);
-
-        gsap.to(cursor, {
-          scale: 2.2,
-          backgroundColor: "rgba(216, 178, 115, 0.12)",
-          borderColor: "#D8B273",
-          duration: 0.3,
-        });
-        if (cursorTextRef.current) {
-          gsap.to(cursorTextRef.current, { opacity: 1, duration: 0.2 });
-        }
-      };
-
-      const handleHoverLeave = () => {
-        gsap.to(cursor, {
-          scale: 1,
-          backgroundColor: "transparent",
-          borderColor: "rgba(216, 178, 115, 0.4)",
-          duration: 0.3,
-        });
-        if (cursorTextRef.current) {
-          gsap.to(cursorTextRef.current, { opacity: 0, duration: 0.2 });
-        }
-      };
-
-      const bindHovers = () => {
-        const interactives = document.querySelectorAll(".interactive-hover");
-        interactives.forEach((el) => {
-          el.addEventListener("mouseenter", handleHoverEnter as any);
-          el.addEventListener("mouseleave", handleHoverLeave as any);
-        });
-      };
-
-      // Slight timeout to ensure DOM finishes mounting
-      setTimeout(bindHovers, 150);
-
-      // Clean up mousemove
-      return () => {
-        window.removeEventListener("mousemove", onMouseMove);
-        lenis.destroy();
-      };
-    }
 
     return () => lenis.destroy();
   }, []);
@@ -166,18 +101,20 @@ function Index() {
 
     // Drifting orbs scroll parallax trigger
     const orbs = document.querySelectorAll(".parallax-orb");
-    orbs.forEach((orb, i) => {
-      gsap.to(orb, {
-        yPercent: (i + 1) * 35,
-        ease: "none",
-        scrollTrigger: {
-          trigger: heroRef.current,
-          start: "top top",
-          end: "bottom top",
-          scrub: true,
-        },
+    if (heroRef.current && orbs.length > 0) {
+      orbs.forEach((orb, i) => {
+        gsap.to(orb, {
+          yPercent: (i + 1) * 35,
+          ease: "none",
+          scrollTrigger: {
+            trigger: heroRef.current,
+            start: "top top",
+            end: "bottom top",
+            scrub: true,
+          },
+        });
       });
-    });
+    }
 
     // Image Expansion Trigger: scales from bordered box layout to full width
     if (expandSectionRef.current && expandWrapperRef.current && expandImageRef.current) {
@@ -243,120 +180,9 @@ function Index() {
 
   return (
     <SiteLayout>
-      {/* GSAP Trailing Custom Cursor Overlay */}
-      <div
-        ref={cursorRef}
-        className="fixed top-0 left-0 w-8 h-8 rounded-full border border-primary/50 pointer-events-none z-50 flex items-center justify-center -translate-x-1/2 -translate-y-1/2 hidden md:flex"
-        style={{ transition: "scale 0.2s, background-color 0.2s, border-color 0.2s" }}
-      >
-        <span
-          ref={cursorTextRef}
-          className="text-[7px] font-bold uppercase tracking-widest text-primary opacity-0 whitespace-nowrap pointer-events-none"
-        >
-          {hoverText}
-        </span>
-      </div>
 
-      {/* Fullscreen Hero Section */}
-      <section
-        ref={heroRef}
-        className="relative overflow-hidden min-h-[92vh] flex items-center justify-center"
-      >
-        {/* Layered Parallax Background radial glowing orbs (depth) */}
-        <div className="absolute top-1/4 left-1/4 w-[35rem] h-[35rem] rounded-full bg-accent/25 blur-[120px] pointer-events-none parallax-orb z-0" />
-        <div
-          className="absolute top-1/3 right-1/4 w-[30rem] h-[30rem] rounded-full bg-primary/10 blur-[140px] pointer-events-none parallax-orb z-0"
-          style={{ animationDelay: "-2s" }}
-        />
-        <div
-          className="absolute bottom-1/4 left-1/3 w-[25rem] h-[25rem] rounded-full bg-accent/20 blur-[100px] pointer-events-none parallax-orb z-0"
-          style={{ animationDelay: "-4s" }}
-        />
-
-        {/* Ambient floating champagne circles background animation */}
-        <div className="absolute inset-0 opacity-20 pointer-events-none z-0 overflow-hidden">
-          <div className="absolute h-2 w-2 rounded-full bg-primary top-1/3 left-1/5 animate-pulse" />
-          <div className="absolute h-3 w-3 rounded-full bg-accent top-1/2 left-2/3 animate-ping duration-1000" />
-          <div className="absolute h-1.5 w-1.5 rounded-full bg-primary bottom-1/3 right-1/4 animate-bounce" />
-        </div>
-
-        <div className="mx-auto max-w-7xl px-6 py-12 lg:py-20 grid lg:grid-cols-2 gap-12 items-center relative z-10 w-full">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-accent/60 px-4 py-1.5 text-xs font-semibold text-accent-foreground select-none">
-              <FiHeart className="text-primary" /> A warmer home for every paw
-            </span>
-
-            <h1
-              ref={heroHeadingRef}
-              className="mt-6 font-display text-5xl lg:text-7xl leading-[1.05] text-balance tracking-tight overflow-hidden"
-            >
-              <span className="block overflow-hidden h-[1.1em] py-1">
-                <span className="block reveal-word">Where pets find</span>
-              </span>
-              <span className="block overflow-hidden h-[1.1em] py-1">
-                <span className="block reveal-word">
-                  <em className="text-primary not-italic font-serif italic">families</em>, and
-                </span>
-              </span>
-              <span className="block overflow-hidden h-[1.1em] py-1">
-                <span className="block reveal-word">families find joy.</span>
-              </span>
-            </h1>
-
-            <p
-              ref={heroSubRef}
-              className="mt-6 text-lg text-muted-foreground max-w-lg font-medium leading-relaxed"
-            >
-              WOOLF.INDIA is a gentle marketplace, training studio and care shop — built for people
-              who love animals the way you do.
-            </p>
-
-            <div ref={heroCtaRef} className="mt-8 flex flex-wrap gap-4 items-center">
-              <Link
-                to="/pets"
-                data-hover-text="GO SHOP"
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-primary-foreground hover:opacity-95 transition shadow-lg interactive-hover cursor-pointer"
-              >
-                Meet the pets <FiArrowRight />
-              </Link>
-              <Link
-                to="/contact"
-                data-hover-text="CHAT"
-                className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-7 py-3.5 text-sm font-semibold hover:bg-muted transition interactive-hover cursor-pointer"
-              >
-                Get in touch
-              </Link>
-            </div>
-
-            <div className="mt-12 grid grid-cols-3 gap-6 max-w-md border-t border-border/50 pt-8">
-              {[
-                { k: "2.4k+", v: "Happy homes" },
-                { k: "98%", v: "Vaccinated" },
-                { k: "120", v: "Rescues / yr" },
-              ].map((s) => (
-                <div key={s.v}>
-                  <div className="font-display text-3xl font-bold text-primary">{s.k}</div>
-                  <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wider font-semibold">
-                    {s.v}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div ref={heroVisualsRef} className="relative z-10">
-            <div className="absolute -inset-6 rounded-[3.5rem] bg-accent/30 blur-3xl" aria-hidden />
-            <HeroSlider />
-            <div className="absolute -bottom-6 -left-6 bg-background/95 border border-border rounded-2xl p-4 hidden sm:flex items-center gap-3 z-30 shadow-md">
-              <FiShield className="text-primary text-2xl" />
-              <div>
-                <div className="text-sm font-semibold">Health-checked</div>
-                <div className="text-xs text-muted-foreground">Every pet, every time</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Cinematic Pinned Scrollytelling Hero Section */}
+      <CinematicHero />
 
       {/* Image Expansion Cinematic Section (Parallax visual) */}
       <section

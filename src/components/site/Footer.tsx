@@ -17,23 +17,10 @@ export function Footer() {
 
   return (
     <footer className="mt-24 border-t border-border bg-secondary/50">
-      <div className="mx-auto max-w-7xl px-6 py-16 grid gap-10 md:grid-cols-4">
+      <div className="mx-auto max-w-7xl px-6 py-16 grid gap-10 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
         <div>
           <div className="flex items-center gap-3">
-            {isDark ? (
-              <img
-                src="/woolfindia.jpg"
-                alt="WOOLF.INDIA"
-                className="h-16 w-auto sm:h-20 object-contain"
-                style={{
-                  filter:
-                    "invert(1) sepia(1) saturate(5) hue-rotate(15deg) brightness(0.9) contrast(1.2)",
-                  mixBlendMode: "screen",
-                }}
-              />
-            ) : (
-              <WolfLogo className="h-10 w-10 text-primary" />
-            )}
+            <WolfLogo className="h-12 w-12 sm:h-16 sm:w-16 text-primary shrink-0" />
             <span className="font-display font-extrabold text-xl tracking-[0.15em] text-foreground">
               WOOLF.INDIA
             </span>

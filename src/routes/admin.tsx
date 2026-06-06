@@ -2363,7 +2363,7 @@ function AdminPage() {
                     <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold">
                       Most Popular Program
                     </div>
-                    <div className="mt-2 font-display text-2xl text-[#673ab7]">
+                    <div className="mt-2 font-display text-2xl text-primary">
                       {(() => {
                         const counts: Record<string, number> = {};
                         trainingBookings.forEach((b) => {

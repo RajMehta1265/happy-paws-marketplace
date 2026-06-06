@@ -171,7 +171,7 @@ function TrainingPage() {
 
     const coords = getCoords(e);
     ctx.beginPath();
-    ctx.strokeStyle = "#D8B273"; // Woolf Champagne Gold
+    ctx.strokeStyle = "#F4A261"; // Primary Accent
     ctx.lineWidth = 2.5;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
