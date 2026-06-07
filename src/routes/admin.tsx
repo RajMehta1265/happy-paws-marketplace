@@ -71,6 +71,26 @@ const BREED_PRESETS: Record<string, string[]> = {
   Exotic: ["Veiled Chameleon", "Sugar Glider", "Red-Eyed Tree Frog", "Bearded Dragon", "Axolotl"],
 };
 
+const commandsList = [
+  "Sit",
+  "Stay",
+  "Heel",
+  "Come",
+  "Down",
+  "Leave It",
+  "Leash Walking",
+  "Shake Hands",
+  "Roll Over",
+  "Bathroom Trained",
+];
+
+const getTrainingPrice = (type: string, selectedCommands?: string[] | null) => {
+  const basePrice = type === "Basic" ? 15000 : type === "Moderate" ? 18000 : 20000;
+  const count = selectedCommands?.length ?? 10;
+  const unselected = Math.max(0, 10 - count);
+  return basePrice - Math.floor(unselected / 2) * 1000;
+};
+
 function AdminPage() {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -2420,6 +2440,9 @@ function AdminPage() {
                             Program
                           </th>
                           <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                            Price
+                          </th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
                             Date
                           </th>
                           <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
@@ -2440,7 +2463,7 @@ function AdminPage() {
                         {trainingBookings.length === 0 ? (
                           <tr>
                             <td
-                              colSpan={9}
+                              colSpan={10}
                               className="text-center py-10 text-muted-foreground italic"
                             >
                               No training bookings yet.
@@ -2493,6 +2516,9 @@ function AdminPage() {
                                 >
                                   {b.trainingType}
                                 </span>
+                              </td>
+                              <td className="px-5 py-3 font-display font-semibold text-accent-foreground">
+                                ₹{getTrainingPrice(b.trainingType, b.selectedCommands).toLocaleString()}
                               </td>
                               <td className="px-5 py-3 text-foreground">{b.preferredDate}</td>
                               <td className="px-5 py-3 text-muted-foreground text-xs">
@@ -2771,6 +2797,8 @@ function AdminPage() {
                           trainingType: editingTraining.trainingType,
                           preferredDate: editingTraining.preferredDate,
                           medicalConditions: editingTraining.medicalConditions,
+                          completed: editingTraining.completed,
+                          selectedCommands: editingTraining.selectedCommands,
                         });
                         setEditingTraining(null);
                         refetchTraining();
@@ -2855,9 +2883,103 @@ function AdminPage() {
                           }
                         >
                           <option value="Basic">Basic</option>
-                          <option value="Moderate">Moderate</option>
                           <option value="Advance">Advance</option>
                         </select>
+                      </div>
+                    </div>
+
+                    <div className="bg-muted/35 p-4 rounded-2xl border border-border/80 space-y-2">
+                      <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wider">
+                        Price Information
+                      </span>
+                      <div className="flex justify-between items-center text-sm font-medium">
+                        <span className="text-muted-foreground">Base Package Price:</span>
+                        <span className="text-foreground">
+                          {editingTraining.trainingType === "Basic" ? "₹15,000" : "₹20,000"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm font-semibold">
+                        <span className="text-muted-foreground">Calculated Booking Price:</span>
+                        <span className="text-accent font-bold text-base">
+                          ₹{getTrainingPrice(editingTraining.trainingType, editingTraining.selectedCommands).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground leading-relaxed">
+                        Calculated for {editingTraining.selectedCommands?.length ?? 10} selected commands (compulsory first 4 cannot be removed, ₹1,000 discount per 2 unselected commands).
+                      </div>
+                    </div>
+
+                    {/* Completed Toggle */}
+                    <div className="flex items-center gap-3 py-1.5 border-t border-border/50 pt-3">
+                      <label className="flex items-center gap-2.5 text-sm font-semibold text-foreground cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          className="rounded text-primary h-5 w-5 border-input focus:ring-primary cursor-pointer accent-primary"
+                          checked={editingTraining.completed || false}
+                          onChange={(e) =>
+                            setEditingTraining({ ...editingTraining, completed: e.target.checked })
+                          }
+                        />
+                        <span>Completed (Mark training as finished)</span>
+                      </label>
+                    </div>
+
+                    {/* Customize Commands Grid */}
+                    <div className="flex flex-col gap-2.5 border-t border-border/50 pt-3">
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Customize Commands List
+                        </label>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          First 4 commands are compulsory. Minimum of 4 commands required.
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {commandsList.map((command) => {
+                          const selected = editingTraining.selectedCommands || [];
+                          const checked = selected.includes(command);
+                          const isCompulsory = ["Sit", "Stay", "Heel", "Come"].includes(command);
+
+                          return (
+                            <button
+                              key={command}
+                              type="button"
+                              onClick={() => {
+                                if (isCompulsory) {
+                                  toast.warning(`${command} is a compulsory command and cannot be removed.`);
+                                  return;
+                                }
+                                if (checked) {
+                                  if (selected.length <= 4) {
+                                    toast.warning("A minimum of 4 commands must be selected.");
+                                    return;
+                                  }
+                                  setEditingTraining({
+                                    ...editingTraining,
+                                    selectedCommands: selected.filter((c) => c !== command),
+                                  });
+                                } else {
+                                  setEditingTraining({
+                                    ...editingTraining,
+                                    selectedCommands: [...selected, command],
+                                  });
+                                }
+                              }}
+                              className={`flex items-center justify-between gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-all ${
+                                checked
+                                  ? "bg-primary/10 text-primary border-primary"
+                                  : "border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+                              } ${isCompulsory ? "cursor-default" : "cursor-pointer"}`}
+                            >
+                              <span className="truncate">{command}</span>
+                              {isCompulsory && (
+                                <span className="text-[8px] bg-primary/20 text-primary px-1 rounded shrink-0">
+                                  Comp
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 

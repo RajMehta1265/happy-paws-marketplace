@@ -182,74 +182,185 @@ function Dashboard() {
         </div>
 
         {/* Explore Training Programs Section */}
-        <div className="rounded-3xl bg-card border border-border p-8 space-y-6">
+        <div className="rounded-3xl bg-card border border-border p-8 md:p-10 space-y-8 animate-fade-in text-foreground">
           <div>
-            <h2 className="font-display text-2xl">Professional Pet Training Packages</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Invest in your companion's behavior and impulse discipline. Select a package below to schedule a session.
+            <h2 className="font-display text-3xl">Professional Pet Training Packages</h2>
+            <p className="text-sm text-muted-foreground mt-2 max-w-xl">
+              From basic house manners to advanced off-leash obedience, explore our comprehensive conditioning programs.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Basic obedience Card */}
-            <div className="rounded-2xl border border-border bg-background p-6 flex flex-col justify-between hover:border-primary/25 transition group">
-              <div className="space-y-4">
-                <div className="flex justify-between items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Basic Obedience Card */}
+            <div className="rounded-[2rem] bg-background border border-border/80 p-8 flex flex-col justify-between hover:shadow-lg hover:border-primary/20 transition-all duration-300">
+              <div className="space-y-6">
+                <div className="flex justify-between items-start flex-wrap gap-4 border-b border-border/60 pb-5">
                   <div>
-                    <span className="text-lg">🦴</span>
-                    <h3 className="font-bold text-lg text-foreground mt-1">Basic Obedience Program</h3>
-                    <p className="text-xs text-muted-foreground">Puppies & Beginners</p>
+                    <span className="text-2xl">🦴</span>
+                    <h3 className="font-display text-xl font-bold text-foreground mt-2">Basic Obedience Commands</h3>
+                    <p className="text-xs text-muted-foreground mt-1">For puppies and beginners</p>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-lg text-primary">₹2,500</div>
-                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground">6-8 Sessions</span>
+                    <div className="font-display text-2xl font-bold text-primary">₹15,000</div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">6–8 Sessions</span>
                   </div>
                 </div>
 
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <div>• Basic Commands (Sit, Stay, Recall, Down)</div>
-                  <div>• Leash Training (Walking calmly, No pulling)</div>
-                  <div>• House Manners (No jumping, doorway boundaries)</div>
-                  <div>• Controlled puppy socialization & Toilet training schedule</div>
+                {/* Basic Highlights */}
+                <div className="grid sm:grid-cols-2 gap-4 text-xs leading-relaxed">
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="font-bold text-foreground mb-1">🦴 Basic Commands</h4>
+                      <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                        <li>Sit, Stay, Come (Recall)</li>
+                        <li>Down (Lie Down)</li>
+                        <li>Leave it / Drop it</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-foreground mb-1">🐕‍🦺 Leash Training</h4>
+                      <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                        <li>Walking calmly on a leash</li>
+                        <li>Not pulling or lunging</li>
+                        <li>Direction & pace shifts</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-foreground mb-1">🧠 Focus & Attention</h4>
+                      <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                        <li>Name recognition</li>
+                        <li>Eye contact on command</li>
+                        <li>Ignore distractions</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="font-bold text-foreground mb-1">🏡 House Manners</h4>
+                      <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                        <li>No jumping on people</li>
+                        <li>Waiting at doors</li>
+                        <li>No begging during meals</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-foreground mb-1">💩 Toilet Training</h4>
+                      <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                        <li>Crate training guidance</li>
+                        <li>Toilet schedule planning</li>
+                        <li>Indoor vs outdoor strategies</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-foreground mb-1">🐶 Socialization & Fixes</h4>
+                      <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                        <li>Dog & stranger exposure</li>
+                        <li>Nipping & biting fixes</li>
+                        <li>Correct household chewing</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-border/50 pt-4 text-[10px] text-muted-foreground space-y-0.5">
+                  <div>🎁 <strong>Included:</strong> Treat advice, practicing calendar, WhatsApp support.</div>
+                  <div>🗓️ <strong>Format:</strong> 45-60 min sessions at home or training center.</div>
                 </div>
               </div>
 
               <Link
                 to="/training"
-                className="mt-6 w-full rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground font-bold py-2.5 text-xs text-center transition duration-200"
+                className="mt-8 w-full rounded-full bg-primary text-primary-foreground hover:opacity-90 font-bold py-3 text-xs text-center transition cursor-pointer shadow-md"
               >
-                Learn & Book Basic
+                Book Basic Obedience Package
               </Link>
             </div>
 
-            {/* Advanced dog training Card */}
-            <div className="rounded-2xl border border-border bg-background p-6 flex flex-col justify-between hover:border-primary/25 transition group">
-              <div className="space-y-4">
-                <div className="flex justify-between items-start">
+            {/* Advanced Training Card */}
+            <div className="rounded-[2rem] bg-background border border-border/80 p-8 flex flex-col justify-between hover:shadow-lg hover:border-primary/20 transition-all duration-300">
+              <div className="space-y-6">
+                <div className="flex justify-between items-start flex-wrap gap-4 border-b border-border/60 pb-5">
                   <div>
-                    <span className="text-lg">🐕</span>
-                    <h3 className="font-bold text-lg text-foreground mt-1">Advanced Training Program</h3>
-                    <p className="text-xs text-muted-foreground">Intermediate & Advanced</p>
+                    <span className="text-2xl">🐕</span>
+                    <h3 className="font-display text-xl font-bold text-foreground mt-2">Advanced Dog Training</h3>
+                    <p className="text-xs text-muted-foreground mt-1">Intermediate to Advanced level</p>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-lg text-primary">₹7,500</div>
-                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground">8-12 Sessions</span>
+                    <div className="font-display text-2xl font-bold text-primary">₹20,000</div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">8–12 Sessions</span>
                   </div>
                 </div>
 
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <div>• Precision distance commands & Off-leash obedience</div>
-                  <div>• High-distraction focus training in public parks</div>
-                  <div>• Behavior modification (reactivity & aggression control)</div>
-                  <div>• Advanced doorway and visitor discipline</div>
+                {/* Advanced Highlights */}
+                <div className="grid sm:grid-cols-2 gap-4 text-xs leading-relaxed">
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="font-bold text-foreground mb-1">🐕 Precision Control</h4>
+                      <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                        <li>Distance control commands</li>
+                        <li>Extended stays + distractions</li>
+                        <li>Off-leash command control</li>
+                        <li>Heel walking precision</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-foreground mb-1">🧠 Impulse & Discipline</h4>
+                      <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                        <li>Food release waiting release</li>
+                        <li>Doorway rush control</li>
+                        <li>Calm greeting greetings</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-foreground mb-1">🐕‍🦺 Leash & Outdoor</h4>
+                      <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                        <li>Loose-leash walking</li>
+                        <li>Traffic/crowds control</li>
+                        <li>Emergency stop & recall</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="font-bold text-foreground mb-1">🧠 Focus Under Distraction</h4>
+                      <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                        <li>Ignoring food & animals</li>
+                        <li>Parks/markets obedience</li>
+                        <li>Sustained focus on handler</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-foreground mb-1">⚠️ Behavior Modification</h4>
+                      <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                        <li>Reactivity (dogs/cars)</li>
+                        <li>Aggression management</li>
+                        <li>Separation anxiety & guarding</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-foreground mb-1">🎯 Off-Leash Reliability</h4>
+                      <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                        <li>Safe zone off-leash recall</li>
+                        <li>Emergency command recall</li>
+                        <li>Real-world proofing</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-border/50 pt-4 text-[10px] text-muted-foreground space-y-0.5">
+                  <div>🎁 <strong>Included:</strong> Custom plan, owner drills, reports, WhatsApp support.</div>
+                  <div>🗓️ <strong>Format:</strong> 60-75 min sessions. Ahmedabad home + outdoors.</div>
                 </div>
               </div>
 
               <Link
                 to="/training"
-                className="mt-6 w-full rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground font-bold py-2.5 text-xs text-center transition duration-200"
+                className="mt-8 w-full rounded-full bg-primary text-primary-foreground hover:opacity-90 font-bold py-3 text-xs text-center transition cursor-pointer shadow-md"
               >
-                Learn & Book Advanced
+                Book Advanced Program Package
               </Link>
             </div>
           </div>
