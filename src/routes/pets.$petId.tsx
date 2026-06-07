@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   FiCheck,
-  FiHeart,
   FiStar,
   FiMessageSquare,
   FiSend,
@@ -372,8 +371,8 @@ function PetDetail() {
             <span className="text-xs uppercase font-bold tracking-wider text-muted-foreground">
               Price
             </span>
-            <div className="font-display text-4xl text-accent font-semibold">
-              ₹{Number(pet.price).toFixed(0)}
+            <div className="font-display text-5xl lg:text-6xl text-accent font-semibold">
+              ₹{Number(pet.price).toLocaleString("en-IN")}
             </div>
           </div>
 
@@ -412,12 +411,6 @@ function PetDetail() {
             >
               Enquire to buy
             </Link>
-            <button
-              aria-label="Wishlist"
-              className="rounded-full border border-border p-3 hover:bg-muted cursor-pointer transition text-muted-foreground"
-            >
-              <FiHeart />
-            </button>
           </div>
         </div>
       </article>
