@@ -159,7 +159,7 @@ function ProductsPage() {
       {/* Page Header Section */}
       <section ref={listingSectionRef} className="mx-auto max-w-7xl px-6 pt-32 pb-4">
         <div className="text-sm sm:text-base md:text-lg uppercase tracking-[0.3em] text-accent font-extrabold">
-          Marketplace
+          Product
         </div>
         <h1 className="mt-2 font-display text-5xl lg:text-6xl text-foreground leading-tight">
           Care, curated.
