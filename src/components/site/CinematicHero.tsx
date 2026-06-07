@@ -206,10 +206,12 @@ export function CinematicHero() {
       .from(".paw-heart", { scale: 0, rotate: -30, duration: 1, ease: "back.out(2)" }, 12.3);
 
     // Continuous animations
-    gsap.to(".feather", {
-      y: "-=40", rotate: "+=20", duration: 4, ease: "sine.inOut",
-      repeat: -1, yoyo: true, stagger: { each: 0.5, from: "random" },
-    });
+    if (document.querySelector(".feather")) {
+      gsap.to(".feather", {
+        y: "-=40", rotate: "+=20", duration: 4, ease: "sine.inOut",
+        repeat: -1, yoyo: true, stagger: { each: 0.5, from: "random" },
+      });
+    }
     gsap.to(".wing", {
       scaleY: 0.35, transformOrigin: "center bottom", duration: 0.25,
       repeat: -1, yoyo: true, ease: "sine.inOut", stagger: { each: 0.03, from: "random" },
@@ -331,9 +333,9 @@ export function CinematicHero() {
 
       {/* ─── SCENE 2 — Shutter opens ────────────────────────────────────────── */}
       <div className="scene-shutter scene absolute inset-0 z-35 overflow-hidden pointer-events-none" style={{ opacity: 0 }}>
-        <div className="shutter-left absolute inset-y-0 left-0 w-1/2 bg-card overflow-hidden border-r border-border/20">
-          <div className="shutter-logo-left absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-4 md:gap-8 mr-[-1px]">
-            <span className="font-display text-4xl md:text-7xl lg:text-8xl font-extrabold text-foreground tracking-tight select-none">
+        <div className="shutter-left absolute inset-y-0 left-0 w-1/2 bg-card flex items-center justify-end overflow-hidden border-r border-border/20">
+          <div className="shutter-logo-left flex items-center gap-3 sm:gap-4 md:gap-8 mr-[-1px]">
+            <span className="font-display text-3xl sm:text-4xl md:text-7xl lg:text-8xl font-extrabold text-foreground tracking-tight select-none">
               WOOLF
             </span>
             <div className="h-24 w-12 md:h-40 md:w-20 lg:h-48 lg:w-24 shrink-0">
@@ -346,8 +348,8 @@ export function CinematicHero() {
           </div>
         </div>
         
-        <div className="shutter-right absolute inset-y-0 right-0 w-1/2 bg-card/90 overflow-hidden border-l border-border/20">
-          <div className="shutter-logo-right absolute left-0 top-1/2 -translate-y-1/2 flex items-center gap-4 md:gap-8 ml-[-1px]">
+        <div className="shutter-right absolute inset-y-0 right-0 w-1/2 bg-card/90 flex items-center justify-start overflow-hidden border-l border-border/20">
+          <div className="shutter-logo-right flex items-center gap-3 sm:gap-4 md:gap-8 ml-[-1px]">
             <div className="h-24 w-12 md:h-40 md:w-20 lg:h-48 lg:w-24 shrink-0">
               <WolfLogo
                 viewBox="100 0 100 220"
@@ -355,7 +357,7 @@ export function CinematicHero() {
                 className="h-full w-full text-primary"
               />
             </div>
-            <span className="font-display text-4xl md:text-7xl lg:text-8xl font-extrabold text-foreground tracking-tight select-none">
+            <span className="font-display text-3xl sm:text-4xl md:text-7xl lg:text-8xl font-extrabold text-foreground tracking-tight select-none">
               INDIA
             </span>
           </div>
