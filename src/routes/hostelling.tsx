@@ -11,10 +11,11 @@ import {
   FiUploadCloud,
   FiCheckCircle,
 } from "react-icons/fi";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { dbService, type HostellingBooking } from "@/services/db-service";
+import { BookingCalendar } from "@/components/BookingCalendar";
 
 export const Route = createFileRoute("/hostelling")({
   head: () => ({
@@ -50,6 +51,47 @@ function HostellingPage() {
   const [checkOutDate, setCheckOutDate] = useState("");
   const [numDays, setNumDays] = useState<number>(1);
   const [consentTerms, setConsentTerms] = useState(false);
+
+  // Calendar availability state
+  const [bookedDates, setBookedDates] = useState<string[]>([]);
+  const [dateCounts, setDateCounts] = useState<Record<string, number>>({});
+
+  const refreshAvailability = useCallback(() => {
+    dbService.getHostellingBookings()
+      .then((bookings) => {
+        const counts: Record<string, number> = {};
+        const maxPerDay = 5; // Suppose max 5 pets allowed for hostelling per day
+        
+        bookings.forEach((b) => {
+          if (!b.checkInDate || !b.checkOutDate) return;
+          // Loop through all dates from checkInDate to checkOutDate
+          const start = new Date(b.checkInDate + "T00:00:00");
+          const end = new Date(b.checkOutDate + "T00:00:00");
+          const current = new Date(start);
+          
+          while (current <= end) {
+            const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}-${String(current.getDate()).padStart(2, "0")}`;
+            counts[dateStr] = (counts[dateStr] || 0) + 1;
+            // Advance one day
+            current.setDate(current.getDate() + 1);
+          }
+        });
+        
+        const booked = Object.entries(counts)
+          .filter(([, count]) => count >= maxPerDay)
+          .map(([date]) => date);
+          
+        setBookedDates(booked);
+        setDateCounts(counts);
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch hostelling availability:", err);
+      });
+  }, []);
+
+  useEffect(() => {
+    refreshAvailability();
+  }, [refreshAvailability]);
 
   // Prefill parent info if user logged in
   useEffect(() => {
@@ -192,6 +234,30 @@ function HostellingPage() {
       return;
     }
 
+    // Validate stay range availability
+    const start = new Date(checkInDate + "T00:00:00");
+    const end = new Date(checkOutDate + "T00:00:00");
+    if (end < start) {
+      toast.error("Check-out date cannot be before check-in date.");
+      return;
+    }
+
+    const current = new Date(start);
+    let hasBookedDate = false;
+    while (current <= end) {
+      const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}-${String(current.getDate()).padStart(2, "0")}`;
+      if (bookedDates.includes(dateStr)) {
+        hasBookedDate = true;
+        break;
+      }
+      current.setDate(current.getDate() + 1);
+    }
+
+    if (hasBookedDate) {
+      toast.error("One or more dates in your selected stay range are fully booked. Please choose another range.");
+      return;
+    }
+
     if (temperament === "Aggressive" && !aggressionDetails.trim()) {
       toast.error("Please specify aggression triggers or details.");
       return;
@@ -233,6 +299,7 @@ function HostellingPage() {
       });
 
       setBooking(createdBooking);
+      refreshAvailability();
       if (typeof window !== "undefined") {
         localStorage.setItem("pawhaven_hostelling_booking", JSON.stringify(createdBooking));
       }
@@ -741,6 +808,33 @@ function HostellingPage() {
               <h3 className="font-display text-2xl text-foreground pb-2 border-b border-border">
                 3. Stay Requirements
               </h3>
+
+              {/* Interactive Date Range Calendar */}
+              <div className="max-w-xl pb-4">
+                <label className="text-sm font-semibold text-foreground block mb-3">
+                  Select Check-in (Dropping off) and Check-out (Picking up) Dates
+                </label>
+                <BookingCalendar
+                  mode="user"
+                  selectionMode="range"
+                  bookedDates={bookedDates}
+                  dateCounts={dateCounts}
+                  maxPerDay={5}
+                  selectedStartDate={checkInDate}
+                  selectedEndDate={checkOutDate}
+                  onRangeSelect={(start, end) => {
+                    setCheckInDate(start || "");
+                    setCheckOutDate(end || "");
+                    if (start && end) {
+                      toast.success(
+                        `Selected stay from ${new Date(start + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "long" })} to ${new Date(end + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "long" })}.`
+                      );
+                    } else if (start) {
+                      toast.info(`Selected check-in date: ${new Date(start + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "long" })}. Now select check-out date.`);
+                    }
+                  }}
+                />
+              </div>
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="flex flex-col gap-1.5">

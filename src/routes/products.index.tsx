@@ -105,7 +105,7 @@ function ProductsPage() {
   // Calculate maximum price from product data dynamically
   const maxSliderValue = useMemo(() => {
     if (!products || products.length === 0) return 5000;
-    const prices = products.map((p) => Number(p.price));
+    const prices = products.map((p: any) => Number(p.price));
     const rawMax = Math.max(...prices, 5000);
     return Math.ceil(rawMax / 500) * 500;
   }, [products]);

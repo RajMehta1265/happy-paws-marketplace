@@ -19,6 +19,14 @@ interface BookingCalendarProps {
   selectedDate?: string;
   /** Called when admin deletes a booking */
   onDeleteBooking?: (id: string) => void;
+  /** Selection mode: "single" or "range" */
+  selectionMode?: "single" | "range";
+  /** Start date of range */
+  selectedStartDate?: string;
+  /** End date of range */
+  selectedEndDate?: string;
+  /** Callback for range selection */
+  onRangeSelect?: (startDate: string | null, endDate: string | null) => void;
 }
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -53,6 +61,10 @@ export function BookingCalendar({
   onDateSelect,
   selectedDate,
   onDeleteBooking,
+  selectionMode = "single",
+  selectedStartDate,
+  selectedEndDate,
+  onRangeSelect,
 }: BookingCalendarProps) {
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
@@ -106,7 +118,21 @@ export function BookingCalendar({
     const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const isPast = dateStr < todayStr;
     const isToday = dateStr === todayStr;
-    const isSelected = mode === "user" ? selectedDate === dateStr : adminSelectedDay === dateStr;
+    
+    const isStart = selectionMode === "range" && selectedStartDate === dateStr;
+    const isEnd = selectionMode === "range" && selectedEndDate === dateStr;
+    const isInRange =
+      selectionMode === "range" &&
+      selectedStartDate &&
+      selectedEndDate &&
+      dateStr > selectedStartDate &&
+      dateStr < selectedEndDate;
+
+    const isSelected =
+      selectionMode === "range"
+        ? (isStart || isEnd)
+        : (mode === "user" ? selectedDate === dateStr : adminSelectedDay === dateStr);
+
     const count = effectiveCounts[dateStr] || 0;
     const isFull = mode === "user" ? bookedDates.includes(dateStr) : count >= maxPerDay;
 
@@ -117,6 +143,8 @@ export function BookingCalendar({
       cellClass += "text-muted-foreground/40 bg-muted/20 cursor-not-allowed";
     } else if (isSelected) {
       cellClass += "bg-primary text-primary-foreground shadow-lg shadow-primary/30 scale-105";
+    } else if (isInRange) {
+      cellClass += "bg-primary/20 text-primary border-y border-primary/30 rounded-none hover:bg-primary/30";
     } else if (isFull) {
       cellClass += "bg-red-500/10 text-red-500 border border-red-500/30 hover:bg-red-500/20";
     } else if (count > 0) {
@@ -127,15 +155,29 @@ export function BookingCalendar({
         "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500/20 hover:shadow-sm";
     }
 
-    if (isToday && !isSelected) {
+    if (isToday && !isSelected && !isInRange) {
       cellClass += " ring-2 ring-primary/50 ring-offset-1 ring-offset-background";
     }
 
     const handleClick = () => {
       if (isPast) return;
       if (mode === "user") {
-        if (!isFull && onDateSelect) {
-          onDateSelect(dateStr);
+        if (selectionMode === "range") {
+          if (onRangeSelect) {
+            if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
+              onRangeSelect(dateStr, null);
+            } else {
+              if (dateStr < selectedStartDate) {
+                onRangeSelect(dateStr, null);
+              } else {
+                onRangeSelect(selectedStartDate, dateStr);
+              }
+            }
+          }
+        } else {
+          if (!isFull && onDateSelect) {
+            onDateSelect(dateStr);
+          }
         }
       } else {
         setAdminSelectedDay(adminSelectedDay === dateStr ? null : dateStr);

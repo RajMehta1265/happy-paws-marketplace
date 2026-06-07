@@ -822,7 +822,7 @@ function AdminPage() {
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            Training Bookings
+            Bookings & Stays
           </button>
           <button
             onClick={() => {
@@ -2687,6 +2687,18 @@ function AdminPage() {
                                     title={b.medicalConditions}
                                   >
                                     Med: {b.medicalConditions}
+                                  </div>
+                                )}
+                                {b.medicalImage && (
+                                  <div className="mt-1.5">
+                                    <span className="text-[9px] text-muted-foreground font-semibold block mb-0.5">Vet Doc:</span>
+                                    <a href={b.medicalImage} target="_blank" rel="noreferrer">
+                                      <img
+                                        src={b.medicalImage}
+                                        alt="Vet Doc"
+                                        className="h-8 max-w-[80px] object-cover bg-white border border-border rounded p-0.5 hover:scale-105 transition cursor-zoom-in"
+                                      />
+                                    </a>
                                   </div>
                                 )}
                               </td>
