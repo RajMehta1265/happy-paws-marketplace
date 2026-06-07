@@ -368,7 +368,7 @@ function PetDetail() {
           </div>
 
           <div className="border-t border-b border-border/60 py-4 flex items-center justify-between">
-            <span className="text-sm lg:text-base uppercase font-extrabold tracking-widest text-muted-foreground">
+            <span className="text-3xl lg:text-4xl uppercase font-extrabold tracking-widest text-muted-foreground">
               Price
             </span>
             <div className="font-display text-3xl lg:text-4xl text-accent font-semibold">
