@@ -154,27 +154,25 @@ function ExoticsPage() {
           </div>
 
           {/* Price slider */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-border/40">
-            <div className="text-xs text-muted-foreground">
-              Showing available certified exotic species
-            </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex flex-col gap-2 pt-4 border-t border-border/40 w-full">
+            <div className="flex justify-between items-center text-xs text-muted-foreground font-semibold">
+              <span>Showing available certified exotic species</span>
               <span>
                 Max Price:{" "}
-                <strong className="text-foreground">
+                <strong className="text-foreground text-sm font-bold">
                   ₹{currentMaxPrice.toLocaleString("en-IN")}
                 </strong>
               </span>
-              <input
-                type="range"
-                min={1000}
-                max={maxSliderValue}
-                step={1000}
-                value={currentMaxPrice}
-                onChange={(e) => setMax(+e.target.value)}
-                className="accent-primary cursor-pointer w-32 sm:w-40 h-1.5 bg-muted rounded-lg appearance-none"
-              />
             </div>
+            <input
+              type="range"
+              min={1000}
+              max={maxSliderValue}
+              step={1000}
+              value={currentMaxPrice}
+              onChange={(e) => setMax(+e.target.value)}
+              className="accent-primary cursor-pointer w-full h-1.5 bg-muted rounded-lg appearance-none"
+            />
           </div>
         </div>
 
