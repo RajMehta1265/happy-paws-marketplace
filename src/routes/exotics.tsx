@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { useQuery } from "@tanstack/react-query";
 import { dbService, parseImages } from "@/services/db-service";
-import { FiCheck, FiInfo, FiArrowRight, FiFilter } from "react-icons/fi";
+import { FiCheck, FiInfo, FiArrowRight, FiFilter, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/exotics")({
@@ -22,6 +22,9 @@ export const Route = createFileRoute("/exotics")({
 
 function ExoticsPage() {
   const [selectedBreed, setSelectedBreed] = useState<string>("All");
+  const [currentPage, setCurrentPage] = useState(1);
+  const listingSectionRef = useRef<HTMLDivElement>(null);
+  const EXOTICS_PER_PAGE = 6;
 
   // Fetch pets
   const { data: pets, isLoading: petsLoading } = useQuery({
@@ -64,10 +67,35 @@ function ExoticsPage() {
     });
   }, [exotics, selectedBreed, currentMaxPrice]);
 
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filtered.length / EXOTICS_PER_PAGE));
+  const paginatedExotics = useMemo(() => {
+    const start = (currentPage - 1) * EXOTICS_PER_PAGE;
+    return filtered.slice(start, start + EXOTICS_PER_PAGE);
+  }, [filtered, currentPage]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedBreed, currentMaxPrice]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+
+    // Smooth-scroll to the top of the listing section with a navbar offset
+    if (listingSectionRef.current) {
+      const navbarHeight = 80;
+      const top = listingSectionRef.current.getBoundingClientRect().top + window.scrollY - navbarHeight;
+      window.scrollTo({ top, behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   return (
     <SiteLayout>
       {/* Page Header Section */}
-      <section className="mx-auto max-w-7xl px-6 pt-32 pb-4">
+      <section ref={listingSectionRef} className="mx-auto max-w-7xl px-6 pt-32 pb-4">
         <div className="text-xs uppercase tracking-[0.25em] text-accent font-semibold">
           Exotics Selection
         </div>
@@ -147,7 +175,7 @@ function ExoticsPage() {
             ? Array.from({ length: 3 }).map((_, i) => (
                 <Skeleton key={i} className="aspect-[4/3] rounded-3xl" />
               ))
-            : filtered.map((p) => (
+            : paginatedExotics.map((p) => (
                 <Link
                   key={p.id}
                   to="/pets/$petId"
@@ -215,6 +243,73 @@ function ExoticsPage() {
             </p>
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {!petsLoading && totalPages > 1 && (
+          <div className="flex flex-col items-center gap-3 pt-4">
+            <div className="flex items-center gap-2">
+              {/* Previous Button */}
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1 rounded-full border border-border px-4 py-2 text-xs font-semibold transition cursor-pointer hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <FiChevronLeft size={14} /> Prev
+              </button>
+
+              {/* Page Numbers */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                  const showPage =
+                    page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
+                  const showEllipsisBefore = page === currentPage - 2 && currentPage > 3;
+                  const showEllipsisAfter =
+                    page === currentPage + 2 && currentPage < totalPages - 2;
+
+                  if (showEllipsisBefore || showEllipsisAfter) {
+                    return (
+                      <span key={page} className="px-1 text-xs text-muted-foreground select-none">
+                        …
+                      </span>
+                    );
+                  }
+
+                  if (!showPage) return null;
+
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`min-w-[36px] h-9 rounded-full text-xs font-bold transition cursor-pointer ${
+                        currentPage === page
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "border border-border hover:bg-muted text-foreground/80"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Next Button */}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1 rounded-full border border-border px-4 py-2 text-xs font-semibold transition cursor-pointer hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next <FiChevronRight size={14} />
+              </button>
+            </div>
+
+            {/* Results Summary */}
+            <div className="text-xs text-muted-foreground">
+              Showing {(currentPage - 1) * EXOTICS_PER_PAGE + 1}–
+              {Math.min(currentPage * EXOTICS_PER_PAGE, filtered.length)} of {filtered.length}{" "}
+              exotic companions
+            </div>
+          </div>
+        )}
       </section>
     </SiteLayout>
   );

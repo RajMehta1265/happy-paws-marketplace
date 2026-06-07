@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { dbService, Pet, parseImages } from "@/services/db-service";
@@ -30,6 +30,7 @@ function PetsPage() {
   const [type, setType] = useState<string>("All");
   const [breed, setBreed] = useState<string>("All Breeds");
   const [currentPage, setCurrentPage] = useState(1);
+  const listingSectionRef = useRef<HTMLDivElement>(null);
 
   // Fetch pets
   const { data: pets, isLoading: petsLoading } = useQuery({
@@ -142,17 +143,14 @@ function PetsPage() {
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     
-    // Temporarily override smooth scroll on HTML element to force an instant scroll jump
-    const html = document.documentElement;
-    const originalScrollBehavior = html.style.scrollBehavior;
-    html.style.scrollBehavior = "auto";
-    
-    window.scrollTo(0, 0);
-    
-    // Restore original scroll behavior after scroll executes
-    setTimeout(() => {
-      html.style.scrollBehavior = originalScrollBehavior;
-    }, 50);
+    // Smooth-scroll to the top of the listing section with a navbar offset
+    if (listingSectionRef.current) {
+      const navbarHeight = 80; // approximate sticky navbar height
+      const top = listingSectionRef.current.getBoundingClientRect().top + window.scrollY - navbarHeight;
+      window.scrollTo({ top, behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   // Submit consultation
@@ -187,7 +185,7 @@ function PetsPage() {
   return (
     <SiteLayout>
       {/* Page Header Section (Full Width with top padding to clear sticky navbar) */}
-      <section className="mx-auto max-w-7xl px-6 pt-32 pb-4">
+      <section ref={listingSectionRef} className="mx-auto max-w-7xl px-6 pt-32 pb-4">
         <div className="text-sm sm:text-base md:text-lg uppercase tracking-[0.3em] text-accent font-extrabold">
           Marketplace
         </div>
