@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 type AuthCtx = {
   user: User | null;
@@ -33,62 +34,82 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchProfileAndCheckComplete = async (userId: string) => {
     try {
       const isMock = !!localStorage.getItem("pawhaven_mock_session");
+      let profileName = "";
       if (isMock) {
         const stored = localStorage.getItem(`pawhaven_profile_${userId}`);
         if (!stored) {
           setIsProfileComplete(false);
-          return;
+          const storedMock = localStorage.getItem("pawhaven_mock_session");
+          if (storedMock) {
+            try {
+              const parsedMock = JSON.parse(storedMock);
+              profileName = parsedMock.user?.user_metadata?.full_name || parsedMock.user?.email || "User";
+            } catch {}
+          }
+        } else {
+          try {
+            const parsed = JSON.parse(stored);
+            profileName = parsed.full_name || "";
+            const complete = !!(
+              parsed.full_name?.trim() &&
+              parsed.phone?.trim() &&
+              parsed.address_line?.trim() &&
+              parsed.city?.trim() &&
+              parsed.postal_code?.trim() &&
+              parsed.country?.trim()
+            );
+            setIsProfileComplete(complete);
+          } catch {
+            setIsProfileComplete(false);
+          }
         }
-        try {
-          const parsed = JSON.parse(stored);
+      } else {
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (profile) {
+          profileName = profile.full_name || "";
           const complete = !!(
-            parsed.full_name?.trim() &&
-            parsed.phone?.trim() &&
-            parsed.address_line?.trim() &&
-            parsed.city?.trim() &&
-            parsed.postal_code?.trim() &&
-            parsed.country?.trim()
+            profile.full_name?.trim() &&
+            profile.phone?.trim() &&
+            profile.address_line?.trim() &&
+            profile.city?.trim() &&
+            profile.postal_code?.trim() &&
+            profile.country?.trim()
           );
           setIsProfileComplete(complete);
-          return;
-        } catch {
+        } else {
+          const {
+            data: { user: authUser },
+          } = await supabase.auth.getUser();
+          if (authUser) {
+            const fullName = authUser.user_metadata?.full_name || authUser.email || "User";
+            profileName = fullName;
+            await supabase.from("profiles").insert({
+              id: userId,
+              full_name: fullName,
+            });
+          }
           setIsProfileComplete(false);
-          return;
         }
       }
 
-      const { data: profile, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (!profile) {
-        const {
-          data: { user: authUser },
-        } = await supabase.auth.getUser();
-        if (authUser) {
-          const fullName = authUser.user_metadata?.full_name || authUser.email || "User";
-          await supabase.from("profiles").insert({
-            id: userId,
-            full_name: fullName,
-          });
+      // Display "Welcome back, name!!" on revisit
+      if (typeof window !== "undefined") {
+        const welcomed = sessionStorage.getItem("woolf_welcome_back_shown");
+        if (!welcomed) {
+          sessionStorage.setItem("woolf_welcome_back_shown", "true");
+          const displayName = profileName || "User";
+          setTimeout(() => {
+            toast.success(`Welcome back, ${displayName}!`);
+          }, 600);
         }
-        setIsProfileComplete(false);
-        return;
       }
-
-      const complete = !!(
-        profile.full_name?.trim() &&
-        profile.phone?.trim() &&
-        profile.address_line?.trim() &&
-        profile.city?.trim() &&
-        profile.postal_code?.trim() &&
-        profile.country?.trim()
-      );
-      setIsProfileComplete(complete);
     } catch (err) {
       console.error("Error checking profile status:", err);
       setIsProfileComplete(true);
@@ -154,12 +175,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const handleAuthChange = () => {
       if (!checkMockAuth()) {
-        supabase.auth.getSession().then(({ data }) => {
-          setSession(data.session);
+        supabase.auth.getSession().then(async ({ data }) => {
+          let currentSession = data.session;
+          if (!currentSession) {
+            const backup = localStorage.getItem("pawhaven_session_backup");
+            if (backup) {
+              try {
+                const parsed = JSON.parse(backup);
+                if (parsed && parsed.access_token && parsed.refresh_token) {
+                  const { data: restored, error } = await supabase.auth.setSession({
+                    access_token: parsed.access_token,
+                    refresh_token: parsed.refresh_token,
+                  });
+                  if (!error && restored.session) {
+                    currentSession = restored.session;
+                  }
+                }
+              } catch (e) {
+                console.warn("Failed to restore session from backup:", e);
+              }
+            }
+          }
+
+          setSession(currentSession);
           setLoading(false);
-          if (data.session?.user) {
-            fetchProfileAndCheckComplete(data.session.user.id);
-            checkAndClaimAdmin(data.session.user.id);
+          if (currentSession?.user) {
+            fetchProfileAndCheckComplete(currentSession.user.id);
+            checkAndClaimAdmin(currentSession.user.id);
           } else {
             setIsAdmin(false);
             setIsProfileComplete(true);
@@ -179,24 +221,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSession(s);
           qc.invalidateQueries();
           if (s?.user) {
+            localStorage.setItem("pawhaven_session_backup", JSON.stringify({
+              access_token: s.access_token,
+              refresh_token: s.refresh_token,
+            }));
             fetchProfileAndCheckComplete(s.user.id);
             setTimeout(() => {
               checkAndClaimAdmin(s.user.id);
             }, 0);
           } else {
+            localStorage.removeItem("pawhaven_session_backup");
             setIsAdmin(false);
             setIsProfileComplete(true);
           }
         }
       });
 
-      supabase.auth.getSession().then(({ data }) => {
+      supabase.auth.getSession().then(async ({ data }) => {
         if (!localStorage.getItem("pawhaven_mock_session")) {
-          setSession(data.session);
+          let currentSession = data.session;
+          if (!currentSession) {
+            const backup = localStorage.getItem("pawhaven_session_backup");
+            if (backup) {
+              try {
+                const parsed = JSON.parse(backup);
+                if (parsed && parsed.access_token && parsed.refresh_token) {
+                  const { data: restored, error } = await supabase.auth.setSession({
+                    access_token: parsed.access_token,
+                    refresh_token: parsed.refresh_token,
+                  });
+                  if (!error && restored.session) {
+                    currentSession = restored.session;
+                  }
+                }
+              } catch (e) {
+                console.warn("Failed to restore session from backup:", e);
+              }
+            }
+          }
+
+          setSession(currentSession);
           setLoading(false);
-          if (data.session?.user) {
-            fetchProfileAndCheckComplete(data.session.user.id);
-            checkAndClaimAdmin(data.session.user.id);
+          if (currentSession?.user) {
+            fetchProfileAndCheckComplete(currentSession.user.id);
+            checkAndClaimAdmin(currentSession.user.id);
           }
         }
       });
@@ -214,8 +282,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     localStorage.removeItem("pawhaven_mock_session");
+    localStorage.removeItem("pawhaven_session_backup");
     if (typeof window !== "undefined") {
       sessionStorage.removeItem("pawhaven_skip_onboarding");
+      sessionStorage.removeItem("woolf_welcome_back_shown");
     }
     window.dispatchEvent(new Event("auth-change"));
     await supabase.auth.signOut();
