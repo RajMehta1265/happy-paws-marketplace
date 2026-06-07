@@ -458,6 +458,15 @@ export const dbService = {
 
   // GET ALL PETS
   async getPets(): Promise<Pet[]> {
+    const isMock = typeof window !== "undefined" && !!localStorage.getItem("pawhaven_mock_session");
+    const localPets = this.initLocalData();
+    const deletedIds = getDeletedPetIds();
+
+    if (isMock) {
+      const activeLocal = localPets.filter((p) => !deletedIds.includes(p.id));
+      return await this.resolveLocalPetsList(activeLocal);
+    }
+
     if (typeof window !== "undefined") {
       const cleanupRan = sessionStorage.getItem("pawhaven_db_cleanup_ran");
       if (!cleanupRan) {
@@ -492,9 +501,6 @@ export const dbService = {
           .catch(() => {});
       }
     }
-
-    const localPets = this.initLocalData();
-    const deletedIds = getDeletedPetIds();
 
     try {
       // Query standard pets
@@ -636,22 +642,11 @@ export const dbService = {
       // Cache base64 media from Supabase into IndexedDB and convert to indexeddb:// references
       const merged = await Promise.all(mergedRaw.map((p) => this.cacheRemoteMedia(p)));
 
-      // Find local pets that are NOT in the Supabase data (i.e. newly created locally, or pending remote sync)
-      const localOnly = localPets.filter(
-        (lp) =>
-          !deletedIds.includes(lp.id) &&
-          !activeData.some(
-            (sp: any) => sp.id === lp.id || sp.name.toLowerCase() === lp.name.toLowerCase(),
-          ),
-      );
-
-      const finalMerged = [...localOnly, ...merged];
-
       // Save the final merged list (containing light indexeddb:// references) back to local storage
-      this.saveLocalData(finalMerged);
+      this.saveLocalData(merged);
 
       // Resolve the references in memory for the UI to display them correctly
-      return await this.resolveLocalPetsList(finalMerged);
+      return await this.resolveLocalPetsList(merged);
     } catch (err) {
       console.warn("Error in getPets, returning local storage:", err);
       const activeLocal = localPets.filter((p) => !deletedIds.includes(p.id));
@@ -788,7 +783,20 @@ export const dbService = {
     const deletedIds = getDeletedPetIds();
     if (deletedIds.includes(id)) return null;
 
+    const isMock = typeof window !== "undefined" && !!localStorage.getItem("pawhaven_mock_session");
     const lp = localPets.find((p) => p.id === id);
+
+    if (isMock) {
+      if (!lp) return null;
+      const img = await loadMediaArrayOrSingle(lp.image_url);
+      const vid = await loadMedia(lp.video_url);
+      return {
+        ...lp,
+        image_url: img || lp.image_url,
+        video_url: vid || lp.video_url,
+      };
+    }
+
     const isExotic = lp ? lp.type.toLowerCase() === "exotic" : false;
 
     try {
@@ -804,14 +812,7 @@ export const dbService = {
           );
 
           if (altError || !altData) {
-            if (!lp) return null;
-            const img = await loadMediaArrayOrSingle(lp.image_url);
-            const vid = await loadMedia(lp.video_url);
-            return {
-              ...lp,
-              image_url: img || lp.image_url,
-              video_url: vid || lp.video_url,
-            };
+            return null;
           }
 
           const img = await loadMediaArrayOrSingle(altData.image_url);
@@ -862,14 +863,7 @@ export const dbService = {
           );
 
           if (altError || !altData) {
-            if (!lp) return null;
-            const img = await loadMediaArrayOrSingle(lp.image_url);
-            const vid = await loadMedia(lp.video_url);
-            return {
-              ...lp,
-              image_url: img || lp.image_url,
-              video_url: vid || lp.video_url,
-            };
+            return null;
           }
 
           const img = await loadMediaArrayOrSingle(altData.image_url);
