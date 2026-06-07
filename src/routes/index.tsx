@@ -38,10 +38,41 @@ function Index() {
         }
         return [];
       }
-      const { data, error } = await supabase.from("products").select("*").limit(3);
-      if (error) throw error;
-      return data || [];
+      try {
+        const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
+        if (error) throw error;
+        if (data) {
+          if (typeof window !== "undefined") {
+            localStorage.setItem("pawhaven_products", JSON.stringify(data));
+          }
+          return data;
+        }
+      } catch (err) {
+        console.warn("Supabase products fetch failed:", err);
+      }
+
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("pawhaven_products");
+        if (stored) {
+          try {
+            return JSON.parse(stored);
+          } catch {}
+        }
+      }
+      return [];
     },
+    initialData: () => {
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("pawhaven_products");
+        if (stored) {
+          try {
+            return JSON.parse(stored);
+          } catch {}
+        }
+      }
+      return undefined;
+    },
+    staleTime: 0,
   });
 
   const featuredPets = (pets ?? []).filter((p) => p.type.toLowerCase() !== "exotic").slice(0, 4);

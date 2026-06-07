@@ -49,13 +49,38 @@ function ProductsPage() {
           .from("products")
           .select("*")
           .order("created_at", { ascending: false });
-        if (!error && data) return data;
+        if (!error && data) {
+          if (typeof window !== "undefined") {
+            localStorage.setItem("pawhaven_products", JSON.stringify(data));
+          }
+          return data;
+        }
       } catch (e) {
         console.warn("Supabase products fetch failed:", e);
       }
 
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("pawhaven_products");
+        if (stored) {
+          try {
+            return JSON.parse(stored);
+          } catch {}
+        }
+      }
       return [];
     },
+    initialData: () => {
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("pawhaven_products");
+        if (stored) {
+          try {
+            return JSON.parse(stored);
+          } catch {}
+        }
+      }
+      return undefined;
+    },
+    staleTime: 0,
   });
 
   // Calculate maximum price from product data dynamically

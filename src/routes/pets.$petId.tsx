@@ -20,18 +20,30 @@ import { toast } from "sonner";
 import { dbService, parseImages, safeUUID, type Review } from "@/services/db-service";
 
 export const Route = createFileRoute("/pets/$petId")({
-  loader: async ({ params }) => {
-    return await dbService.getPet(params.petId);
+  loader: ({ params }) => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("pawhaven_pets");
+        if (stored) {
+          const list = JSON.parse(stored);
+          const found = list.find((p: any) => p.id === params.petId);
+          if (found) return found;
+        }
+      } catch (err) {
+        console.warn("Loader sync pet cache check failed:", err);
+      }
+    }
+    return { id: params.petId };
   },
   head: ({ loaderData }) => {
-    const title = loaderData
-      ? `${loaderData.name} — Premium ${loaderData.breed} for Adoption & Sale | WOOLF.INDIA`
+    const title = loaderData && "name" in loaderData
+      ? `${(loaderData as any).name} — Premium ${(loaderData as any).breed} for Adoption & Sale | WOOLF.INDIA`
       : "Pet Details — WOOLF.INDIA";
-    const description = loaderData
-      ? `Meet ${loaderData.name}, a beautiful ${loaderData.age} old ${loaderData.breed} available on WOOLF.INDIA. ${loaderData.description.slice(0, 150)}...`
+    const description = loaderData && "description" in loaderData
+      ? `Meet ${(loaderData as any).name}, a beautiful ${(loaderData as any).age} old ${(loaderData as any).breed} available on WOOLF.INDIA. ${(loaderData as any).description.slice(0, 150)}...`
       : "View details of our premium companion pets available for adoption and sale across India.";
-    const imageUrl = loaderData
-      ? (parseImages(loaderData.image_url)[0] || loaderData.image_url)
+    const imageUrl = loaderData && "image_url" in loaderData
+      ? (parseImages((loaderData as any).image_url)[0] || (loaderData as any).image_url)
       : "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?auto=format&fit=crop&q=80&w=1200";
 
     return {
@@ -42,7 +54,7 @@ export const Route = createFileRoute("/pets/$petId")({
         { property: "og:description", content: description },
         { property: "og:image", content: imageUrl },
         { property: "og:type", content: "product" },
-        { property: "og:url", content: `https://woolfindia.com/pets/${loaderData?.id || ""}` },
+        { property: "og:url", content: `https://woolfindia.com/pets/${(loaderData as any)?.id || ""}` },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: description },
         { name: "twitter:image", content: imageUrl },
@@ -69,10 +81,13 @@ function PetDetail() {
   const { data: pet, isLoading } = useQuery({
     queryKey: ["pet", petId],
     queryFn: () => dbService.getPet(petId),
-    initialData: loaderPet || (() => {
+    initialData: () => {
+      if (loaderPet && "name" in loaderPet) {
+        return loaderPet as any;
+      }
       const localPets = dbService.initLocalData();
       return localPets.find((p) => p.id === petId) || undefined;
-    }),
+    },
     staleTime: 0,
   });
 

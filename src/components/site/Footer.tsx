@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { FiInstagram, FiTwitter, FiFacebook } from "react-icons/fi";
+import { FiInstagram } from "react-icons/fi";
 import { useState, useEffect } from "react";
 import { WolfLogo } from "@/components/ui/WolfLogo";
 
@@ -102,12 +102,7 @@ export function Footer() {
             >
               <FiInstagram size={24} />
             </a>
-            <a href="#" className="hover:text-primary transition-colors" aria-label="Twitter">
-              <FiTwitter size={24} />
-            </a>
-            <a href="#" className="hover:text-primary transition-colors" aria-label="Facebook">
-              <FiFacebook size={24} />
-            </a>
+
           </div>
         </div>
       </div>
