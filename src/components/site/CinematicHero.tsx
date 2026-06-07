@@ -375,11 +375,11 @@ export function CinematicHero() {
           <path d="M0 340 Q 250 240 550 300 T 1200 290 L1200 400 L0 400 Z" fill="rgba(38, 70, 83, 0.4)" />
         </svg>
         <div className="relative z-10 text-center max-w-4xl">
-          <h1 className="hero-title font-display text-4xl sm:text-6xl md:text-8xl lg:text-9xl leading-[0.95] text-foreground">
-            <span className="inline-block overflow-hidden"><span className="word inline-block">Where</span></span>{" "}
-            <span className="inline-block overflow-hidden"><span className="word inline-block italic text-foreground drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] drop-shadow-[0_8px_24px_rgba(0,0,0,0.95)] drop-shadow-[0_16px_32px_rgba(0,0,0,0.95)]">pets</span></span>{" "}
-            <span className="inline-block overflow-hidden"><span className="word inline-block">find</span></span>{" "}
-            <span className="inline-block overflow-hidden"><span className="word inline-block">family.</span></span>
+          <h1 className="hero-title font-display text-4xl sm:text-6xl md:text-8xl lg:text-9xl leading-[1.15] text-foreground">
+            <span className="inline-block overflow-hidden pb-4 -mb-4"><span className="word inline-block">Where</span></span>{" "}
+            <span className="inline-block overflow-hidden pb-4 -mb-4"><span className="word inline-block italic text-foreground drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] drop-shadow-[0_8px_24px_rgba(0,0,0,0.95)] drop-shadow-[0_16px_32px_rgba(0,0,0,0.95)]">pets</span></span>{" "}
+            <span className="inline-block overflow-hidden pb-4 -mb-4"><span className="word inline-block">find</span></span>{" "}
+            <span className="inline-block overflow-hidden pb-4 -mb-4"><span className="word inline-block">family.</span></span>
           </h1>
           <p className="hero-sub mt-6 text-base sm:text-lg text-muted-foreground">Scroll gently — a small world wakes up.</p>
         </div>
@@ -430,11 +430,11 @@ export function CinematicHero() {
       {/* ─── SCENE 8 — Final CTA ────────────────────────────────────────────── */}
       <div className="scene-cta scene absolute inset-0 flex flex-col items-center justify-center px-6 text-center z-30" style={{ opacity: 0 }}>
         <PawHeart className="paw-heart w-24 mb-6 text-[var(--color-accent)]" />
-        <h2 className="final-title font-display text-3xl sm:text-5xl md:text-7xl text-foreground max-w-4xl leading-[0.95]">
-          <span className="inline-block overflow-hidden"><span className="word inline-block">Your</span></span>{" "}
-          <span className="inline-block overflow-hidden"><span className="word inline-block italic text-[var(--color-accent)]">companion</span></span>{" "}
-          <span className="inline-block overflow-hidden"><span className="word inline-block">is</span></span>{" "}
-          <span className="inline-block overflow-hidden"><span className="word inline-block">waiting.</span></span>
+        <h2 className="final-title font-display text-3xl sm:text-5xl md:text-7xl text-foreground max-w-4xl leading-[1.15]">
+          <span className="inline-block overflow-hidden pb-4 -mb-4"><span className="word inline-block">Your</span></span>{" "}
+          <span className="inline-block overflow-hidden pb-4 -mb-4"><span className="word inline-block italic text-[var(--color-accent)]">companion</span></span>{" "}
+          <span className="inline-block overflow-hidden pb-4 -mb-4"><span className="word inline-block">is</span></span>{" "}
+          <span className="inline-block overflow-hidden pb-4 -mb-4"><span className="word inline-block">waiting.</span></span>
         </h2>
         <div className="final-cta mt-10 flex flex-wrap gap-4 justify-center">
           <Link to="/pets" className="rounded-full bg-primary text-primary-foreground px-8 py-4 hover:opacity-90 transition font-semibold text-sm sm:text-base">
