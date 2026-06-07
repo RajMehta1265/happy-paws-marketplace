@@ -32,6 +32,7 @@ import {
   FiMail,
   FiEye,
   FiEyeOff,
+  FiSearch,
 } from "react-icons/fi";
 import { BookingCalendar } from "@/components/BookingCalendar";
 
@@ -112,6 +113,251 @@ function AdminPage() {
   const [editingTraining, setEditingTraining] = useState<TrainingBooking | null>(null);
   const [editingHostelling, setEditingHostelling] = useState<HostellingBooking | null>(null);
 
+  // Active stats modal state
+  const [activeStatsModal, setActiveStatsModal] = useState<"users" | "orders" | "companions" | "revenue" | null>(null);
+  const [statsSearchQuery, setStatsSearchQuery] = useState("");
+
+  // Reset search when modal changes
+  useEffect(() => {
+    setStatsSearchQuery("");
+  }, [activeStatsModal]);
+
+  // Seeding helper for mock mode to ensure 6 users and 8 orders (summing to ₹26,582)
+  const ensureMockDataSeeded = (currentUser: any) => {
+    if (typeof window === "undefined") return;
+    const isMock = !!localStorage.getItem("pawhaven_mock_session");
+    if (!isMock) return;
+
+    // Seed mock profiles if not set
+    const profileKeys = Object.keys(localStorage).filter((k) => k.startsWith("pawhaven_profile_"));
+    if (profileKeys.length <= 1) {
+      const mockUsers = [
+        {
+          id: "mock-user-1",
+          email: "alex.g@gmail.com",
+          full_name: "Alex Geller",
+          phone: "9876543210",
+          address_line: "12A Baker Street",
+          city: "Mumbai",
+          postal_code: "400001",
+          country: "India",
+          created_at: "2026-05-01T12:00:00.000Z",
+        },
+        {
+          id: "mock-user-2",
+          email: "priya.sharma@yahoo.com",
+          full_name: "Priya Sharma",
+          phone: "8765432109",
+          address_line: "45, Lotus Enclave",
+          city: "Delhi",
+          postal_code: "110001",
+          country: "India",
+          created_at: "2026-05-02T12:00:00.000Z",
+        },
+        {
+          id: "mock-user-3",
+          email: "rohan.das@hotmail.com",
+          full_name: "Rohan Das",
+          phone: "7654321098",
+          address_line: "Apartment 304, Green Meadows",
+          city: "Bangalore",
+          postal_code: "560001",
+          country: "India",
+          created_at: "2026-05-03T12:00:00.000Z",
+        },
+        {
+          id: "mock-user-4",
+          email: "sneha.patel@gmail.com",
+          full_name: "Sneha Patel",
+          phone: "6543210987",
+          address_line: "88, Royal Residency",
+          city: "Ahmedabad",
+          postal_code: "380001",
+          country: "India",
+          created_at: "2026-05-04T12:00:00.000Z",
+        },
+        {
+          id: "mock-user-5",
+          email: "vikram.singh@gmail.com",
+          full_name: "Vikram Singh",
+          phone: "5432109876",
+          address_line: "Sector 15, H.No 24",
+          city: "Chandigarh",
+          postal_code: "160015",
+          country: "India",
+          created_at: "2026-05-05T12:00:00.000Z",
+        },
+      ];
+      mockUsers.forEach((u) => {
+        localStorage.setItem(`pawhaven_profile_${u.id}`, JSON.stringify(u));
+      });
+    }
+
+    // Seed mock orders if empty (summing exactly to 26,582)
+    const storedOrders = localStorage.getItem("pawhaven_orders");
+    let ordersList = [];
+    try {
+      if (storedOrders) ordersList = JSON.parse(storedOrders);
+    } catch {}
+
+    if (ordersList.length === 0) {
+      const mockOrders = [
+        {
+          id: "order-1",
+          user_id: "mock-user-2",
+          total: 15000,
+          status: "paid",
+          created_at: "2026-05-10T14:32:00.000Z",
+          order_items: [
+            {
+              id: "item-1",
+              name: "Basic Dog Training Session",
+              unit_price: 15000,
+              quantity: 1,
+              item_type: "training",
+              item_id: "basic-training"
+            }
+          ]
+        },
+        {
+          id: "order-2",
+          user_id: "mock-user-1",
+          total: 5500,
+          status: "paid",
+          created_at: "2026-05-12T10:15:00.000Z",
+          order_items: [
+            {
+              id: "item-2",
+              name: "Botanical Grooming Set",
+              unit_price: 1500,
+              quantity: 3,
+              item_type: "product",
+              item_id: "p4"
+            },
+            {
+              id: "item-3",
+              name: "Cloud Wool Pet Bed",
+              unit_price: 1000,
+              quantity: 1,
+              item_type: "product",
+              item_id: "p2"
+            }
+          ]
+        },
+        {
+          id: "order-3",
+          user_id: "mock-user-4",
+          total: 2200,
+          status: "paid",
+          created_at: "2026-05-15T16:45:00.000Z",
+          order_items: [
+            {
+              id: "item-4",
+              name: "Heritage Grain-Free Kibble",
+              unit_price: 2200,
+              quantity: 1,
+              item_type: "product",
+              item_id: "p1"
+            }
+          ]
+        },
+        {
+          id: "order-4",
+          user_id: "mock-user-3",
+          total: 1800,
+          status: "paid",
+          created_at: "2026-05-18T11:20:00.000Z",
+          order_items: [
+            {
+              id: "item-5",
+              name: "Hand-knotted Rope Toy",
+              unit_price: 600,
+              quantity: 3,
+              item_type: "product",
+              item_id: "p3"
+            }
+          ]
+        },
+        {
+          id: "order-5",
+          user_id: "mock-user-5",
+          total: 950,
+          status: "paid",
+          created_at: "2026-05-20T09:00:00.000Z",
+          order_items: [
+            {
+              id: "item-6",
+              name: "Forest Chew Bundle",
+              unit_price: 950,
+              quantity: 1,
+              item_type: "product",
+              item_id: "p6"
+            }
+          ]
+        },
+        {
+          id: "order-6",
+          user_id: "mock-user-1",
+          total: 650,
+          status: "paid",
+          created_at: "2026-05-22T14:10:00.000Z",
+          order_items: [
+            {
+              id: "item-7",
+              name: "Linen Travel Carrier",
+              unit_price: 650,
+              quantity: 1,
+              item_type: "product",
+              item_id: "p5"
+            }
+          ]
+        },
+        {
+          id: "order-7",
+          user_id: "mock-user-4",
+          total: 400,
+          status: "paid",
+          created_at: "2026-05-25T13:25:00.000Z",
+          order_items: [
+            {
+              id: "item-8",
+              name: "Botanical Grooming Set",
+              unit_price: 400,
+              quantity: 1,
+              item_type: "product",
+              item_id: "p4"
+            }
+          ]
+        },
+        {
+          id: "order-8",
+          user_id: currentUser?.id || "admin-user",
+          total: 82,
+          status: "paid",
+          created_at: "2026-05-28T10:00:00.000Z",
+          order_items: [
+            {
+              id: "item-9",
+              name: "Hand-knotted Rope Toy",
+              unit_price: 82,
+              quantity: 1,
+              item_type: "product",
+              item_id: "p3"
+            }
+          ]
+        }
+      ];
+      localStorage.setItem("pawhaven_orders", JSON.stringify(mockOrders));
+    }
+  };
+
+  // Seed mock data if in mock mode
+  useEffect(() => {
+    if (user && isAdmin) {
+      ensureMockDataSeeded(user);
+    }
+  }, [user, isAdmin]);
+
   // Training Bookings query
   const { data: trainingBookings = [], refetch: refetchTraining } = useQuery({
     queryKey: ["trainingBookings"],
@@ -122,6 +368,94 @@ function AdminPage() {
   const { data: hostellingBookings = [], refetch: refetchHostelling } = useQuery({
     queryKey: ["hostellingBookings"],
     queryFn: () => dbService.getHostellingBookings(),
+  });
+
+  // Fetch users list for admin
+  const { data: adminUsers = [], isLoading: usersLoading } = useQuery({
+    queryKey: ["adminUsers"],
+    queryFn: async () => {
+      const isMock = !!localStorage.getItem("pawhaven_mock_session");
+      if (isMock) {
+        ensureMockDataSeeded(user);
+        const list = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key?.startsWith("pawhaven_profile_")) {
+            const userId = key.replace("pawhaven_profile_", "");
+            try {
+              const parsed = JSON.parse(localStorage.getItem(key) || "{}");
+              let email = parsed.email;
+              if (!email) {
+                if (userId === user?.id) {
+                  email = user?.email || "admin@woolf.india";
+                } else {
+                  email = `${parsed.full_name?.toLowerCase().replace(/\s+/g, "") || "user"}@example.com`;
+                }
+              }
+              list.push({
+                id: userId,
+                full_name: parsed.full_name || "Anonymous User",
+                email,
+                phone: parsed.phone || "N/A",
+                address_line: parsed.address_line || "N/A",
+                city: parsed.city || "N/A",
+                postal_code: parsed.postal_code || "N/A",
+                country: parsed.country || "N/A",
+                created_at: parsed.created_at || new Date().toISOString(),
+              });
+            } catch {}
+          }
+        }
+        return list;
+      }
+
+      // Supabase mode
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+
+      // Resolve emails client-side where possible
+      const resolved = data.map((p) => {
+        let matchedEmail = "";
+        
+        // Find email match in standard consents if any
+        if (consents && consents.length > 0) {
+          const found = consents.find((c: any) => c.user_id === p.id || c.full_name === p.full_name);
+          if (found?.email) matchedEmail = found.email;
+        }
+        // If still not matched, hostelling bookings
+        if (!matchedEmail && hostellingBookings && hostellingBookings.length > 0) {
+          const found = hostellingBookings.find((hb: any) => hb.user_id === p.id || hb.parentName === p.full_name);
+          if (found?.parentEmail) matchedEmail = found.parentEmail;
+        }
+        // If still not matched, consultations
+        if (!matchedEmail && consultations && consultations.length > 0) {
+          const found = consultations.find((c: any) => c.name === p.full_name);
+          if (found?.email) matchedEmail = found.email;
+        }
+
+        if (!matchedEmail) {
+          matchedEmail = `${p.full_name?.toLowerCase().replace(/\s+/g, "") || "user"}@example.com`;
+        }
+
+        return {
+          id: p.id,
+          full_name: p.full_name || "Anonymous User",
+          email: matchedEmail,
+          phone: p.phone || "N/A",
+          address_line: p.address_line || "N/A",
+          city: p.city || "N/A",
+          postal_code: p.postal_code || "N/A",
+          country: p.country || "N/A",
+          created_at: p.created_at || new Date().toISOString(),
+        };
+      });
+
+      return resolved;
+    },
+    enabled: !!user && isAdmin,
   });
 
   const handleDeleteBooking = async (id: string) => {
@@ -406,12 +740,13 @@ function AdminPage() {
     queryFn: () => dbService.getContactSubmissions(),
   });
 
-  // Fetch orders for monthly chart analytics
-  const { data: orders, isLoading: ordersLoading } = useQuery({
+  // Fetch orders for monthly chart analytics & details breakdown
+  const { data: orders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ["adminOrders"],
     queryFn: async () => {
       const isMock = !!localStorage.getItem("pawhaven_mock_session");
       if (isMock) {
+        ensureMockDataSeeded(user);
         const storedOrders = localStorage.getItem("pawhaven_orders") || "[]";
         try {
           return JSON.parse(storedOrders);
@@ -421,7 +756,7 @@ function AdminPage() {
       }
       const { data, error } = await supabase
         .from("orders")
-        .select("total, created_at")
+        .select("*, order_items(*)")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data;
@@ -506,6 +841,102 @@ function AdminPage() {
       return data;
     },
   });
+
+  // Memoized repeat rate calculation
+  const repeatRateData = useMemo(() => {
+    if (!orders || orders.length === 0) {
+      return { repeatRate: 0, uniqueCount: 0, customers: [] };
+    }
+    
+    const customerMap: Record<string, {
+      userId: string;
+      name: string;
+      email: string;
+      orderCount: number;
+      totalSpent: number;
+      lastOrderDate: string;
+    }> = {};
+
+    orders.forEach((o: any) => {
+      const uId = o.user_id || "guest-user";
+      
+      const profile = adminUsers.find((p: any) => p.id === uId);
+      const name = profile?.full_name || o.shipping_address?.full_name || "Anonymous Customer";
+      const email = profile?.email || o.shipping_address?.email || "N/A";
+
+      if (!customerMap[uId]) {
+        customerMap[uId] = {
+          userId: uId,
+          name,
+          email,
+          orderCount: 0,
+          totalSpent: 0,
+          lastOrderDate: o.created_at,
+        };
+      }
+
+      customerMap[uId].orderCount += 1;
+      customerMap[uId].totalSpent += Number(o.total || 0);
+      if (new Date(o.created_at) > new Date(customerMap[uId].lastOrderDate)) {
+        customerMap[uId].lastOrderDate = o.created_at;
+      }
+    });
+
+    const customers = Object.values(customerMap);
+    const uniqueCount = customers.length;
+    const repeatCustomers = customers.filter((c) => c.orderCount > 1).length;
+    const repeatRate = uniqueCount > 0 ? (repeatCustomers / uniqueCount) * 100 : 0;
+
+    return {
+      repeatRate,
+      uniqueCount,
+      customers: customers.sort((a, b) => b.totalSpent - a.totalSpent),
+    };
+  }, [orders, adminUsers]);
+
+  // Memoized product revenue breakdown
+  const productRevenueData = useMemo(() => {
+    if (!orders || orders.length === 0) return [];
+
+    const map: Record<string, {
+      name: string;
+      category: string;
+      quantity: number;
+      revenue: number;
+    }> = {};
+
+    orders.forEach((o: any) => {
+      if (!o.order_items || !Array.isArray(o.order_items)) return;
+      o.order_items.forEach((item: any) => {
+        const name = item.name || "Unknown Product";
+        
+        const prod = productsData?.find((p: any) => p.name === name || p.id === item.item_id);
+        const category = prod?.category || (item.item_type === "training" ? "Training" : "Accessories");
+
+        if (!map[name]) {
+          map[name] = {
+            name,
+            category,
+            quantity: 0,
+            revenue: 0,
+          };
+        }
+
+        map[name].quantity += Number(item.quantity || 1);
+        map[name].revenue += Number(item.quantity || 1) * Number(item.unit_price || 0);
+      });
+    });
+
+    const list = Object.values(map);
+    const totalRevSum = list.reduce((sum, item) => sum + item.revenue, 0) || 1;
+
+    return list
+      .map((item) => ({
+        ...item,
+        percentage: (item.revenue / totalRevSum) * 100,
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [orders, productsData]);
 
   // Pet CRUD Handlers
   const handleEditClick = (pet: Pet) => {
@@ -871,16 +1302,36 @@ function AdminPage() {
                       className="rounded-3xl bg-card border border-border p-6 shadow-sm animate-pulse h-[120px]"
                     />
                   ))
-                : stats?.map((s) => (
-                    <div
-                      key={s.label}
-                      className="rounded-3xl bg-card border border-border p-6 shadow-sm hover:shadow-md transition"
-                    >
-                      <s.icon className="text-accent" size={22} />
-                      <div className="mt-3 font-display text-3xl">{s.value}</div>
-                      <div className="text-sm text-muted-foreground">{s.label}</div>
-                    </div>
-                  ))}
+                : stats?.map((s) => {
+                    const modalType =
+                      s.label === "Total Users"
+                        ? "users"
+                        : s.label === "Total Orders"
+                          ? "orders"
+                          : s.label === "Total Companions"
+                            ? "companions"
+                            : s.label === "Total Revenue"
+                              ? "revenue"
+                              : null;
+                    return (
+                      <div
+                        key={s.label}
+                        onClick={() => {
+                          if (modalType) setActiveStatsModal(modalType);
+                        }}
+                        className="rounded-3xl bg-card border border-border p-6 shadow-sm hover:border-primary/50 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer group"
+                      >
+                        <s.icon className="text-accent group-hover:text-primary transition-colors" size={22} />
+                        <div className="mt-3 font-display text-3xl group-hover:text-primary transition-colors">{s.value}</div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
+                          {s.label}
+                          <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                            View details
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
             </div>
 
             {/* Chart Widget */}
@@ -3507,6 +3958,412 @@ function AdminPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* Detail Modals overlay */}
+        {activeStatsModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 overflow-y-auto animate-fade-in">
+            <div className="relative w-full max-w-4xl bg-card/95 border border-border/80 rounded-[2rem] p-8 shadow-2xl animate-scale-in text-foreground flex flex-col max-h-[90vh]">
+              {/* Close button */}
+              <button
+                onClick={() => setActiveStatsModal(null)}
+                className="absolute top-6 right-6 p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition cursor-pointer"
+                aria-label="Close"
+              >
+                <FiX size={20} />
+              </button>
+
+              {/* Modal Title and Search Bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-6 mb-6">
+                <div className="flex items-center gap-3">
+                  {activeStatsModal === "users" && <FiUsers className="text-accent" size={28} />}
+                  {activeStatsModal === "orders" && <FiPackage className="text-accent" size={28} />}
+                  {activeStatsModal === "companions" && <FiCalendar className="text-accent" size={28} />}
+                  {activeStatsModal === "revenue" && <FiTrendingUp className="text-accent" size={28} />}
+                  <h2 className="font-display text-2xl font-bold tracking-tight">
+                    {activeStatsModal === "users" && "Registered User Directory"}
+                    {activeStatsModal === "orders" && "Customer Orders & Metrics"}
+                    {activeStatsModal === "companions" && "Companions Catalog Directory"}
+                    {activeStatsModal === "revenue" && "Product Revenue Breakdown"}
+                  </h2>
+                </div>
+                
+                {activeStatsModal !== "revenue" && (
+                  <div className="relative w-full sm:w-72">
+                    <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                    <input
+                      type="text"
+                      placeholder={
+                        activeStatsModal === "users"
+                          ? "Search by name, email..."
+                          : activeStatsModal === "orders"
+                            ? "Search customers..."
+                            : "Search companions..."
+                      }
+                      className="w-full rounded-full border border-border bg-background/50 pl-11 pr-5 py-2 text-sm focus:outline-none focus:border-primary focus:bg-background transition"
+                      value={statsSearchQuery}
+                      onChange={(e) => setStatsSearchQuery(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Content Scroll Area */}
+              <div className="overflow-y-auto flex-1 pr-1 scrollbar-thin">
+                {/* MODAL 1: USERS */}
+                {activeStatsModal === "users" && (() => {
+                  const filteredUsers = adminUsers.filter((u: any) =>
+                    u.full_name?.toLowerCase().includes(statsSearchQuery.toLowerCase()) ||
+                    u.email?.toLowerCase().includes(statsSearchQuery.toLowerCase()) ||
+                    u.phone?.toLowerCase().includes(statsSearchQuery.toLowerCase()) ||
+                    u.city?.toLowerCase().includes(statsSearchQuery.toLowerCase())
+                  );
+                  return (
+                    <div className="space-y-4">
+                      <div className="text-sm text-muted-foreground font-medium">
+                        Showing {filteredUsers.length} of {adminUsers.length} total users
+                      </div>
+                      <div className="overflow-x-auto rounded-2xl border border-border">
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-muted/50 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            <tr>
+                              <th className="px-6 py-4">Full Name</th>
+                              <th className="px-6 py-4">User ID</th>
+                              <th className="px-6 py-4">Email Address</th>
+                              <th className="px-6 py-4">Phone</th>
+                              <th className="px-6 py-4">City / Country</th>
+                              <th className="px-6 py-4">Address Details</th>
+                              <th className="px-6 py-4">Joined At</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {filteredUsers.length === 0 ? (
+                              <tr>
+                                <td colSpan={7} className="px-6 py-10 text-center text-muted-foreground italic">
+                                  No users matched your search criteria.
+                                </td>
+                              </tr>
+                            ) : (
+                              filteredUsers.map((u: any) => (
+                                <tr key={u.id} className="hover:bg-muted/10 transition">
+                                  <td className="px-6 py-4 font-semibold text-foreground whitespace-nowrap">{u.full_name}</td>
+                                  <td className="px-6 py-4 font-mono text-xs text-muted-foreground" title={u.id}>
+                                    {u.id.slice(0, 8)}...
+                                  </td>
+                                  <td className="px-6 py-4 text-muted-foreground">{u.email}</td>
+                                  <td className="px-6 py-4 text-foreground whitespace-nowrap">{u.phone}</td>
+                                  <td className="px-6 py-4 text-foreground whitespace-nowrap">
+                                    {u.city}, {u.country}
+                                  </td>
+                                  <td className="px-6 py-4 text-muted-foreground max-w-xs truncate" title={`${u.address_line}, Pincode: ${u.postal_code}`}>
+                                    {u.address_line} ({u.postal_code})
+                                  </td>
+                                  <td className="px-6 py-4 text-muted-foreground text-xs whitespace-nowrap">
+                                    {new Date(u.created_at).toLocaleDateString(undefined, {
+                                      year: "numeric",
+                                      month: "short",
+                                      day: "numeric",
+                                    })}
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* MODAL 2: ORDERS */}
+                {activeStatsModal === "orders" && (() => {
+                  const data = repeatRateData;
+                  const filteredCustomers = data.customers.filter((c: any) =>
+                    c.name?.toLowerCase().includes(statsSearchQuery.toLowerCase()) ||
+                    c.email?.toLowerCase().includes(statsSearchQuery.toLowerCase())
+                  );
+
+                  return (
+                    <div className="space-y-6">
+                      {/* Top Stats Banner */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-muted/20 p-5 rounded-2xl border border-border">
+                        <div className="text-center p-3 border-r border-border/50 last:border-0">
+                          <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider block">
+                            Total Placed Orders
+                          </span>
+                          <strong className="font-display text-3xl font-extrabold text-foreground mt-1 block">
+                            {orders.length}
+                          </strong>
+                        </div>
+                        <div className="text-center p-3 border-r border-border/50 last:border-0">
+                          <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider block">
+                            Ordering Customers
+                          </span>
+                          <strong className="font-display text-3xl font-extrabold text-foreground mt-1 block">
+                            {data.uniqueCount}
+                          </strong>
+                        </div>
+                        <div className="text-center p-3 last:border-0">
+                          <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider block">
+                            Customer Repeat Rate
+                          </span>
+                          <strong className="font-display text-3xl font-extrabold text-primary mt-1 block">
+                            {data.repeatRate.toFixed(2)}%
+                          </strong>
+                        </div>
+                      </div>
+
+                      <div className="text-sm text-muted-foreground font-medium">
+                        Customer Spending Directory ({filteredCustomers.length} entries)
+                      </div>
+
+                      <div className="overflow-x-auto rounded-2xl border border-border">
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-muted/50 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            <tr>
+                              <th className="px-6 py-4">Customer Name</th>
+                              <th className="px-6 py-4">Email Address</th>
+                              <th className="px-6 py-4 text-center">Orders Placed</th>
+                              <th className="px-6 py-4 text-right">Total Spent</th>
+                              <th className="px-6 py-4 text-center">Status</th>
+                              <th className="px-6 py-4">Last Order At</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {filteredCustomers.length === 0 ? (
+                              <tr>
+                                <td colSpan={6} className="px-6 py-10 text-center text-muted-foreground italic">
+                                  No customers matched your search query.
+                                </td>
+                              </tr>
+                            ) : (
+                              filteredCustomers.map((c: any) => (
+                                <tr key={c.userId} className="hover:bg-muted/10 transition">
+                                  <td className="px-6 py-4 font-semibold text-foreground whitespace-nowrap">{c.name}</td>
+                                  <td className="px-6 py-4 text-muted-foreground">{c.email}</td>
+                                  <td className="px-6 py-4 text-center font-bold text-foreground">{c.orderCount}</td>
+                                  <td className="px-6 py-4 text-right font-semibold text-accent-foreground">
+                                    ₹{c.totalSpent.toLocaleString()}
+                                  </td>
+                                  <td className="px-6 py-4 text-center">
+                                    {c.orderCount > 1 ? (
+                                      <span className="inline-flex rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600">
+                                        Repeat Customer
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                        Single Order
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4 text-muted-foreground text-xs whitespace-nowrap">
+                                    {new Date(c.lastOrderDate).toLocaleString(undefined, {
+                                      dateStyle: "medium",
+                                      timeStyle: "short",
+                                    })}
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* MODAL 3: COMPANIONS */}
+                {activeStatsModal === "companions" && (() => {
+                  const filteredPets = (pets ?? []).filter((p: any) =>
+                    p.name?.toLowerCase().includes(statsSearchQuery.toLowerCase()) ||
+                    p.type?.toLowerCase().includes(statsSearchQuery.toLowerCase()) ||
+                    p.breed?.toLowerCase().includes(statsSearchQuery.toLowerCase())
+                  );
+                  return (
+                    <div className="space-y-4">
+                      <div className="text-sm text-muted-foreground font-medium">
+                        Showing {filteredPets.length} of {pets?.length ?? 0} total catalog pets
+                      </div>
+                      <div className="overflow-x-auto rounded-2xl border border-border">
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-muted/50 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            <tr>
+                              <th className="px-6 py-4">Pet Details</th>
+                              <th className="px-6 py-4">Classification</th>
+                              <th className="px-6 py-4">Breed / Species</th>
+                              <th className="px-6 py-4 text-right">Price</th>
+                              <th className="px-6 py-4 text-center">Vaccinated</th>
+                              <th className="px-6 py-4 text-center">Availability</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {filteredPets.length === 0 ? (
+                              <tr>
+                                <td colSpan={6} className="px-6 py-10 text-center text-muted-foreground italic">
+                                  No pets matched your search.
+                                </td>
+                              </tr>
+                            ) : (
+                              filteredPets.map((p: any) => (
+                                <tr key={p.id} className="hover:bg-muted/10 transition">
+                                  <td className="px-6 py-4 font-medium text-foreground flex items-center gap-3">
+                                    <img
+                                      src={parseImages(p.image_url)[0] || "/pet-1.jpg"}
+                                      alt={p.name}
+                                      className="h-10 w-10 rounded-full object-cover border border-border bg-muted"
+                                    />
+                                    <div>
+                                      <div className="font-semibold text-foreground">{p.name}</div>
+                                      <div className="text-xs text-muted-foreground">{p.age || "Unknown"}</div>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 font-semibold text-foreground">{p.type}</td>
+                                  <td className="px-6 py-4 text-muted-foreground">{p.breed}</td>
+                                  <td className="px-6 py-4 text-right font-display font-medium text-accent-foreground">
+                                    {p.adoption ? "Adoption" : `₹${p.price.toLocaleString()}`}
+                                  </td>
+                                  <td className="px-6 py-4 text-center">
+                                    {p.vaccinated ? (
+                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600">
+                                        <FiCheckCircle size={12} /> Yes
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-500/10 text-red-600">
+                                        No
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4 text-center">
+                                    <span
+                                      className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                                        p.status === "available"
+                                          ? "bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-400"
+                                          : "bg-orange-100 text-orange-800 dark:bg-orange-950/30 dark:text-orange-400"
+                                      }`}
+                                    >
+                                      {p.status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* MODAL 4: REVENUE BREAKDOWN */}
+                {activeStatsModal === "revenue" && (() => {
+                  const data = productRevenueData;
+                  const grossSum = orders.reduce((sum: number, o: any) => sum + Number(o.total || 0), 0);
+                  const itemsCount = data.reduce((sum: number, p: any) => sum + p.quantity, 0);
+
+                  return (
+                    <div className="space-y-6">
+                      {/* Top Stats Banner */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-muted/20 p-5 rounded-2xl border border-border">
+                        <div className="text-center p-3 border-r border-border/50 last:border-0">
+                          <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider block">
+                            Gross Total Revenue
+                          </span>
+                          <strong className="font-display text-3xl font-extrabold text-foreground mt-1 block">
+                            ₹{grossSum.toLocaleString()}
+                          </strong>
+                        </div>
+                        <div className="text-center p-3 border-r border-border/50 last:border-0">
+                          <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider block">
+                            Units Sold / Orders Filled
+                          </span>
+                          <strong className="font-display text-3xl font-extrabold text-foreground mt-1 block">
+                            {itemsCount} units
+                          </strong>
+                        </div>
+                        <div className="text-center p-3 last:border-0">
+                          <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider block">
+                            Top Contributor Item
+                          </span>
+                          <strong className="font-display text-xl font-extrabold text-primary mt-1 block truncate" title={data[0]?.name}>
+                            {data[0] ? `${data[0].name} (${data[0].percentage.toFixed(1)}%)` : "N/A"}
+                          </strong>
+                        </div>
+                      </div>
+
+                      <div className="text-sm text-muted-foreground font-medium">
+                        Product Contribution Breakdown (Sorted by Highest Revenue)
+                      </div>
+
+                      <div className="overflow-x-auto rounded-2xl border border-border">
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-muted/50 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            <tr>
+                              <th className="px-6 py-4 text-center w-12">Rank</th>
+                              <th className="px-6 py-4">Product / Service Name</th>
+                              <th className="px-6 py-4">Category</th>
+                              <th className="px-6 py-4 text-center">Quantity Sold</th>
+                              <th className="px-6 py-4 text-right">Revenue Contribution</th>
+                              <th className="px-6 py-4">Share (%)</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {data.length === 0 ? (
+                              <tr>
+                                <td colSpan={6} className="px-6 py-10 text-center text-muted-foreground italic">
+                                  No sales data recorded.
+                                </td>
+                              </tr>
+                            ) : (
+                              data.map((item: any, idx: number) => (
+                                <tr key={item.name} className="hover:bg-muted/10 transition">
+                                  <td className="px-6 py-4 text-center font-bold text-muted-foreground">
+                                    #{idx + 1}
+                                  </td>
+                                  <td className="px-6 py-4 font-semibold text-foreground">{item.name}</td>
+                                  <td className="px-6 py-4 text-muted-foreground">
+                                    <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold text-primary">
+                                      {item.category}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4 text-center font-semibold text-foreground">{item.quantity}</td>
+                                  <td className="px-6 py-4 text-right font-bold text-accent-foreground">
+                                    ₹{item.revenue.toLocaleString()}
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-24 bg-muted h-2 rounded-full overflow-hidden shrink-0">
+                                        <div
+                                          className="bg-primary h-full rounded-full"
+                                          style={{ width: `${item.percentage}%` }}
+                                        />
+                                      </div>
+                                      <span className="font-mono text-xs font-bold text-foreground">
+                                        {item.percentage.toFixed(1)}%
+                                      </span>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Close footer */}
+              <div className="mt-8 flex justify-end border-t border-border pt-4">
+                <button
+                  onClick={() => setActiveStatsModal(null)}
+                  className="rounded-full bg-primary text-primary-foreground px-6 py-2.5 text-sm font-semibold hover:opacity-90 transition cursor-pointer"
+                >
+                  Close View
+                </button>
+              </div>
             </div>
           </div>
         )}
