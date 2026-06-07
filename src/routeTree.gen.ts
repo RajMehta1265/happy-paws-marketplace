@@ -22,7 +22,9 @@ import { Route as CartRouteImport } from './routes/cart'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProductsIndexRouteImport } from './routes/products.index'
 import { Route as PetsIndexRouteImport } from './routes/pets.index'
+import { Route as ProductsProductIdRouteImport } from './routes/products.$productId'
 import { Route as PetsPetIdRouteImport } from './routes/pets.$petId'
 
 const TrainingRoute = TrainingRouteImport.update({
@@ -90,10 +92,20 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProductsIndexRoute = ProductsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ProductsRoute,
+} as any)
 const PetsIndexRoute = PetsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => PetsRoute,
+} as any)
+const ProductsProductIdRoute = ProductsProductIdRouteImport.update({
+  id: '/$productId',
+  path: '/$productId',
+  getParentRoute: () => ProductsRoute,
 } as any)
 const PetsPetIdRoute = PetsPetIdRouteImport.update({
   id: '/$petId',
@@ -113,10 +125,12 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/pets': typeof PetsRouteWithChildren
-  '/products': typeof ProductsRoute
+  '/products': typeof ProductsRouteWithChildren
   '/training': typeof TrainingRoute
   '/pets/$petId': typeof PetsPetIdRoute
+  '/products/$productId': typeof ProductsProductIdRoute
   '/pets/': typeof PetsIndexRoute
+  '/products/': typeof ProductsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -129,10 +143,11 @@ export interface FileRoutesByTo {
   '/hostelling': typeof HostellingRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
-  '/products': typeof ProductsRoute
   '/training': typeof TrainingRoute
   '/pets/$petId': typeof PetsPetIdRoute
+  '/products/$productId': typeof ProductsProductIdRoute
   '/pets': typeof PetsIndexRoute
+  '/products': typeof ProductsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -147,10 +162,12 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/pets': typeof PetsRouteWithChildren
-  '/products': typeof ProductsRoute
+  '/products': typeof ProductsRouteWithChildren
   '/training': typeof TrainingRoute
   '/pets/$petId': typeof PetsPetIdRoute
+  '/products/$productId': typeof ProductsProductIdRoute
   '/pets/': typeof PetsIndexRoute
+  '/products/': typeof ProductsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -169,7 +186,9 @@ export interface FileRouteTypes {
     | '/products'
     | '/training'
     | '/pets/$petId'
+    | '/products/$productId'
     | '/pets/'
+    | '/products/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -182,10 +201,11 @@ export interface FileRouteTypes {
     | '/hostelling'
     | '/login'
     | '/onboarding'
-    | '/products'
     | '/training'
     | '/pets/$petId'
+    | '/products/$productId'
     | '/pets'
+    | '/products'
   id:
     | '__root__'
     | '/'
@@ -202,7 +222,9 @@ export interface FileRouteTypes {
     | '/products'
     | '/training'
     | '/pets/$petId'
+    | '/products/$productId'
     | '/pets/'
+    | '/products/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -217,7 +239,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   PetsRoute: typeof PetsRouteWithChildren
-  ProductsRoute: typeof ProductsRoute
+  ProductsRoute: typeof ProductsRouteWithChildren
   TrainingRoute: typeof TrainingRoute
 }
 
@@ -314,12 +336,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/products/': {
+      id: '/products/'
+      path: '/'
+      fullPath: '/products/'
+      preLoaderRoute: typeof ProductsIndexRouteImport
+      parentRoute: typeof ProductsRoute
+    }
     '/pets/': {
       id: '/pets/'
       path: '/'
       fullPath: '/pets/'
       preLoaderRoute: typeof PetsIndexRouteImport
       parentRoute: typeof PetsRoute
+    }
+    '/products/$productId': {
+      id: '/products/$productId'
+      path: '/$productId'
+      fullPath: '/products/$productId'
+      preLoaderRoute: typeof ProductsProductIdRouteImport
+      parentRoute: typeof ProductsRoute
     }
     '/pets/$petId': {
       id: '/pets/$petId'
@@ -343,6 +379,20 @@ const PetsRouteChildren: PetsRouteChildren = {
 
 const PetsRouteWithChildren = PetsRoute._addFileChildren(PetsRouteChildren)
 
+interface ProductsRouteChildren {
+  ProductsProductIdRoute: typeof ProductsProductIdRoute
+  ProductsIndexRoute: typeof ProductsIndexRoute
+}
+
+const ProductsRouteChildren: ProductsRouteChildren = {
+  ProductsProductIdRoute: ProductsProductIdRoute,
+  ProductsIndexRoute: ProductsIndexRoute,
+}
+
+const ProductsRouteWithChildren = ProductsRoute._addFileChildren(
+  ProductsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
@@ -355,7 +405,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   PetsRoute: PetsRouteWithChildren,
-  ProductsRoute: ProductsRoute,
+  ProductsRoute: ProductsRouteWithChildren,
   TrainingRoute: TrainingRoute,
 }
 export const routeTree = rootRouteImport
