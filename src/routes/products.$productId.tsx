@@ -64,20 +64,7 @@ function ProductDetail() {
             if (found) return found;
           } catch {}
         }
-        // Fallback to sample
-        const { products: sampleProducts } = await import("@/data/sample");
-        const found = sampleProducts.find((p: any) => p.id === productId);
-        if (found) {
-          return {
-            id: found.id,
-            name: found.name,
-            category: found.category,
-            price: found.price,
-            image_url: found.image || null,
-            rating: found.rating,
-            description: "Curated premium care product by WOOLF.INDIA. Ethically sourced and vet-approved for your companions.",
-          };
-        }
+        return null;
       }
 
       // Try Supabase
@@ -92,20 +79,6 @@ function ProductDetail() {
         console.warn("Fetch single product from Supabase failed:", err);
       }
 
-      // Fallback
-      const { products: sampleProducts } = await import("@/data/sample");
-      const found = sampleProducts.find((p: any) => p.id === productId);
-      if (found) {
-        return {
-          id: found.id,
-          name: found.name,
-          category: found.category,
-          price: found.price,
-          image_url: found.image || null,
-          rating: found.rating,
-          description: "Curated premium care product by WOOLF.INDIA. Ethically sourced and vet-approved for your companions.",
-        };
-      }
       return null;
     },
   });

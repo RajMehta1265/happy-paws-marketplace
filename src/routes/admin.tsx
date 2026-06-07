@@ -1144,6 +1144,55 @@ function AdminPage() {
     }
   };
 
+  const handleClearStaticData = async () => {
+    if (!confirm("Are you sure you want to delete all default/static pets, exotic pets, and products from the Supabase database? This will leave the catalog clean for custom entries.")) return;
+
+    try {
+      toast.info("Deleting static/default data from live database...");
+
+      // 1. Delete standard pets matching default names/IDs
+      const defaultPetNames = ["Milo", "Luna", "Biscuit", "Kiwi", "Rosie", "Mochi"];
+      const { error: petsErr } = await supabase
+        .from("pets")
+        .delete()
+        .in("name", defaultPetNames);
+      if (petsErr) console.warn("Error deleting default pets:", petsErr.message);
+
+      // 2. Delete exotic pets matching default names/IDs
+      const defaultExoticNames = ["Major", "Ziggy", "Peanut"];
+      const { error: exoticsErr } = await supabase
+        .from("exotic_pets")
+        .delete()
+        .in("name", defaultExoticNames);
+      if (exoticsErr) console.warn("Error deleting default exotic pets:", exoticsErr.message);
+
+      // 3. Delete products matching default names
+      const defaultProductNames = [
+        "Heritage Grain-Free Kibble",
+        "Cloud Wool Pet Bed",
+        "Hand-knotted Rope Toy",
+        "Botanical Grooming Set",
+        "Linen Travel Carrier",
+        "Forest Chew Bundle"
+      ];
+      const { error: productsErr } = await supabase
+        .from("products")
+        .delete()
+        .in("name", defaultProductNames);
+      if (productsErr) console.warn("Error deleting default products:", productsErr.message);
+
+      // 4. Clear localStorage mock arrays
+      localStorage.removeItem("pawhaven_products");
+      localStorage.removeItem("pawhaven_pets");
+      localStorage.removeItem("pawhaven_deleted_pet_ids");
+
+      toast.success("Static catalog data removed successfully!");
+      qc.invalidateQueries();
+    } catch (err) {
+      toast.error(`Clear failed: ${(err as Error).message}`);
+    }
+  };
+
   const autofillProductPreset = () => {
     setProductFormData((prev) => ({
       ...prev,
@@ -1391,6 +1440,26 @@ function AdminPage() {
                     );
                   })
                 )}
+              </div>
+            </div>
+
+            {/* System Data Cleanup Section */}
+            <div className="rounded-3xl bg-card border border-destructive/30 p-7 shadow-sm bg-gradient-to-br from-card to-destructive/5 mt-6">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                  <h3 className="font-display text-2xl text-destructive/90 flex items-center gap-2">
+                    <span>⚠️</span> System Data Reset
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
+                    Permanently delete all default/static sample pets, exotic pets, and products from the Supabase database. This will clean the system catalog so the owner starts with a fresh empty database.
+                  </p>
+                </div>
+                <button
+                  onClick={handleClearStaticData}
+                  className="rounded-full bg-destructive/10 border border-destructive/30 px-6 py-3 text-xs font-semibold text-destructive hover:bg-destructive/20 active:scale-95 transition cursor-pointer whitespace-nowrap"
+                >
+                  Clear Default Catalog Data
+                </button>
               </div>
             </div>
           </div>

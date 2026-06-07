@@ -41,19 +41,7 @@ function ProductsPage() {
             return JSON.parse(stored);
           } catch {}
         }
-        const { products: sampleProducts } = await import("@/data/sample");
-        const list = sampleProducts.map((p) => ({
-          id: p.id,
-          name: p.name,
-          category: p.category,
-          price: p.price,
-          image_url: p.image || null,
-          rating: p.rating,
-          description: "Curated premium care product by WOOLF.INDIA",
-          stock: 10,
-        }));
-        localStorage.setItem("pawhaven_products", JSON.stringify(list));
-        return list;
+        return [];
       }
 
       try {
@@ -61,44 +49,12 @@ function ProductsPage() {
           .from("products")
           .select("*")
           .order("created_at", { ascending: false });
-        if (!error && data && data.length > 0) return data;
-
-        if (!error && data && data.length === 0) {
-          console.log("Supabase products table is empty. Seeding with sample data...");
-          const { products: sampleProducts } = await import("@/data/sample");
-          const toInsert = sampleProducts.map((p) => ({
-            name: p.name,
-            category: p.category,
-            price: p.price,
-            image_url: p.image || null,
-            rating: p.rating,
-            description: "Curated premium care product by WOOLF.INDIA",
-            stock: 10,
-          }));
-          const { data: seeded, error: seedErr } = await supabase
-            .from("products")
-            .insert(toInsert)
-            .select();
-          if (!seedErr && seeded && seeded.length > 0) {
-            return seeded;
-          }
-          console.warn("Seeding products to Supabase failed:", seedErr);
-        }
+        if (!error && data) return data;
       } catch (e) {
-        console.warn("Supabase products fetch failed, using sample fallback:", e);
+        console.warn("Supabase products fetch failed:", e);
       }
 
-      // Fallback to sample data, mapping `image` to `image_url`
-      const { products: sampleProducts } = await import("@/data/sample");
-      return sampleProducts.map((p) => ({
-        id: p.id,
-        name: p.name,
-        category: p.category,
-        price: p.price,
-        image_url: p.image || null,
-        rating: p.rating,
-        description: "Curated premium care product by WOOLF.INDIA",
-      }));
+      return [];
     },
   });
 

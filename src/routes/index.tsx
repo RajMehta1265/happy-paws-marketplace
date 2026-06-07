@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { FiArrowRight, FiHeart, FiShield, FiAward, FiCheck, FiChevronRight } from "react-icons/fi";
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { products, testimonials, trainingPlans } from "@/data/sample";
+import { testimonials, trainingPlans } from "@/data/sample";
 import { HeroSlider } from "@/components/site/HeroSlider";
 import { CinematicHero } from "@/components/site/CinematicHero";
 import { dbService, parseImages } from "@/services/db-service";
@@ -11,17 +11,37 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
 function Index() {
-  const { data: pets, isLoading } = useQuery({
+  const { data: pets, isLoading: petsLoading } = useQuery({
     queryKey: ["pets"],
     queryFn: () => dbService.getPets(),
     initialData: () => dbService.initLocalData(),
     staleTime: 0,
+  });
+
+  const { data: productsList = [], isLoading: productsLoading } = useQuery({
+    queryKey: ["products"],
+    queryFn: async () => {
+      const isMock = typeof window !== "undefined" && !!localStorage.getItem("pawhaven_mock_session");
+      if (isMock) {
+        const stored = localStorage.getItem("pawhaven_products");
+        if (stored) {
+          try {
+            return JSON.parse(stored);
+          } catch {}
+        }
+        return [];
+      }
+      const { data, error } = await supabase.from("products").select("*").limit(3);
+      if (error) throw error;
+      return data || [];
+    },
   });
 
   const featuredPets = (pets ?? []).filter((p) => p.type.toLowerCase() !== "exotic").slice(0, 4);
@@ -176,7 +196,7 @@ function Index() {
         cta={{ to: "/pets", label: "View all pets" }}
       >
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 scroll-reveal-section">
-          {isLoading
+          {petsLoading
             ? Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="aspect-square rounded-3xl" />
               ))
@@ -411,36 +431,47 @@ function Index() {
         cta={{ to: "/products", label: "View all products" }}
       >
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 scroll-reveal-section">
-          {products.slice(0, 3).map((p) => (
-            <article
-              key={p.id}
-              className="rounded-3xl bg-card overflow-hidden hover-lift border border-border scroll-reveal-card flex flex-col"
-            >
-              <Link
-                to="/products"
-                data-hover-text="BUY"
-                className="block group interactive-hover cursor-pointer"
+          {productsLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="aspect-[4/3] rounded-3xl" />
+            ))
+          ) : productsList.length === 0 ? (
+            <p className="text-muted-foreground col-span-full py-12 text-center border border-dashed border-border rounded-3xl bg-muted/10">
+              No products available in the catalog.
+            </p>
+          ) : (
+            productsList.slice(0, 3).map((p: any) => (
+              <article
+                key={p.id}
+                className="rounded-3xl bg-card overflow-hidden hover-lift border border-border scroll-reveal-card flex flex-col"
               >
-                <div className="overflow-hidden aspect-[4/3] w-full">
-                  <img
-                    src={p.image}
-                    alt={`Premium product ${p.name}`}
-                    width={800}
-                    height={800}
-                    loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-105"
-                  />
-                </div>
-                <div className="p-6 md:p-7 flex items-center justify-between">
-                  <div>
-                    <div className="text-xs sm:text-sm text-muted-foreground font-semibold uppercase tracking-wider">{p.category}</div>
-                    <h3 className="font-display text-xl md:text-2xl font-bold mt-1">{p.name}</h3>
+                <Link
+                  to="/products/$productId"
+                  params={{ productId: p.id }}
+                  data-hover-text="BUY"
+                  className="block group interactive-hover cursor-pointer"
+                >
+                  <div className="overflow-hidden aspect-[4/3] w-full">
+                    <img
+                      src={p.image_url || "/product-1.jpg"}
+                      alt={`Premium product ${p.name}`}
+                      width={800}
+                      height={800}
+                      loading="lazy"
+                      className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-105"
+                    />
                   </div>
-                  <div className="font-display text-2xl text-primary font-bold">₹{p.price}</div>
-                </div>
-              </Link>
-            </article>
-          ))}
+                  <div className="p-6 md:p-7 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs sm:text-sm text-muted-foreground font-semibold uppercase tracking-wider">{p.category}</div>
+                      <h3 className="font-display text-xl md:text-2xl font-bold mt-1">{p.name}</h3>
+                    </div>
+                    <div className="font-display text-2xl text-primary font-bold">₹{p.price}</div>
+                  </div>
+                </Link>
+              </article>
+            ))
+          )}
         </div>
       </Section>
 
