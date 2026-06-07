@@ -65,6 +65,12 @@ function TrainingPage() {
   const [selectedCommands, setSelectedCommands] = useState<string[]>([]);
   const [bookSuccess, setBookSuccess] = useState(false);
 
+  const scrollToBooking = (type: "Basic" | "Moderate" | "Advance") => {
+    setTrainingType(type);
+    document.getElementById("booking-form")?.scrollIntoView({ behavior: "smooth" });
+    toast.info(`Selected ${type} training. Please complete the intake form below.`);
+  };
+
   // Calendar availability state
   const [bookedDates, setBookedDates] = useState<string[]>([]);
   const [dateCounts, setDateCounts] = useState<Record<string, number>>({});
@@ -231,6 +237,194 @@ function TrainingPage() {
         </p>
       </section>
 
+      {/* Training Programs Section */}
+      <section className="mx-auto max-w-7xl px-6 my-16 space-y-8 animate-fade-in">
+        <div>
+          <div className="text-xs uppercase tracking-[0.25em] text-primary mb-2">Our Programs</div>
+          <h2 className="font-display text-4xl">Choose Your Training Package</h2>
+          <p className="mt-2 text-sm text-muted-foreground max-w-xl">
+            From basic house manners to advanced off-leash obedience, select the perfect conditioning program for your companion.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Basic Obedience Card */}
+          <div className="rounded-[2.5rem] bg-card border border-border p-8 md:p-10 flex flex-col justify-between hover:shadow-lg hover:border-primary/20 transition-all duration-300">
+            <div className="space-y-6">
+              <div className="flex justify-between items-start flex-wrap gap-4 border-b border-border/60 pb-6">
+                <div>
+                  <span className="text-2xl">🦴</span>
+                  <h3 className="font-display text-2xl font-bold text-foreground mt-2">Basic Obedience Commands</h3>
+                  <p className="text-xs text-muted-foreground mt-1">For puppies and beginners</p>
+                </div>
+                <div className="text-right">
+                  <div className="font-display text-3xl font-bold text-primary">₹2,500</div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">6–8 Sessions</span>
+                </div>
+              </div>
+
+              {/* Basic Highlights */}
+              <div className="grid sm:grid-cols-2 gap-6 text-xs leading-relaxed">
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-bold text-foreground mb-1">🦴 Basic Commands</h4>
+                    <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                      <li>Sit, Stay, Come (Recall)</li>
+                      <li>Down (Lie Down)</li>
+                      <li>Leave it / Drop it</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-foreground mb-1">🐕‍🦺 Leash Training</h4>
+                    <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                      <li>Walking calmly on a leash</li>
+                      <li>No pulling or lunging</li>
+                      <li>Responding to pace shifts</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-foreground mb-1">🧠 Focus & Attention</h4>
+                    <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                      <li>Name recognition</li>
+                      <li>Eye contact on command</li>
+                      <li>Ignoring mild distractions</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-bold text-foreground mb-1">🏡 House Manners</h4>
+                    <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                      <li>No jumping on people</li>
+                      <li>Waiting at doors</li>
+                      <li>No begging during meals</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-foreground mb-1">💩 Toilet Training</h4>
+                    <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                      <li>Crate training guidance</li>
+                      <li>Toilet schedule planning</li>
+                      <li>Indoor vs outdoor strategies</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-foreground mb-1">🐶 Socialization & Mild fixes</h4>
+                    <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                      <li>Controlled exposure/sounds</li>
+                      <li>Correct nipping & biting</li>
+                      <li>Correct household chewing</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-border/50 pt-4 text-[11px] text-muted-foreground space-y-1">
+                <div>🎁 <strong className="text-foreground">Included Extras:</strong> Treats/tools advice, practice homework, weekly progress reports, WhatsApp support between sessions.</div>
+                <div>🗓️ <strong className="text-foreground">Format:</strong> 45-60 min sessions at your home (Ahmedabad) or my training center.</div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => scrollToBooking("Basic")}
+              className="mt-8 w-full rounded-full bg-primary text-primary-foreground hover:opacity-90 font-bold py-3 text-sm transition cursor-pointer shadow-md text-center"
+            >
+              Select Basic Obedience
+            </button>
+          </div>
+
+          {/* Advanced Training Card */}
+          <div className="rounded-[2.5rem] bg-card border border-border p-8 md:p-10 flex flex-col justify-between hover:shadow-lg hover:border-primary/20 transition-all duration-300">
+            <div className="space-y-6">
+              <div className="flex justify-between items-start flex-wrap gap-4 border-b border-border/60 pb-6">
+                <div>
+                  <span className="text-2xl">🐕</span>
+                  <h3 className="font-display text-2xl font-bold text-foreground mt-2">Advanced Dog Training</h3>
+                  <p className="text-xs text-muted-foreground mt-1">Intermediate to Advanced level</p>
+                </div>
+                <div className="text-right">
+                  <div className="font-display text-3xl font-bold text-primary">₹7,500</div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">8–12 Sessions</span>
+                </div>
+              </div>
+
+              {/* Advanced Highlights */}
+              <div className="grid sm:grid-cols-2 gap-6 text-xs leading-relaxed">
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-bold text-foreground mb-1">🐕 Precision Command Control</h4>
+                    <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                      <li>Distance control commands</li>
+                      <li>Extended stays & distractions</li>
+                      <li>Off-leash control & Recall</li>
+                      <li>Heel walk perfect positioning</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-foreground mb-1">🧠 Impulse & Mental Discipline</h4>
+                    <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                      <li>Food waiting release</li>
+                      <li>Doorway boundary control</li>
+                      <li>Calm greetings (no jumping)</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-foreground mb-1">🐕‍🦺 Advanced Leash Control</h4>
+                    <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                      <li>Crowded walking control</li>
+                      <li>No reactivity (dogs, traffic)</li>
+                      <li>Emergency stops & movement</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-bold text-foreground mb-1">🧠 Public Focus & Exposure</h4>
+                    <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                      <li>Ignored food & noise triggers</li>
+                      <li>Obedience in parks/markets</li>
+                      <li>Sustained focus on handler</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-foreground mb-1">⚠️ Moderate/Advanced Fixes</h4>
+                    <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                      <li>Dog/people reactivity</li>
+                      <li>Aggression management</li>
+                      <li>Separation anxiety & guarding</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-foreground mb-1">🎯 Off-Leash Reliability</h4>
+                    <ul className="list-disc pl-4 text-muted-foreground space-y-0.5">
+                      <li>Remote distance recall</li>
+                      <li>Emergency recall ("Come NOW")</li>
+                      <li>Real-world proofing</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-border/50 pt-4 text-[11px] text-muted-foreground space-y-1">
+                <div>🎁 <strong className="text-foreground">Included Extras:</strong> Custom behavior plan, owner handling advice, progress reports, practice homework drills, WhatsApp support.</div>
+                <div>🗓️ <strong className="text-foreground">Format:</strong> 60-75 min sessions. Home + outdoor public areas (Ahmedabad-based).</div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => scrollToBooking("Advance")}
+              className="mt-8 w-full rounded-full bg-primary text-primary-foreground hover:opacity-90 font-bold py-3 text-sm transition cursor-pointer shadow-md text-center"
+            >
+              Select Advanced Program
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* Availability Calendar */}
       <section className="mx-auto max-w-7xl px-6 my-16">
         <div className="mb-6">
@@ -259,7 +453,7 @@ function TrainingPage() {
       </section>
 
       {/* Appointment Booking Form */}
-      <section className="mx-auto max-w-7xl px-6 my-16">
+      <section id="booking-form" className="mx-auto max-w-7xl px-6 my-16">
         <div className="rounded-[2.5rem] bg-accent/40 p-8 md:p-12 lg:p-14 border border-accent/20">
           <h2 className="font-display text-4xl mb-2 text-foreground">Book an Appointment</h2>
           <p className="text-sm text-muted-foreground mb-8">

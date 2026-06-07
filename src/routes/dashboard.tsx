@@ -180,6 +180,80 @@ function Dashboard() {
             </ul>
           )}
         </div>
+
+        {/* Explore Training Programs Section */}
+        <div className="rounded-3xl bg-card border border-border p-8 space-y-6">
+          <div>
+            <h2 className="font-display text-2xl">Professional Pet Training Packages</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Invest in your companion's behavior and impulse discipline. Select a package below to schedule a session.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Basic obedience Card */}
+            <div className="rounded-2xl border border-border bg-background p-6 flex flex-col justify-between hover:border-primary/25 transition group">
+              <div className="space-y-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-lg">🦴</span>
+                    <h3 className="font-bold text-lg text-foreground mt-1">Basic Obedience Program</h3>
+                    <p className="text-xs text-muted-foreground">Puppies & Beginners</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-lg text-primary">₹2,500</div>
+                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground">6-8 Sessions</span>
+                  </div>
+                </div>
+
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div>• Basic Commands (Sit, Stay, Recall, Down)</div>
+                  <div>• Leash Training (Walking calmly, No pulling)</div>
+                  <div>• House Manners (No jumping, doorway boundaries)</div>
+                  <div>• Controlled puppy socialization & Toilet training schedule</div>
+                </div>
+              </div>
+
+              <Link
+                to="/training"
+                className="mt-6 w-full rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground font-bold py-2.5 text-xs text-center transition duration-200"
+              >
+                Learn & Book Basic
+              </Link>
+            </div>
+
+            {/* Advanced dog training Card */}
+            <div className="rounded-2xl border border-border bg-background p-6 flex flex-col justify-between hover:border-primary/25 transition group">
+              <div className="space-y-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-lg">🐕</span>
+                    <h3 className="font-bold text-lg text-foreground mt-1">Advanced Training Program</h3>
+                    <p className="text-xs text-muted-foreground">Intermediate & Advanced</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-lg text-primary">₹7,500</div>
+                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground">8-12 Sessions</span>
+                  </div>
+                </div>
+
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div>• Precision distance commands & Off-leash obedience</div>
+                  <div>• High-distraction focus training in public parks</div>
+                  <div>• Behavior modification (reactivity & aggression control)</div>
+                  <div>• Advanced doorway and visitor discipline</div>
+                </div>
+              </div>
+
+              <Link
+                to="/training"
+                className="mt-6 w-full rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground font-bold py-2.5 text-xs text-center transition duration-200"
+              >
+                Learn & Book Advanced
+              </Link>
+            </div>
+          </div>
+        </div>
       </section>
     </SiteLayout>
   );
