@@ -18,6 +18,7 @@ export default defineConfig({
   vite: {
     plugins: [
       nitro({
+        // @ts-ignore
         preset: "vercel",
       }),
     ],

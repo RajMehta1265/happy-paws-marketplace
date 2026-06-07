@@ -33,10 +33,6 @@ function Index() {
   const heroCtaRef = useRef<HTMLDivElement>(null);
   const heroVisualsRef = useRef<HTMLDivElement>(null);
 
-  const expandSectionRef = useRef<HTMLDivElement>(null);
-  const expandImageRef = useRef<HTMLDivElement>(null);
-  const expandWrapperRef = useRef<HTMLDivElement>(null);
-
 
 
   useEffect(() => {
@@ -116,39 +112,7 @@ function Index() {
       });
     }
 
-    // Image Expansion Trigger: scales from bordered box layout to full width
-    if (expandSectionRef.current && expandWrapperRef.current && expandImageRef.current) {
-      gsap.fromTo(
-        expandWrapperRef.current,
-        { width: "80vw", borderRadius: "3rem" },
-        {
-          width: "100vw",
-          borderRadius: "0rem",
-          ease: "none",
-          scrollTrigger: {
-            trigger: expandSectionRef.current,
-            start: "top bottom",
-            end: "top top+=100",
-            scrub: true,
-          },
-        },
-      );
 
-      gsap.fromTo(
-        expandImageRef.current,
-        { scale: 1.2 },
-        {
-          scale: 1,
-          ease: "none",
-          scrollTrigger: {
-            trigger: expandSectionRef.current,
-            start: "top bottom",
-            end: "top top+=100",
-            scrub: true,
-          },
-        },
-      );
-    }
 
     // Scroll reveal fade-ins for grid sections
     const scrollSections = document.querySelectorAll(".scroll-reveal-section");
@@ -202,42 +166,7 @@ function Index() {
       {/* Cinematic Pinned Scrollytelling Hero Section */}
       <CinematicHero />
 
-      {/* Image Expansion Cinematic Section (Parallax visual) */}
-      <section
-        ref={expandSectionRef}
-        className="w-full min-h-[60vh] md:min-h-[80vh] flex items-center justify-center overflow-hidden bg-background relative z-20 py-16"
-      >
-        <div
-          ref={expandWrapperRef}
-          className="relative aspect-video max-w-full overflow-hidden shadow-2xl flex items-center justify-center w-[80vw] rounded-[3rem] border border-border"
-          style={{ transition: "border-radius 0.1s" }}
-        >
-          {/* Black shade scrim overlay */}
-          <div className="absolute inset-0 bg-black/45 z-10" />
 
-          {/* Luxury Companion background image */}
-          <div ref={expandImageRef} className="absolute inset-0 w-full h-full">
-            <img
-              src="https://images.unsplash.com/photo-1601758228041-f3b2795255f1?auto=format&fit=crop&q=80&w=1600"
-              alt="Cinematic Companion Landscape"
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          </div>
-
-          <div className="relative z-20 text-center px-6 max-w-2xl text-white">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary text-xs font-semibold text-primary-foreground mb-4 uppercase tracking-widest">
-              WOOLF.INDIA Ethos
-            </span>
-            <h2 className="font-display text-4xl md:text-6xl font-bold tracking-tight text-white mb-4 drop-shadow-lg">
-              A Legacy of Companionship & Care
-            </h2>
-            <p className="text-sm md:text-base text-white/80 font-medium max-w-lg mx-auto drop-shadow">
-              We connect families with ethically raised, health-checked pets across India, providing premium training, organic food, and lifetime support for a happy life together.
-            </p>
-          </div>
-        </div>
-      </section>
 
       {/* Featured Section */}
       <Section
@@ -299,7 +228,7 @@ function Index() {
         subtitle="Trainers who teach with patience — never punishment."
         cta={{ to: "/training", label: "Explore programs" }}
       >
-        <div className="grid md:grid-cols-3 gap-6 scroll-reveal-section">
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 scroll-reveal-section">
           {trainingPlans.map((t) => (
             <article
               key={t.id}
@@ -436,23 +365,23 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mx-auto max-w-7xl px-6 py-28 md:py-36 relative z-20">
-      <div className="flex items-end justify-between mb-16 gap-6 flex-wrap border-b border-border/50 pb-8">
+    <section className="mx-auto max-w-7xl px-6 py-24 md:py-32 relative z-20">
+      <div className="flex items-end justify-between mb-12 gap-6 flex-wrap border-b border-border/50 pb-8">
         <div>
-          <div className="text-xs sm:text-sm uppercase tracking-[0.3em] text-primary font-bold">
+          <div className="text-sm sm:text-base md:text-lg uppercase tracking-[0.3em] text-primary font-extrabold">
             {eyebrow}
           </div>
-          <h2 className="mt-3 font-display text-5xl md:text-6xl lg:text-7xl text-balance font-bold tracking-tight leading-tight">
+          <h2 className="mt-3 font-display text-4xl sm:text-5xl md:text-6xl text-balance font-bold tracking-tight leading-tight">
             {title}
           </h2>
           {subtitle && (
-            <p className="mt-4 text-muted-foreground text-sm sm:text-base md:text-lg max-w-2xl font-medium">{subtitle}</p>
+            <p className="mt-4 text-muted-foreground text-base sm:text-lg md:text-xl max-w-2xl font-semibold leading-relaxed">{subtitle}</p>
           )}
         </div>
         {cta && (
           <Link
             to={cta.to}
-            className="text-base text-primary hover:underline whitespace-nowrap font-bold flex items-center gap-1 hover:translate-x-1 transition-transform"
+            className="text-lg sm:text-xl text-primary hover:underline whitespace-nowrap font-extrabold flex items-center gap-1 hover:translate-x-1.5 transition-transform"
           >
             {cta.label} <FiChevronRight />
           </Link>

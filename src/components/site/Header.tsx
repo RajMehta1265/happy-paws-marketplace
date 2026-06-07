@@ -23,24 +23,25 @@ export function Header() {
   const { count } = useCart();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isHome = pathname === "/";
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [isHome, setIsHome] = useState(pathname === "/");
+  const [visible, setVisible] = useState(pathname !== "/");
 
   useEffect(() => {
-    if (!isHome) {
-      setIsScrolled(true);
-      return;
-    }
+    const isCurrentHome = window.location.pathname === "/";
+    setIsHome(isCurrentHome);
     
-    setIsScrolled(false);
-    const onScroll = () => {
-      // Reveal glass background once user has scrolled past the pinned cinematic stage
-      setIsScrolled(window.scrollY > window.innerHeight * 12.2);
+    const handleScroll = () => {
+      if (!isCurrentHome) {
+        setVisible(true);
+      } else {
+        setVisible(window.scrollY > window.innerHeight * 12.6);
+      }
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [isHome]);
+    
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [pathname]);
 
   const [isDark, setIsDark] = useState(true);
 
@@ -78,9 +79,9 @@ export function Header() {
       className={`z-50 transition-all duration-500 ${
         isHome ? "fixed top-0 left-0 w-full" : "sticky top-0"
       } ${
-        (!isHome || isScrolled)
-          ? "glass border-b border-border/20 shadow-sm"
-          : "bg-transparent border-transparent border-b-0 shadow-none backdrop-blur-none"
+        visible
+          ? "glass opacity-100 translate-y-0 pointer-events-auto border-b border-border/20 shadow-sm"
+          : "opacity-0 -translate-y-full pointer-events-none"
       }`}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">

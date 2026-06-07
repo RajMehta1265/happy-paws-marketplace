@@ -373,13 +373,13 @@ export function CinematicHero() {
           <path d="M0 340 Q 250 240 550 300 T 1200 290 L1200 400 L0 400 Z" fill="rgba(38, 70, 83, 0.4)" />
         </svg>
         <div className="relative z-10 text-center max-w-4xl">
-          <h1 className="hero-title font-display text-6xl md:text-8xl lg:text-9xl leading-[0.95] text-foreground">
+          <h1 className="hero-title font-display text-4xl sm:text-6xl md:text-8xl lg:text-9xl leading-[0.95] text-foreground">
             <span className="inline-block overflow-hidden"><span className="word inline-block">Where</span></span>{" "}
-            <span className="inline-block overflow-hidden"><span className="word inline-block italic text-[var(--color-accent)]">pets</span></span>{" "}
+            <span className="inline-block overflow-hidden"><span className="word inline-block italic text-foreground drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] drop-shadow-[0_8px_24px_rgba(0,0,0,0.95)] drop-shadow-[0_16px_32px_rgba(0,0,0,0.95)]">pets</span></span>{" "}
             <span className="inline-block overflow-hidden"><span className="word inline-block">find</span></span>{" "}
             <span className="inline-block overflow-hidden"><span className="word inline-block">family.</span></span>
           </h1>
-          <p className="hero-sub mt-6 text-lg text-muted-foreground">Scroll gently — a small world wakes up.</p>
+          <p className="hero-sub mt-6 text-base sm:text-lg text-muted-foreground">Scroll gently — a small world wakes up.</p>
         </div>
         <ScrollHint />
       </div>
@@ -393,7 +393,7 @@ export function CinematicHero() {
         </div>
         <div className="scene-2-title relative z-10 text-center max-w-3xl">
           <p className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent)] mb-3">Every paw, a story</p>
-          <h2 className="font-display text-5xl md:text-7xl text-foreground">
+          <h2 className="font-display text-2xl sm:text-4xl md:text-6xl text-foreground">
             They arrive on <em className="text-[var(--color-accent)]">soft little feet</em>.
           </h2>
         </div>
@@ -408,7 +408,7 @@ export function CinematicHero() {
         </div>
         <div className="scene-3-title relative z-10 text-center max-w-3xl">
           <p className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent)] mb-3">Wings & whispers</p>
-          <h2 className="font-display text-5xl md:text-7xl text-foreground">
+          <h2 className="font-display text-2xl sm:text-4xl md:text-6xl text-foreground">
             A flock takes <em className="text-[var(--color-accent)]">flight</em> with you.
           </h2>
         </div>
@@ -419,7 +419,7 @@ export function CinematicHero() {
         <div className="sunbeam absolute top-0 right-[18%] w-64 h-full bg-gradient-to-b from-[var(--color-accent)]/20 via-[var(--color-accent)]/5 to-transparent blur-2xl" />
         <div className="scene-4-title relative z-10 text-center max-w-3xl mr-auto ml-[8%]">
           <p className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent)] mb-3">Quiet companions</p>
-          <h2 className="font-display text-5xl md:text-7xl text-foreground max-w-lg">
+          <h2 className="font-display text-2xl sm:text-4xl md:text-6xl text-foreground max-w-lg">
             Slow mornings, <em className="text-[var(--color-accent)]">warm laps</em>.
           </h2>
         </div>
@@ -428,17 +428,17 @@ export function CinematicHero() {
       {/* ─── SCENE 8 — Final CTA ────────────────────────────────────────────── */}
       <div className="scene-cta scene absolute inset-0 flex flex-col items-center justify-center px-6 text-center z-30" style={{ opacity: 0 }}>
         <PawHeart className="paw-heart w-24 mb-6 text-[var(--color-accent)]" />
-        <h2 className="final-title font-display text-6xl md:text-8xl text-foreground max-w-4xl leading-[0.95]">
+        <h2 className="final-title font-display text-3xl sm:text-5xl md:text-7xl text-foreground max-w-4xl leading-[0.95]">
           <span className="inline-block overflow-hidden"><span className="word inline-block">Your</span></span>{" "}
           <span className="inline-block overflow-hidden"><span className="word inline-block italic text-[var(--color-accent)]">companion</span></span>{" "}
           <span className="inline-block overflow-hidden"><span className="word inline-block">is</span></span>{" "}
           <span className="inline-block overflow-hidden"><span className="word inline-block">waiting.</span></span>
         </h2>
         <div className="final-cta mt-10 flex flex-wrap gap-4 justify-center">
-          <Link to="/pets" className="rounded-full bg-primary text-primary-foreground px-8 py-4 hover:opacity-90 transition font-semibold">
+          <Link to="/pets" className="rounded-full bg-primary text-primary-foreground px-8 py-4 hover:opacity-90 transition font-semibold text-sm sm:text-base">
             Meet the pets
           </Link>
-          <Link to="/pets" className="rounded-full border border-border bg-card/40 backdrop-blur-md px-8 py-4 hover:bg-card/70 transition text-foreground">
+          <Link to="/pets" className="rounded-full border border-border bg-card/40 backdrop-blur-md px-8 py-4 hover:bg-card/70 transition text-foreground text-sm sm:text-base">
             Adopt a friend
           </Link>
         </div>
