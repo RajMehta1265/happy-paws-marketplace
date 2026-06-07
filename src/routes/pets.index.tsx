@@ -136,21 +136,30 @@ function PetsPage() {
   }, [filtered, currentPage]);
 
   // Reset page when filters change
+  const isManualPageChange = useRef(false);
   useEffect(() => {
+    if (isManualPageChange.current) {
+      isManualPageChange.current = false;
+      return;
+    }
     setCurrentPage(1);
   }, [type, breed, currentMaxPrice]);
 
   const handlePageChange = (page: number) => {
+    if (page < 1 || page > totalPages) return;
+    isManualPageChange.current = true;
     setCurrentPage(page);
     
     // Smooth-scroll to the top of the listing section with a navbar offset
-    if (listingSectionRef.current) {
-      const navbarHeight = 80; // approximate sticky navbar height
-      const top = listingSectionRef.current.getBoundingClientRect().top + window.scrollY - navbarHeight;
-      window.scrollTo({ top, behavior: "smooth" });
-    } else {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+    requestAnimationFrame(() => {
+      if (listingSectionRef.current) {
+        const navbarHeight = 80;
+        const top = listingSectionRef.current.getBoundingClientRect().top + window.scrollY - navbarHeight;
+        window.scrollTo({ top, behavior: "smooth" });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    });
   };
 
   // Submit consultation
