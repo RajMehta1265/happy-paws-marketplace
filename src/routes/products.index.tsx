@@ -20,11 +20,10 @@ export const Route = createFileRoute("/products/")({
   component: ProductsPage,
 });
 
-const CATS = ["All", "Food", "Toys", "Grooming", "Accessories"] as const;
 const PRODUCTS_PER_PAGE = 6;
 
 function ProductsPage() {
-  const [cat, setCat] = useState<(typeof CATS)[number]>("All");
+  const [cat, setCat] = useState<string>("All");
   const [currentPage, setCurrentPage] = useState(1);
   const { add } = useCart();
   const listingSectionRef = useRef<HTMLDivElement>(null);
@@ -114,6 +113,19 @@ function ProductsPage() {
   const [max, setMax] = useState<number | null>(null);
   const currentMaxPrice = max ?? maxSliderValue;
 
+  // Dynamically compute available categories from product data
+  const availableCategories = useMemo(() => {
+    const dataCategories = [...new Set((products ?? []).map((p: any) => p.category))];
+    const baseCategories = ["Food", "Toys", "Grooming", "Accessories"];
+    const merged = [...baseCategories];
+    dataCategories.forEach((c: any) => {
+      if (c && !merged.includes(c)) {
+        merged.push(c);
+      }
+    });
+    return ["All", ...merged];
+  }, [products]);
+
   // Filtered list
   const filtered = useMemo(() => {
     return (products ?? [])
@@ -175,7 +187,7 @@ function ProductsPage() {
         <div className="space-y-4 bg-card/40 border border-border/80 rounded-3xl p-5 shadow-xs glass transition-all hover:border-border/100">
           {/* Categories Tab Row */}
           <div className="flex flex-wrap items-center gap-2">
-            {CATS.map((c) => (
+            {availableCategories.map((c) => (
               <button
                 key={c}
                 onClick={() => setCat(c)}

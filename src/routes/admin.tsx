@@ -1805,20 +1805,25 @@ function AdminPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs font-semibold text-muted-foreground">
-                          Category
+                          Category *
                         </label>
-                        <select
-                          className="rounded-full border border-input bg-background px-4 py-3 text-sm focus:outline-primary"
+                        <input
+                          required
+                          type="text"
+                          placeholder="e.g. Food, Toys, Accessories"
+                          className="rounded-full border border-input bg-background px-5 py-3 text-sm focus:outline-primary"
                           value={productFormData.category}
                           onChange={(e) =>
                             setProductFormData({ ...productFormData, category: e.target.value })
                           }
-                        >
-                          <option value="Food">Food</option>
-                          <option value="Toys">Toys</option>
-                          <option value="Grooming">Grooming</option>
-                          <option value="Accessories">Accessories</option>
-                        </select>
+                          list="product-categories"
+                        />
+                        <datalist id="product-categories">
+                          <option value="Food" />
+                          <option value="Toys" />
+                          <option value="Grooming" />
+                          <option value="Accessories" />
+                        </datalist>
                       </div>
 
                       <div className="flex flex-col gap-1.5">
