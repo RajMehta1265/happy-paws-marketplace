@@ -91,7 +91,7 @@ export function Header() {
             WOOLF.INDIA
           </span>
         </Link>
-        <nav className="hidden lg:flex items-center gap-7 text-sm">
+        <nav className="hidden xl:flex items-center gap-7 text-sm">
           {nav.map((n) => (
             <Link
               key={n.to}
@@ -159,7 +159,7 @@ export function Header() {
 
           {/* Mobile hamburger menu */}
           <button
-            className="lg:hidden p-2 hover:bg-muted rounded-full"
+            className="xl:hidden p-2 hover:bg-muted rounded-full"
             onClick={() => setOpen((v) => !v)}
             aria-label="Menu"
           >
@@ -168,7 +168,7 @@ export function Header() {
         </div>
       </div>
       {open && (
-        <div className="lg:hidden border-t border-border bg-background">
+        <div className="xl:hidden border-t border-border bg-background">
           <nav className="flex flex-col p-4 gap-2">
             {nav.map((n) => (
               <Link

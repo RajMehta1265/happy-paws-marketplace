@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { dbService, Pet, parseImages } from "@/services/db-service";
@@ -135,13 +135,24 @@ function PetsPage() {
   }, [filtered, currentPage]);
 
   // Reset page when filters change
-  useMemo(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [type, breed, currentMaxPrice]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    
+    // Temporarily override smooth scroll on HTML element to force an instant scroll jump
+    const html = document.documentElement;
+    const originalScrollBehavior = html.style.scrollBehavior;
+    html.style.scrollBehavior = "auto";
+    
+    window.scrollTo(0, 0);
+    
+    // Restore original scroll behavior after scroll executes
+    setTimeout(() => {
+      html.style.scrollBehavior = originalScrollBehavior;
+    }, 50);
   };
 
   // Submit consultation
@@ -177,7 +188,7 @@ function PetsPage() {
     <SiteLayout>
       {/* Page Header Section (Full Width with top padding to clear sticky navbar) */}
       <section className="mx-auto max-w-7xl px-6 pt-32 pb-4">
-        <div className="text-xs uppercase tracking-[0.25em] text-accent font-semibold">
+        <div className="text-sm sm:text-base md:text-lg uppercase tracking-[0.3em] text-accent font-extrabold">
           Marketplace
         </div>
         <h1 className="mt-2 font-display text-5xl lg:text-6xl text-foreground leading-tight">
@@ -239,10 +250,13 @@ function PetsPage() {
             )}
 
             {/* Price Filter */}
-            <div className="flex items-center justify-end gap-4 pt-4 border-t border-border/40">
-              <span className="text-xs text-muted-foreground">
-                Max Price: <strong className="text-foreground">₹{currentMaxPrice}</strong>
-              </span>
+            <div className="flex flex-col gap-2 pt-4 border-t border-border/40 w-full">
+              <div className="flex justify-between items-center text-xs text-muted-foreground font-semibold">
+                <span>Price Range</span>
+                <span>
+                  Max Price: <strong className="text-foreground text-sm font-bold">₹{currentMaxPrice}</strong>
+                </span>
+              </div>
               <input
                 type="range"
                 min={50}
@@ -250,7 +264,7 @@ function PetsPage() {
                 step={50}
                 value={currentMaxPrice}
                 onChange={(e) => setMax(+e.target.value)}
-                className="accent-primary cursor-pointer w-32 sm:w-40 h-1.5 bg-muted rounded-lg appearance-none"
+                className="accent-primary cursor-pointer w-full h-1.5 bg-muted rounded-lg appearance-none"
               />
             </div>
           </div>
@@ -288,7 +302,7 @@ function PetsPage() {
                             </div>
                           </div>
                           <div className="shrink-0 ml-2">
-                            <span className="inline-flex rounded-full bg-accent/15 px-3.5 py-1.5 text-xs font-semibold text-accent font-display">
+                            <span className="inline-flex rounded-full bg-accent/20 px-4.5 py-2 text-sm sm:text-base font-extrabold text-accent font-display shadow-sm">
                               ₹{Number(p.price).toFixed(0)}
                             </span>
                           </div>

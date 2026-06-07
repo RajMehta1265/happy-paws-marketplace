@@ -17,8 +17,8 @@ export function Footer() {
 
   return (
     <footer className="mt-24 border-t border-border bg-secondary/50">
-      <div className="mx-auto max-w-7xl px-6 py-20 md:py-24 grid gap-12 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
-        <div>
+      <div className="mx-auto max-w-7xl px-6 py-20 md:py-24 grid grid-cols-12 gap-x-6 gap-y-12 lg:gap-x-12">
+        <div className="col-span-12 md:col-span-6 xl:col-span-4">
           <div className="flex items-center gap-4">
             <WolfLogo className="h-16 w-16 sm:h-20 sm:w-20 text-primary shrink-0" />
             <span className="font-display font-extrabold text-2xl sm:text-3xl tracking-[0.15em] text-foreground">
@@ -29,7 +29,7 @@ export function Footer() {
             Nourishing bonds, naturally. Premium companions, ethical sourcing, and gentle training.
           </p>
         </div>
-        <div>
+        <div className="col-span-6 md:col-span-3 xl:col-span-2">
           <h4 className="text-base sm:text-lg font-bold tracking-wider mb-5 uppercase text-foreground">Explore</h4>
           <ul className="space-y-3.5 text-base sm:text-lg text-muted-foreground">
             <li>
@@ -54,7 +54,7 @@ export function Footer() {
             </li>
           </ul>
         </div>
-        <div>
+        <div className="col-span-6 md:col-span-3 xl:col-span-2">
           <h4 className="text-base sm:text-lg font-bold tracking-wider mb-5 uppercase text-foreground">Care</h4>
           <ul className="space-y-3.5 text-base sm:text-lg text-muted-foreground">
             <li>
@@ -79,16 +79,16 @@ export function Footer() {
             </li>
           </ul>
         </div>
-        <div>
+        <div className="col-span-12 md:col-span-12 xl:col-span-4 max-w-md">
           <h4 className="text-base sm:text-lg font-bold tracking-wider mb-5 uppercase text-foreground">Stay close</h4>
           <p className="text-base sm:text-lg text-muted-foreground mb-5 leading-relaxed">Gentle stories, care tips, no noise.</p>
-          <form className="flex gap-2.5">
+          <form className="flex flex-col sm:flex-row gap-2.5">
             <input
               type="email"
               placeholder="your@email.com"
-              className="flex-1 rounded-full border border-input bg-background px-5 py-3.5 text-base sm:text-lg"
+              className="flex-1 min-w-0 rounded-full border border-input bg-background px-5 py-3.5 text-base sm:text-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
-            <button className="rounded-full bg-primary px-6 py-3.5 text-base sm:text-lg font-bold text-primary-foreground hover:opacity-90 transition-opacity">
+            <button className="rounded-full bg-primary px-6 py-3.5 text-base sm:text-lg font-bold text-primary-foreground hover:opacity-90 transition-opacity whitespace-nowrap shrink-0">
               Join
             </button>
           </form>
