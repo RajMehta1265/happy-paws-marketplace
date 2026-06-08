@@ -1,6 +1,6 @@
 -- Delete all default pets from pets table
 DELETE FROM public.pets
-WHERE LOWER(name) IN ('milo', 'luna', 'biscuit', 'kiwi', 'rosie', 'mochi', 'snowy');
+WHERE LOWER(name) IN ('milo', 'luna', 'biscuit', 'kiwi', 'rosie', 'mochi', 'snowy', 'maxxy');
 
 -- Delete all default exotic pets from exotic_pets table
 DELETE FROM public.exotic_pets
