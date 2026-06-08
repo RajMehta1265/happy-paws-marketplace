@@ -6,28 +6,40 @@ async function getRazorpayConfig() {
   let keyId = process.env.RAZORPAY_KEY_ID || import.meta.env.RAZORPAY_KEY_ID;
   let keySecret = process.env.RAZORPAY_KEY_SECRET || import.meta.env.RAZORPAY_KEY_SECRET;
 
+  console.log("[Razorpay Config Debug] Initial keys from process.env:", { keyId, keySecret: keySecret ? "***" : undefined });
+
   if (!keyId || !keySecret) {
     try {
       const fs = await import("fs");
       const path = await import("path");
       const envPath = path.resolve(process.cwd(), ".env");
+      console.log("[Razorpay Config Debug] Resolved .env path:", envPath);
       if (fs.existsSync(envPath)) {
         const envContent = fs.readFileSync(envPath, "utf-8");
+        console.log("[Razorpay Config Debug] .env file content length:", envContent.length);
         const keyIdMatch = envContent.match(/^RAZORPAY_KEY_ID=["']?([^"'\r\n]+)["']?/m);
         const keySecretMatch = envContent.match(/^RAZORPAY_KEY_SECRET=["']?([^"'\r\n]+)["']?/m);
         
+        console.log("[Razorpay Config Debug] Regex match results:", {
+          keyIdMatch: keyIdMatch ? "Matched" : "No Match",
+          keySecretMatch: keySecretMatch ? "Matched" : "No Match"
+        });
+
         if (keyIdMatch && keyIdMatch[1]) {
           keyId = keyIdMatch[1].trim();
         }
         if (keySecretMatch && keySecretMatch[1]) {
           keySecret = keySecretMatch[1].trim();
         }
+      } else {
+        console.log("[Razorpay Config Debug] .env file does not exist at resolved path");
       }
     } catch (err) {
       console.error("[Razorpay Service] Error reading .env file manually:", err);
     }
   }
 
+  console.log("[Razorpay Config Debug] Final keys resolved:", { keyId, keySecret: keySecret ? "***" : undefined });
   return { keyId, keySecret };
 }
 

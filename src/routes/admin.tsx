@@ -1151,7 +1151,7 @@ function AdminPage() {
       toast.info("Deleting static/default data from live database...");
 
       // 1. Delete standard pets matching default names/IDs
-      const defaultPetNames = ["Milo", "Luna", "Biscuit", "Kiwi", "Rosie", "Mochi"];
+      const defaultPetNames = ["Milo", "Luna", "Biscuit", "Kiwi", "Rosie", "Mochi", "Snowy"];
       const { error: petsErr } = await supabase
         .from("pets")
         .delete()
