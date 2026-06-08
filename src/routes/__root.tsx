@@ -119,6 +119,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
         <script
           dangerouslySetInnerHTML={{
             __html: `

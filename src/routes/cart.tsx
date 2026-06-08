@@ -10,6 +10,13 @@ import { FiMinus, FiPlus, FiTrash2 } from "react-icons/fi";
 import { useQueryClient } from "@tanstack/react-query";
 import { sendEmail } from "@/services/mail-service";
 import { mailTemplates } from "@/services/mail-templates";
+import { createRazorpayOrderServer, verifyRazorpayPaymentServer } from "@/services/razorpay-service";
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 export const Route = createFileRoute("/cart")({
   head: () => ({ meta: [{ title: "Cart — WOOLF.INDIA" }] }),
@@ -80,57 +87,8 @@ function CartPage() {
 
   const hasPet = items.some((i) => i.product?.category === "Pet");
 
-  const checkout = async () => {
-    if (!user) {
-      navigate({ to: "/login" });
-      return;
-    }
-    if (items.length === 0) return;
-
-    if (
-      !shippingDetails.full_name.trim() ||
-      !shippingDetails.phone.trim() ||
-      !shippingDetails.address_line.trim() ||
-      !shippingDetails.city.trim() ||
-      !shippingDetails.postal_code.trim() ||
-      !shippingDetails.country.trim()
-    ) {
-      toast.error("Please fill in all shipping details before placing the order.");
-      return;
-    }
-
-    const nameRegex = /^[A-Za-z\s]+$/;
-    if (!nameRegex.test(shippingDetails.full_name.trim())) {
-      toast.error("Full name must contain only letters and spaces.");
-      return;
-    }
-
-    const phoneRegex = /^\d{10}$/;
-    if (!phoneRegex.test(shippingDetails.phone.trim())) {
-      toast.error("Phone number must be exactly 10 digits (numbers only).");
-      return;
-    }
-
-    if (shippingDetails.country.trim().toLowerCase() === "india") {
-      const pinRegex = /^\d{6}$/;
-      if (!pinRegex.test(shippingDetails.postal_code.trim())) {
-        toast.error("Postal code must be exactly 6 digits for India (numbers only).");
-        return;
-      }
-    }
-
-    if (hasPet) {
-      if (!signedName.trim()) {
-        toast.error("Please sign your full legal name for the Liability and Consent Basis.");
-        return;
-      }
-      if (!liabilityAccepted || !consentGiven) {
-        toast.error("Please accept the liability waiver and consent terms to proceed.");
-        return;
-      }
-    }
-
-    setPlacing(true);
+  const completeOrder = async (gatewayOrderId: string) => {
+    if (!user) return;
     try {
       const isMock = !!localStorage.getItem("pawhaven_mock_session");
       if (isMock) {
@@ -160,7 +118,7 @@ function CartPage() {
         }
 
         const newOrder = {
-          id: crypto.randomUUID(),
+          id: gatewayOrderId || crypto.randomUUID(),
           user_id: user.id,
           total,
           status: "paid",
@@ -314,6 +272,142 @@ function CartPage() {
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
+      setPlacing(false);
+    }
+  };
+
+  const checkout = async () => {
+    if (!user) {
+      navigate({ to: "/login" });
+      return;
+    }
+    if (items.length === 0) return;
+
+    if (
+      !shippingDetails.full_name.trim() ||
+      !shippingDetails.phone.trim() ||
+      !shippingDetails.address_line.trim() ||
+      !shippingDetails.city.trim() ||
+      !shippingDetails.postal_code.trim() ||
+      !shippingDetails.country.trim()
+    ) {
+      toast.error("Please fill in all shipping details before placing the order.");
+      return;
+    }
+
+    const nameRegex = /^[A-Za-z\s]+$/;
+    if (!nameRegex.test(shippingDetails.full_name.trim())) {
+      toast.error("Full name must contain only letters and spaces.");
+      return;
+    }
+
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(shippingDetails.phone.trim())) {
+      toast.error("Phone number must be exactly 10 digits (numbers only).");
+      return;
+    }
+
+    if (shippingDetails.country.trim().toLowerCase() === "india") {
+      const pinRegex = /^\d{6}$/;
+      if (!pinRegex.test(shippingDetails.postal_code.trim())) {
+        toast.error("Postal code must be exactly 6 digits for India (numbers only).");
+        return;
+      }
+    }
+
+    if (hasPet) {
+      if (!signedName.trim()) {
+        toast.error("Please sign your full legal name for the Liability and Consent Basis.");
+        return;
+      }
+      if (!liabilityAccepted || !consentGiven) {
+        toast.error("Please accept the liability waiver and consent terms to proceed.");
+        return;
+      }
+    }
+
+    if (typeof window === "undefined" || !window.Razorpay) {
+      toast.error("Razorpay SDK is not loaded. Please try again in a moment.");
+      return;
+    }
+
+    setPlacing(true);
+    try {
+      const amountPaise = Math.round(total * 100);
+      if (amountPaise < 100) {
+        toast.error("Minimum order amount must be ₹1 (100 paise).");
+        setPlacing(false);
+        return;
+      }
+
+      // 1. Create Razorpay Order on the backend server
+      const orderData = await createRazorpayOrderServer({
+        data: {
+          amount: amountPaise,
+          currency: "INR",
+          receipt: `rcpt_${Date.now().toString().slice(-8)}`,
+        }
+      });
+
+      if (!orderData || !orderData.id) {
+        throw new Error("Failed to initialize payment gateway order.");
+      }
+
+      // 2. Configure and Open Razorpay Checkout Modal
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_Sz7jBfqKeVr3Ig",
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "WOOLF.INDIA",
+        description: "Pet Marketplace Checkout",
+        order_id: orderData.id,
+        prefill: {
+          name: shippingDetails.full_name,
+          email: user.email || "",
+          contact: shippingDetails.phone,
+        },
+        theme: {
+          color: "#D8B273", // premium gold accent of WOOLF.INDIA
+        },
+        handler: async (response: any) => {
+          // 3. Verify Payment Signature on backend server
+          try {
+            setPlacing(true);
+            const verifyResult = await verifyRazorpayPaymentServer({
+              data: {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }
+            });
+
+            if (verifyResult && verifyResult.success) {
+              await completeOrder(response.razorpay_order_id);
+            } else {
+              toast.error(verifyResult?.error || "Signature verification failed. Payment was not recorded.");
+              setPlacing(false);
+            }
+          } catch (err) {
+            toast.error("Signature verification error: " + (err as Error).message);
+            setPlacing(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            toast.error("Payment cancelled by user.");
+            setPlacing(false);
+          }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", function (response: any) {
+        toast.error(`Payment failed: ${response.error.description}`);
+        setPlacing(false);
+      });
+      rzp.open();
+    } catch (e) {
+      toast.error("Checkout failed: " + (e as Error).message);
       setPlacing(false);
     }
   };
