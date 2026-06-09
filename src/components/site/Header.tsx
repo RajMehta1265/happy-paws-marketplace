@@ -34,7 +34,7 @@ export function Header() {
       if (!isCurrentHome) {
         setVisible(true);
       } else {
-        setVisible(window.scrollY > window.innerHeight * 12.6);
+        setVisible(window.scrollY > window.innerHeight * 9.8);
       }
     };
     

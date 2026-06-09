@@ -94,6 +94,8 @@ function Index() {
       touchMultiplier: 2,
     });
 
+    (window as any).lenis = lenis;
+
     lenis.on("scroll", ScrollTrigger.update);
 
     gsap.ticker.add((time) => {
@@ -101,7 +103,10 @@ function Index() {
     });
     gsap.ticker.lagSmoothing(0);
 
-    return () => lenis.destroy();
+    return () => {
+      (window as any).lenis = null;
+      lenis.destroy();
+    };
   }, []);
 
   useEffect(() => {
