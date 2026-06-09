@@ -69,7 +69,7 @@ export function CinematicHero() {
 
       tween = gsap.to(scrollObj, {
         y: targetScrollY,
-        duration: 22, // Steady, cinematic slow auto-scroll
+        duration: 10, // Fast, steady 10-second cinematic auto-scroll
         ease: "sine.inOut",
         onUpdate: () => {
           window.scrollTo(0, scrollObj.y);
@@ -182,7 +182,7 @@ export function CinematicHero() {
         trigger: root.current,
         start: "top top",
         end: () => `+=${total * 100}%`,
-        scrub: 1,
+        scrub: true,
         pin: true,
         anticipatePin: 1,
       },
