@@ -12,24 +12,96 @@ export function CinematicHero() {
 
   const handleVideoEnded = () => {
     if (typeof window !== "undefined" && window.scrollY < window.innerHeight * 0.5) {
-      const targetScrollY = window.innerHeight * 5.0;
+      const targetScrollY = window.innerHeight * 6.6;
       const lenis = (window as any).lenis;
       if (lenis) {
-        lenis.scrollTo(targetScrollY, { immediate: true });
+        lenis.start();
+        lenis.scrollTo(targetScrollY, {
+          duration: 2.2,
+          easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        });
       } else {
-        window.scrollTo(0, targetScrollY);
+        window.scrollTo({
+          top: targetScrollY,
+          behavior: "smooth",
+        });
+      }
+    }
+  };
+
+  const handleSkipIntro = () => {
+    if (typeof window !== "undefined") {
+      const targetScrollY = window.innerHeight * 10.7; // Directly past scrollytelling
+      const lenis = (window as any).lenis;
+      if (lenis) {
+        lenis.start();
+        lenis.scrollTo(targetScrollY, {
+          duration: 1.5,
+          easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        });
+      } else {
+        window.scrollTo({
+          top: targetScrollY,
+          behavior: "smooth",
+        });
+      }
+    }
+  };
+
+  const handleScrollDown = () => {
+    if (typeof window !== "undefined") {
+      const targetScrollY = window.innerHeight * 8.0; // Next scene (Paw Trail)
+      const lenis = (window as any).lenis;
+      if (lenis) {
+        lenis.start();
+        lenis.scrollTo(targetScrollY, {
+          duration: 1.5,
+          easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        });
+      } else {
+        window.scrollTo({
+          top: targetScrollY,
+          behavior: "smooth",
+        });
       }
     }
   };
 
   useEffect(() => {
-    if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
-      window.history.scrollRestoration = "manual";
+    if (typeof window !== "undefined") {
+      if ("scrollRestoration" in window.history) {
+        window.history.scrollRestoration = "manual";
+      }
+      window.scrollTo(0, 0);
+      
+      // Lock scrolling initially during the video
+      const lenis = (window as any).lenis;
+      if (lenis) {
+        lenis.scrollTo(0, { immediate: true });
+        lenis.stop();
+      } else {
+        let attempts = 0;
+        const interval = setInterval(() => {
+          const l = (window as any).lenis;
+          if (l) {
+            l.scrollTo(0, { immediate: true });
+            l.stop();
+            clearInterval(interval);
+          }
+          attempts++;
+          if (attempts > 50) clearInterval(interval);
+        }, 50);
+      }
     }
     if (videoRef.current) {
       videoRef.current.muted = true;
       videoRef.current.play().catch((err) => {
         console.error("Video autoplay failed:", err);
+        // Fallback: unlock scroll if video cannot autoplay
+        const lenis = (window as any).lenis;
+        if (lenis) {
+          lenis.start();
+        }
       });
     }
   }, []);
@@ -127,6 +199,7 @@ export function CinematicHero() {
           muted
           playsInline
           onEnded={handleVideoEnded}
+          onError={handleVideoEnded}
           className="absolute inset-0 w-full h-full object-cover z-0"
         />
 
@@ -183,7 +256,7 @@ export function CinematicHero() {
           <path d="M0 300 Q 300 180 600 250 T 1200 220 L1200 400 L0 400 Z" fill="rgba(38, 70, 83, 0.2)" />
           <path d="M0 340 Q 250 240 550 300 T 1200 290 L1200 400 L0 400 Z" fill="rgba(38, 70, 83, 0.4)" />
         </svg>
-        <div className="relative z-10 text-center max-w-4xl">
+        <div className="relative z-10 text-center max-w-4xl -translate-y-16">
           <h1 className="hero-title font-display text-4xl sm:text-6xl md:text-8xl lg:text-9xl leading-[1.15] text-foreground">
             <span className="inline-block overflow-hidden pb-4 -mb-4"><span className="word inline-block">Where</span></span>{" "}
             <span className="inline-block overflow-hidden pb-4 -mb-4"><span className="word inline-block italic text-foreground drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] drop-shadow-[0_8px_24px_rgba(0,0,0,0.95)] drop-shadow-[0_16px_32px_rgba(0,0,0,0.95)]">pets</span></span>{" "}
@@ -192,7 +265,17 @@ export function CinematicHero() {
           </h1>
           <p className="hero-sub mt-6 text-base sm:text-lg text-muted-foreground">Scroll gently — a small world wakes up.</p>
         </div>
-        <ScrollHint />
+        
+        {/* Scroll Cue exactly in center */}
+        <ScrollHint onClick={handleScrollDown} />
+
+        {/* Skip Button */}
+        <button
+          onClick={handleSkipIntro}
+          className="skip-intro-btn absolute bottom-12 left-1/2 -translate-x-1/2 z-40 rounded-full border border-foreground/20 bg-background/30 backdrop-blur-md px-6 py-3 text-[10px] font-mono tracking-[0.2em] uppercase text-foreground hover:bg-background/60 hover:border-foreground/40 transition duration-300 pointer-events-auto cursor-pointer"
+        >
+          Skip
+        </button>
       </div>
 
       {/* ─── SCENE 4 ─ Paw trail ────────────────────────────────────────────── */}
@@ -241,12 +324,17 @@ export function CinematicHero() {
    Sub-components & Silhouettes
    ═══════════════════════════════════════════════════════════════════════════ */
 
-function ScrollHint() {
+function ScrollHint({ onClick }: { onClick?: () => void }) {
   return (
-    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-xs uppercase tracking-[0.3em] text-gray-500">
-      <span>Scroll</span>
-      <div className="h-10 w-[1px] bg-gray-500 animate-pulse" />
-    </div>
+    <button
+      onClick={onClick}
+      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-3 text-xs uppercase tracking-[0.3em] text-foreground/60 hover:text-foreground transition-all duration-300 pointer-events-auto cursor-pointer focus:outline-none bg-transparent border-none mt-28 sm:mt-32"
+    >
+      <span>Scroll down</span>
+      <div className="w-7 h-11 rounded-full border-2 border-foreground/30 flex justify-center p-1 hover:border-foreground/60 transition-colors">
+        <div className="w-1.5 h-2.5 bg-foreground/60 rounded-full animate-bounce" />
+      </div>
+    </button>
   );
 }
 
