@@ -15,23 +15,79 @@ export function CinematicHero() {
   const [images, setImages] = useState<HTMLImageElement[]>([]);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [showSkip, setShowSkip] = useState(true);
 
   useEffect(() => {
-    const handleScroll = () => {
-      // Fade out the skip button when entering the shutter sequence (at scroll position > 5.0 viewports)
-      setShowSkip(window.scrollY < window.innerHeight * 5.0);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
   }, []);
 
-  const handleSkip = () => {
-    window.scrollTo({
-      top: window.innerHeight * 5.3,
-      behavior: "smooth",
-    });
-  };
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    // Prevent default scroll behaviors
+    const preventDefault = (e: Event) => {
+      e.preventDefault();
+    };
+
+    const keys = { 32: 1, 33: 1, 34: 1, 35: 1, 36: 1, 37: 1, 38: 1, 39: 1, 40: 1 };
+    const preventDefaultForScrollKeys = (e: KeyboardEvent) => {
+      if (keys[e.keyCode as keyof typeof keys]) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    let scrollDisabled = false;
+
+    const disableScroll = () => {
+      if (scrollDisabled) return;
+      window.addEventListener("wheel", preventDefault, { passive: false });
+      window.addEventListener("touchmove", preventDefault, { passive: false });
+      window.addEventListener("DOMMouseScroll", preventDefault, { passive: false });
+      window.addEventListener("keydown", preventDefaultForScrollKeys, { passive: false });
+      scrollDisabled = true;
+    };
+
+    const enableScroll = () => {
+      if (!scrollDisabled) return;
+      window.removeEventListener("wheel", preventDefault);
+      window.removeEventListener("touchmove", preventDefault);
+      window.removeEventListener("DOMMouseScroll", preventDefault);
+      window.removeEventListener("keydown", preventDefaultForScrollKeys);
+      scrollDisabled = false;
+    };
+
+    let tween: gsap.core.Tween | null = null;
+
+    const delayTimer = setTimeout(() => {
+      window.scrollTo(0, 0);
+      disableScroll();
+      
+      const targetScrollY = window.innerHeight * 13.0;
+      const scrollObj = { y: 0 };
+
+      tween = gsap.to(scrollObj, {
+        y: targetScrollY,
+        duration: 22, // Steady, cinematic slow auto-scroll
+        ease: "sine.inOut",
+        onUpdate: () => {
+          window.scrollTo(0, scrollObj.y);
+        },
+        onComplete: () => {
+          enableScroll();
+        },
+      });
+    }, 1200);
+
+    return () => {
+      clearTimeout(delayTimer);
+      if (tween) {
+        tween.kill();
+      }
+      enableScroll();
+    };
+  }, [isLoaded]);
 
   // Preload all 144 images
   useEffect(() => {
@@ -450,16 +506,6 @@ export function CinematicHero() {
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 h-1 w-48 rounded-full bg-primary/10 overflow-hidden z-40">
         <div className="progress-fill h-full w-full origin-left scale-x-0 bg-primary" />
       </div>
-
-      {/* Skip Intro Button */}
-      <button
-        onClick={handleSkip}
-        className={`fixed bottom-10 right-6 md:right-10 z-[60] px-6 py-3 rounded-full glass text-xs sm:text-sm font-bold tracking-wider text-foreground hover:bg-primary hover:text-primary-foreground hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg cursor-pointer ${
-          showSkip ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
-      >
-        Skip Intro
-      </button>
     </div>
   );
 }
