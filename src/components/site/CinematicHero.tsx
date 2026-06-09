@@ -70,7 +70,7 @@ export function CinematicHero() {
       tween = gsap.to(scrollObj, {
         y: targetScrollY,
         duration: 10, // Fast, steady 10-second cinematic auto-scroll
-        ease: "sine.inOut",
+        ease: "none",
         onUpdate: () => {
           window.scrollTo(0, scrollObj.y);
         },
@@ -78,7 +78,7 @@ export function CinematicHero() {
           enableScroll();
         },
       });
-    }, 1200);
+    }, 300);
 
     return () => {
       clearTimeout(delayTimer);
@@ -291,25 +291,23 @@ export function CinematicHero() {
     <div ref={root} className="cinematic-hero relative h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary selection:text-primary-foreground font-sans">
       
       {/* ─── PRELOADER SCREEN ──────────────────────────────────────────────── */}
-      {!isLoaded && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background transition-opacity duration-500">
-          <div className="flex flex-col items-center max-w-md w-full px-8 text-center">
-            <WolfLogo className="h-44 w-44 sm:h-48 sm:w-48 text-primary shrink-0 animate-pulse mb-8 drop-shadow-[0_0_35px_rgba(244,162,97,0.4)]" />
-            <span className="text-2xl sm:text-3xl lg:text-4xl font-display font-extrabold tracking-[0.4em] uppercase mb-4 text-foreground">
-              WOOLF.INDIA
-            </span>
-            <div className="w-full bg-primary/15 h-[3px] rounded-full overflow-hidden mb-4">
-              <div 
-                className="bg-primary h-full transition-all duration-300 ease-out shadow-[0_0_10px_rgba(244,162,97,0.6)]" 
-                style={{ width: `${loadingProgress}%` }}
-              />
-            </div>
-            <span className="text-[10px] font-mono tracking-[0.3em] uppercase text-foreground/50">
-              PRELOADING EXPERIENCE &bull; {loadingProgress}%
-            </span>
+      <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background transition-opacity duration-500 ${isLoaded ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
+        <div className="flex flex-col items-center max-w-md w-full px-8 text-center">
+          <WolfLogo className="h-44 w-44 sm:h-48 sm:w-48 text-primary shrink-0 animate-pulse mb-8 drop-shadow-[0_0_35px_rgba(244,162,97,0.4)]" />
+          <span className="text-2xl sm:text-3xl lg:text-4xl font-display font-extrabold tracking-[0.4em] uppercase mb-4 text-foreground">
+            WOOLF.INDIA
+          </span>
+          <div className="w-full bg-primary/15 h-[3px] rounded-full overflow-hidden mb-4">
+            <div 
+              className="bg-primary h-full transition-all duration-300 ease-out shadow-[0_0_10px_rgba(244,162,97,0.6)]" 
+              style={{ width: `${loadingProgress}%` }}
+            />
           </div>
+          <span className="text-[10px] font-mono tracking-[0.3em] uppercase text-foreground/50">
+            PRELOADING EXPERIENCE &bull; {loadingProgress}%
+          </span>
         </div>
-      )}
+      </div>
 
       {/* ─── SCENE 1: Keyboard sequence canvas ──────────────────────────────── */}
       <div className="keyboard-sequence-container scene absolute inset-0 z-50 overflow-hidden bg-background select-none">
