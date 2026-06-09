@@ -2792,9 +2792,14 @@ function AdminPage() {
             <div className="rounded-[2rem] bg-card border border-border p-6 shadow-sm">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h2 className="font-display text-3xl">Consultation Requests</h2>
+                  <h2 className="font-display text-3xl flex items-center gap-3">
+                    Consultation Requests
+                    <span className="bg-emerald-500/10 text-emerald-500 text-xs font-bold px-3 py-1 rounded-full border border-emerald-500/20">
+                      Free Service
+                    </span>
+                  </h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Manage and review custom consultation requests submitted by clients.
+                    Manage and review custom consultation requests submitted by clients. All consultations are 100% free of charge.
                   </p>
                 </div>
               </div>
@@ -3142,6 +3147,9 @@ function AdminPage() {
                             Pet Details
                           </th>
                           <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                            Rate / Price
+                          </th>
+                          <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
                             Duration
                           </th>
                           <th className="px-5 py-3 font-bold text-xs uppercase tracking-wider text-muted-foreground">
@@ -3197,9 +3205,22 @@ function AdminPage() {
                                 <div className="text-xs text-muted-foreground">{b.parentPhone}</div>
                               </td>
                               <td className="px-5 py-3">
-                                <div className="font-semibold text-foreground">{b.petName}</div>
+                                <div className="font-semibold text-foreground">
+                                  {b.petName}{" "}
+                                  <span className="text-xs font-normal text-muted-foreground">
+                                    ({b.petType || "Dog"})
+                                  </span>
+                                </div>
                                 <div className="text-xs text-muted-foreground">
                                   {b.petBreed} ({b.petGender}, {b.petAge})
+                                </div>
+                              </td>
+                              <td className="px-5 py-3">
+                                <div className="font-medium text-foreground">
+                                  Up to ₹{(b.petType === "Cat" ? 900 : 1100).toLocaleString()} / day
+                                </div>
+                                <div className="font-bold text-primary text-xs mt-0.5">
+                                  Total: ₹{(b.price || 0).toLocaleString()}
                                 </div>
                               </td>
                               <td className="px-5 py-3">
@@ -3596,6 +3617,8 @@ function AdminPage() {
                         Math.ceil(diffTime / (1000 * 60 * 60 * 24)),
                         1,
                       );
+                      const dailyRate = editingHostelling.petType === "Cat" ? 900 : 1100;
+                      const calculatedPrice = calculatedDays * dailyRate;
 
                       try {
                         await dbService.updateHostellingBooking(editingHostelling.id, {
@@ -3606,6 +3629,8 @@ function AdminPage() {
                           petBreed: editingHostelling.petBreed,
                           petGender: editingHostelling.petGender,
                           petAge: editingHostelling.petAge,
+                          petType: editingHostelling.petType || "Dog",
+                          price: calculatedPrice,
                           checkInDate: editingHostelling.checkInDate,
                           checkOutDate: editingHostelling.checkOutDate,
                           numDays: calculatedDays,
@@ -3705,7 +3730,25 @@ function AdminPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground">
+                          Pet Type
+                        </label>
+                        <select
+                          className="rounded-full border border-input bg-background px-4 py-3 text-sm focus:outline-primary"
+                          value={editingHostelling.petType || "Dog"}
+                          onChange={(e) =>
+                            setEditingHostelling({
+                              ...editingHostelling,
+                              petType: e.target.value as any,
+                            })
+                          }
+                        >
+                          <option value="Dog">Dog</option>
+                          <option value="Cat">Cat</option>
+                        </select>
+                      </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs font-semibold text-muted-foreground">
                           Gender

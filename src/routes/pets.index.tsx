@@ -417,7 +417,11 @@ function PetsPage() {
         {/* Right Column: Consultation Form & Recent Requests */}
         <div className="lg:col-span-4 space-y-6">
           {/* Consultation Form Card */}
-          <div className="rounded-3xl border border-border bg-card p-6 shadow-xs glass transition-all hover:border-border/100">
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-xs glass transition-all hover:border-border/100 relative overflow-hidden">
+            {/* Free Consultation Badge */}
+            <div className="absolute top-0 right-0 bg-primary/10 border-l border-b border-primary/20 rounded-bl-2xl px-4 py-1.5 text-[10px] font-bold tracking-wider uppercase text-primary">
+              100% Free
+            </div>
             <h2 className="font-display text-2xl mb-1 text-foreground">Request a Consultation</h2>
             <p className="text-xs text-muted-foreground mb-5 leading-relaxed">
               Let our coordinator team find the perfect companion matching your budget.

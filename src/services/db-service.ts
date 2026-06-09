@@ -374,6 +374,8 @@ export interface HostellingBooking {
   petBreed: string;
   petGender: "Male" | "Female";
   petAge: string;
+  petType: "Dog" | "Cat";
+  price: number;
   medicalConditions: string;
   medicalImage: string;
   temperament: "Friendly" | "Aggressive";
@@ -1723,6 +1725,8 @@ export const dbService = {
         petBreed: row.pet_breed,
         petGender: row.pet_gender as "Male" | "Female",
         petAge: row.pet_age,
+        petType: (row.pet_type as "Dog" | "Cat") || "Dog",
+        price: Number(row.price || 0),
         medicalConditions: row.medical_conditions || "",
         medicalImage: row.medical_image || "",
         temperament: row.temperament as "Friendly" | "Aggressive",
@@ -1785,6 +1789,8 @@ export const dbService = {
           pet_breed: newBooking.petBreed,
           pet_gender: newBooking.petGender,
           pet_age: newBooking.petAge,
+          pet_type: newBooking.petType,
+          price: newBooking.price,
           medical_conditions: newBooking.medicalConditions,
           medical_image: newBooking.medicalImage,
           temperament: newBooking.temperament,
@@ -1841,6 +1847,8 @@ export const dbService = {
     if (updates.petBreed !== undefined) dbPayload.pet_breed = updates.petBreed;
     if (updates.petGender !== undefined) dbPayload.pet_gender = updates.petGender;
     if (updates.petAge !== undefined) dbPayload.pet_age = updates.petAge;
+    if (updates.petType !== undefined) dbPayload.pet_type = updates.petType;
+    if (updates.price !== undefined) dbPayload.price = updates.price;
     if (updates.medicalConditions !== undefined)
       dbPayload.medical_conditions = updates.medicalConditions;
     if (updates.medicalImage !== undefined) dbPayload.medical_image = updates.medicalImage;

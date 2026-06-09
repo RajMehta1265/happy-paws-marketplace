@@ -51,6 +51,10 @@ function HostellingPage() {
   const [checkOutDate, setCheckOutDate] = useState("");
   const [numDays, setNumDays] = useState<number>(1);
   const [consentTerms, setConsentTerms] = useState(false);
+  const [petType, setPetType] = useState<"Dog" | "Cat">("Dog");
+
+  const dailyRate = petType === "Dog" ? 1100 : 900;
+  const totalPrice = numDays * dailyRate;
 
   // Calendar availability state
   const [bookedDates, setBookedDates] = useState<string[]>([]);
@@ -286,6 +290,8 @@ function HostellingPage() {
         petBreed,
         petGender,
         petAge,
+        petType,
+        price: totalPrice,
         medicalConditions: finalMedicalConditions,
         medicalImage,
         temperament,
@@ -332,6 +338,7 @@ function HostellingPage() {
     setPetName("");
     setPetBreed("");
     setPetAge("");
+    setPetType("Dog");
     setHasMedical(false);
     setMedicalConditions("");
     setMedicalImage("");
@@ -408,6 +415,9 @@ function HostellingPage() {
                     Pet Name: <span className="font-medium text-foreground">{booking.petName}</span>
                   </div>
                   <div>
+                    Type: <span className="font-medium text-foreground">{booking.petType}</span>
+                  </div>
+                  <div>
                     Breed: <span className="font-medium text-foreground">{booking.petBreed}</span>
                   </div>
                   <div>
@@ -470,6 +480,16 @@ function HostellingPage() {
                   <div>
                     Duration:{" "}
                     <span className="font-semibold text-primary">{booking.numDays} Days</span>
+                  </div>
+                  <div>
+                    Rate:{" "}
+                    <span className="font-medium text-foreground">
+                      Up to ₹{booking.petType === "Dog" ? "1,100" : "900"} / Day
+                    </span>
+                  </div>
+                  <div>
+                    Estimated Total:{" "}
+                    <span className="font-bold text-primary">₹{booking.price?.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -620,6 +640,31 @@ function HostellingPage() {
                     className="border-b border-border/80 focus:border-primary bg-transparent outline-none py-2 text-sm"
                   />
                 </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-foreground">
+                  Pet Type <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-4">
+                  {(["Dog", "Cat"] as const).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setPetType(t)}
+                      className={`px-6 py-2 rounded-full border text-xs font-semibold transition cursor-pointer ${
+                        petType === t
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border hover:bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Boarding Rate: {petType === "Dog" ? "Up to ₹1,100 / day" : "Up to ₹900 / day"}
+                </p>
               </div>
 
               <div className="flex flex-col gap-2">
@@ -879,6 +924,23 @@ function HostellingPage() {
                   <span className="text-xs text-muted-foreground">
                     calculated automatically from dates
                   </span>
+                </div>
+              </div>
+
+              {/* Pricing breakdown estimation */}
+              <div className="bg-primary/5 rounded-2xl p-5 border border-primary/10 mt-4">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground font-medium">Daily Boarding Rate:</span>
+                  <span className="font-semibold text-foreground">Up to ₹{dailyRate} / day</span>
+                </div>
+                <div className="flex justify-between items-center text-sm mt-2">
+                  <span className="text-muted-foreground font-medium">Duration:</span>
+                  <span className="font-semibold text-foreground">{numDays} {numDays === 1 ? "day" : "days"}</span>
+                </div>
+                <div className="border-t border-border/50 my-3" />
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-foreground">Estimated Total Charge:</span>
+                  <span className="font-extrabold text-lg text-primary">Up to ₹{totalPrice.toLocaleString()}</span>
                 </div>
               </div>
             </div>
