@@ -1121,6 +1121,14 @@ function AdminPage() {
   };
 
   const handleDeleteProduct = async (id: string, name: string) => {
+    if (!id || typeof id !== "string" || id.trim() === "" || id === "undefined") {
+      const errMsg = `Deletion aborted: Invalid product ID for '${name}' (ID: ${id})`;
+      console.error(errMsg);
+      toast.error("Error: Product ID is invalid. Deletion aborted for safety.");
+      return;
+    }
+
+    console.log(`[Product Delete] Action triggered by admin. Name: '${name}', ID: '${id}'`);
     if (!confirm(`Are you sure you want to delete ${name}?`)) return;
     const isMock = !!localStorage.getItem("pawhaven_mock_session");
     try {

@@ -50,7 +50,8 @@ function Dashboard() {
       if (isMock) {
         const stored = localStorage.getItem("pawhaven_orders") || "[]";
         try {
-          return JSON.parse(stored);
+          const list = JSON.parse(stored);
+          return list.filter((o: any) => o.user_id === user!.id);
         } catch {
           return [];
         }
@@ -60,6 +61,7 @@ function Dashboard() {
           await supabase
             .from("orders")
             .select("*, order_items(*)")
+            .eq("user_id", user!.id)
             .order("created_at", { ascending: false })
         ).data ?? []
       );

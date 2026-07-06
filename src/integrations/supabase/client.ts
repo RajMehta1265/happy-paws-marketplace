@@ -19,12 +19,83 @@ function createSupabaseClient() {
     throw new Error(message);
   }
 
-  return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  const client = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
       storage: typeof window !== "undefined" ? localStorage : undefined,
       persistSession: true,
       autoRefreshToken: true,
     },
+  });
+
+  return wrapSupabaseClient(client);
+}
+
+function wrapSupabaseClient(client: any) {
+  const originalFrom = client.from.bind(client);
+
+  client.from = (table: string) => {
+    const queryBuilder = originalFrom(table);
+
+    const originalDelete = queryBuilder.delete.bind(queryBuilder);
+    const originalUpdate = queryBuilder.update.bind(queryBuilder);
+
+    queryBuilder.delete = (options?: any) => {
+      const filterBuilder = originalDelete(options);
+      return createSafeFilterBuilder(filterBuilder, table, "DELETE");
+    };
+
+    queryBuilder.update = (values: any, options?: any) => {
+      const filterBuilder = originalUpdate(values, options);
+      return createSafeFilterBuilder(filterBuilder, table, "UPDATE");
+    };
+
+    return queryBuilder;
+  };
+
+  return client;
+}
+
+function createSafeFilterBuilder(filterBuilder: any, table: string, operation: string, state = { hasValidFilter: false }) {
+  return new Proxy(filterBuilder, {
+    get(target, prop, receiver) {
+      const val = Reflect.get(target, prop, receiver);
+
+      if (typeof val === "function") {
+        return function (...args: any[]) {
+          const filterMethods = [
+            "eq", "neq", "gt", "gte", "lt", "lte", "like", "ilike", "is", "in", 
+            "contains", "containedBy", "rangeGt", "rangeGte", "rangeLt", "rangeLte", 
+            "rangeAdjacent", "overlaps", "textSearch", "match", "filter", "or", "and", "not"
+          ];
+
+          if (filterMethods.includes(prop as string)) {
+            const [column, value] = args;
+            if (value === undefined || value === null || value === "" || value === "undefined") {
+              const errorMsg = `[Supabase Safe Guard] Blocked ${operation} on table '${table}': filter for column '${column}' has an invalid value (${value}).`;
+              console.error(errorMsg);
+              throw new Error(errorMsg);
+            }
+            state.hasValidFilter = true;
+          }
+
+          if (prop === "then") {
+            if (!state.hasValidFilter) {
+              const errorMsg = `[Supabase Safe Guard] Blocked unfiltered ${operation} on table '${table}' to prevent accidental mass deletion/updates.`;
+              console.error(errorMsg);
+              throw new Error(errorMsg);
+            }
+          }
+
+          const result = val.apply(target, args);
+          if (result && typeof result === "object" && typeof result.then === "function") {
+            return createSafeFilterBuilder(result, table, operation, state);
+          }
+          return result;
+        };
+      }
+
+      return val;
+    }
   });
 }
 

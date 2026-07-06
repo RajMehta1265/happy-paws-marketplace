@@ -1100,6 +1100,11 @@ export const dbService = {
 
   // DELETE PET
   async deletePet(id: string): Promise<boolean> {
+    if (!id || typeof id !== "string" || id.trim() === "" || id === "undefined") {
+      console.error("[db-service] deletePet aborted: Invalid or undefined pet ID:", id);
+      return false;
+    }
+    console.log(`[db-service] deletePet called for ID: ${id}`);
     const localPets = this.initLocalData();
     const petToDelete = localPets.find((p) => p.id === id);
     const isExotic = petToDelete ? petToDelete.type.toLowerCase() === "exotic" : false;
@@ -1438,6 +1443,11 @@ export const dbService = {
 
   // DELETE REVIEW
   async deleteReview(id: string, petId: string): Promise<void> {
+    if (!id || typeof id !== "string" || id.trim() === "" || id === "undefined") {
+      console.error("[db-service] deleteReview aborted: Invalid or undefined review ID:", id);
+      return;
+    }
+    console.log(`[db-service] deleteReview called for ID: ${id}, petId: ${petId}`);
     if (typeof window !== "undefined") {
       const allLocal = this.initLocalReviews();
       const updated = allLocal.filter((r) => r.id !== id);
@@ -1672,6 +1682,11 @@ export const dbService = {
 
   // DELETE TRAINING BOOKING (admin action)
   async deleteTrainingBooking(id: string): Promise<boolean> {
+    if (!id || typeof id !== "string" || id.trim() === "" || id === "undefined") {
+      console.error("[db-service] deleteTrainingBooking aborted: Invalid or undefined booking ID:", id);
+      return false;
+    }
+    console.log(`[db-service] deleteTrainingBooking called for ID: ${id}`);
     if (typeof window === "undefined") return false;
     const bookings = await this.getTrainingBookings();
     const filtered = bookings.filter((b) => b.id !== id);
@@ -1881,6 +1896,11 @@ export const dbService = {
 
   // DELETE HOSTELLING BOOKING
   async deleteHostellingBooking(id: string): Promise<boolean> {
+    if (!id || typeof id !== "string" || id.trim() === "" || id === "undefined") {
+      console.error("[db-service] deleteHostellingBooking aborted: Invalid or undefined booking ID:", id);
+      return false;
+    }
+    console.log(`[db-service] deleteHostellingBooking called for ID: ${id}`);
     if (typeof window === "undefined") return false;
     const bookings = await this.getHostellingBookings();
     const filtered = bookings.filter((b) => b.id !== id);
@@ -1938,6 +1958,11 @@ export const dbService = {
   },
 
   async deleteContactSubmission(id: string): Promise<boolean> {
+    if (!id || typeof id !== "string" || id.trim() === "" || id === "undefined") {
+      console.error("[db-service] deleteContactSubmission aborted: Invalid or undefined submission ID:", id);
+      return false;
+    }
+    console.log(`[db-service] deleteContactSubmission called for ID: ${id}`);
     if (typeof window === "undefined") return false;
 
     // Remove from localStorage
