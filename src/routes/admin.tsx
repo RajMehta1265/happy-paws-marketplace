@@ -649,6 +649,9 @@ function AdminPage() {
         const { count: petCount } = await supabase
           .from("pets")
           .select("*", { count: "exact", head: true });
+        const { count: exoticCount } = await supabase
+          .from("exotic_pets")
+          .select("*", { count: "exact", head: true });
 
         const orderCount = ordersData?.length ?? 0;
         const totalRevenue = ordersData?.reduce((sum, o) => sum + Number(o.total), 0) ?? 0;
@@ -656,7 +659,7 @@ function AdminPage() {
         return [
           { label: "Total Users", value: String(userCount ?? 0), icon: FiUsers },
           { label: "Total Orders", value: String(orderCount), icon: FiPackage },
-          { label: "Total Companions", value: String(petCount ?? 0), icon: FiCalendar },
+          { label: "Total Companions", value: String((petCount ?? 0) + (exoticCount ?? 0)), icon: FiCalendar },
           {
             label: "Total Revenue",
             value: `₹${totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
